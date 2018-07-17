@@ -1,0 +1,26 @@
+logging:
+  level:
+    root: WARN
+    org:
+      spring: WARN
+    io:
+      kgraph: DEBUG
+
+info:
+  app:
+    name: Kafka Graphs Test
+
+kafka:
+  graphs:
+    bootstrapServers: ${spring.embedded.kafka.brokers}
+    zookeeperConnect: ${spring.embedded.zookeeper.connect}
+    verticesTopic: vertices
+    edgesGroupedBySourceTopic: edges
+    solutionSetTopic: solutionSet
+    solutionSetStore: solutionStore
+    workSetTopic: workSet
+    numPartitions: 50
+    replicationFactor: 1
+
+management.endpoint.health.show-details: always
+management.endpoints.web.exposure.include: '*'
