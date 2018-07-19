@@ -20,10 +20,10 @@ package io.kgraph.rest.server.graph;
 
 public enum GraphAlgorithmType {
     bfs,
-    connectedComponents,
-    labelPropagation,
-    localClusteringCoefficient,
+    lcc,
+    lp,
     mssp,
     pagerank,
-    sssp
+    sssp,
+    wcc
 }

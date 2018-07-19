@@ -88,7 +88,7 @@ public class GraphIntegrationTest {
             .expectBody(Void.class);
 
         GraphAlgorithmCreateRequest createRequest = new GraphAlgorithmCreateRequest();
-        createRequest.setAlgorithm(GraphAlgorithmType.connectedComponents);
+        createRequest.setAlgorithm(GraphAlgorithmType.wcc);
         createRequest.setVerticesTopic("new-vertices");
         createRequest.setEdgesGroupedBySourceTopic("new-edges");
 

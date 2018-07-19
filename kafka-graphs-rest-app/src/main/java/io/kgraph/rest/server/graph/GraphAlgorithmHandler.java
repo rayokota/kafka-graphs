@@ -237,7 +237,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                         );
                     }
                     break;
-                case connectedComponents:
+                case wcc:
                     if (input.isValuesOfTypeDouble()) {
                         algorithm = new ConnectedComponents<>(
                             getHostAndPort(),
@@ -264,7 +264,20 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                         );
                     }
                     break;
-                case labelPropagation:
+                case lcc:
+                    algorithm = new LocalClusteringCoefficient(
+                        getHostAndPort(),
+                        appId,
+                        props.getBootstrapServers(),
+                        curator,
+                        input.getVerticesTopic(),
+                        input.getEdgesGroupedBySourceTopic(),
+                        GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()),
+                        input.getNumPartitions(),
+                        input.getReplicationFactor()
+                    );
+                    break;
+                case lp:
                     srcVertexId = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
                     if (input.isValuesOfTypeDouble()) {
                         algorithm = new LabelPropagation<>(
@@ -293,19 +306,6 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                             srcVertexId
                         );
                     }
-                    break;
-                case localClusteringCoefficient:
-                    algorithm = new LocalClusteringCoefficient(
-                        getHostAndPort(),
-                        appId,
-                        props.getBootstrapServers(),
-                        curator,
-                        input.getVerticesTopic(),
-                        input.getEdgesGroupedBySourceTopic(),
-                        GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()),
-                        input.getNumPartitions(),
-                        input.getReplicationFactor()
-                    );
                     break;
                 case mssp:
                     String[] values = getParam(input.getParams(), "landmarkVertexIds", true).split(",");
