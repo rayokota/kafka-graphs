@@ -75,6 +75,7 @@ public class ReduceOnNeighborMethodsITCase extends AbstractIntegrationTest {
 
         compareResultAsTuples(result, expectedResult);
     }
+
     @Test
     public void testSumOfOutNeighborsNoValue() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
@@ -111,7 +112,6 @@ public class ReduceOnNeighborMethodsITCase extends AbstractIntegrationTest {
         compareResultAsTuples(result, expectedResult);
     }
 
-    @SuppressWarnings("serial")
     private static final class SumOutNeighbors implements
         NeighborsFunctionWithVertexValue<Long, Long, Long, Long> {
 

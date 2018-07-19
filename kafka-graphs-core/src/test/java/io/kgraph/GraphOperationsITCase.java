@@ -146,7 +146,6 @@ public class GraphOperationsITCase extends AbstractIntegrationTest {
         compareResultAsTuples(result, expectedResult);
     }
 
-    @SuppressWarnings("serial")
     @Test
     public void testSubGraph() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
@@ -179,7 +178,6 @@ public class GraphOperationsITCase extends AbstractIntegrationTest {
         compareResultAsTuples(result, expectedResult);
     }
 
-    @SuppressWarnings("serial")
 	@Test
 	public void testFilterVertices() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
@@ -213,7 +211,6 @@ public class GraphOperationsITCase extends AbstractIntegrationTest {
 		compareResultAsTuples(result, expectedResult);
 	}
 
-	@SuppressWarnings("serial")
 	@Test
 	public void testFilterEdges() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,

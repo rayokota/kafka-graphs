@@ -76,7 +76,6 @@ public class JoinWithVerticesITCase extends AbstractIntegrationTest {
         TestUtils.compareResultAsTuples(result, expectedResult);
     }
 
-    @SuppressWarnings("serial")
     private static final class AddValuesMapper implements VertexJoinFunction<Long, Long> {
 
         public Long vertexJoin(Long vertexValue, Long inputValue) {

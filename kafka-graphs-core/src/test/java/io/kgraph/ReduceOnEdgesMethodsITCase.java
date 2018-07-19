@@ -111,7 +111,6 @@ public class ReduceOnEdgesMethodsITCase extends AbstractIntegrationTest {
         TestUtils.compareResultAsTuples(result, expectedResult);
     }
 
-    @SuppressWarnings("serial")
     private static final class SelectMinWeightNeighbor
         implements EdgesFunctionWithVertexValue<Long, Long, Long, Long> {
 
@@ -132,7 +131,6 @@ public class ReduceOnEdgesMethodsITCase extends AbstractIntegrationTest {
         }
     }
 
-    @SuppressWarnings("serial")
     private static final class SelectMinWeightNeighborNoValue implements Reducer<Long> {
 
         @Override
