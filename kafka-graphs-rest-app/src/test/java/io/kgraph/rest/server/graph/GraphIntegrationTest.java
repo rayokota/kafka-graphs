@@ -32,7 +32,6 @@ import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWeb
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.test.context.junit4.SpringRunner;
@@ -43,8 +42,6 @@ import org.springframework.util.MultiValueMap;
 
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.rest.server.KafkaGraphsApplication;
-import reactor.core.publisher.Mono;
-import reactor.test.StepVerifier;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient(timeout = "36000")
