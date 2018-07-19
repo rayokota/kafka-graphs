@@ -174,14 +174,15 @@ public class KGraph<K, VV, EV> {
     }
 
     public <NV> KGraph<K, NV, EV> mapVertices(ValueMapperWithKey<K, VV, NV> mapper, Serde<NV> newVertexValueSerde) {
-        KTable<K, NV> mappedVertices = vertices.mapValues(mapper, Materialized.with(keySerde(), newVertexValueSerde));
+        KTable<K, NV> mappedVertices = vertices.mapValues(mapper, Materialized.<K, NV, KeyValueStore<Bytes, byte[]>>as(
+            generateStoreName()).withKeySerde(keySerde()).withValueSerde(newVertexValueSerde));
         return new KGraph<>(mappedVertices, edges,
             GraphSerialized.with(keySerde(), newVertexValueSerde, edgeValueSerde()));
     }
 
     public <NV> KGraph<K, VV, NV> mapEdges(ValueMapperWithKey<Edge<K>, EV, NV> mapper, Serde<NV> newEdgeValueSerde) {
-        KTable<Edge<K>, NV> mappedEdges = edges.mapValues(mapper, Materialized.with(new KryoSerde<>(),
-            newEdgeValueSerde));
+        KTable<Edge<K>, NV> mappedEdges = edges.mapValues(mapper, Materialized.<Edge<K>, NV, KeyValueStore<Bytes, byte[]>>as(
+            generateStoreName()).withKeySerde(new KryoSerde<>()).withValueSerde(newEdgeValueSerde));
         return new KGraph<>(vertices, mappedEdges,
             GraphSerialized.with(keySerde(), vertexValueSerde(), newEdgeValueSerde));
     }
@@ -264,7 +265,8 @@ public class KGraph<K, VV, EV> {
                 return edges;
             })
             .groupByKey(Serialized.with(new KryoSerde<>(), edgeValueSerde()))
-            .<EV>reduce((v1, v2) -> v2, Materialized.with(new KryoSerde<>(), edgeValueSerde()));
+            .<EV>reduce((v1, v2) -> v2, Materialized.<Edge<K>, EV, KeyValueStore<Bytes, byte[]>>as(
+                generateStoreName()).withKeySerde(new KryoSerde<>()).withValueSerde(edgeValueSerde()));
 
         return new KGraph<>(this.vertices, resultedEdges, serialized);
     }
@@ -274,8 +276,8 @@ public class KGraph<K, VV, EV> {
 
         KTable<Edge<K>, EV> resultedEdges = edgesGroupedByTarget()
             .leftJoin(inputDataSet,
-                new ApplyLeftJoinToEdgeValuesOnEitherSourceOrTarget<>(edgeJoinFunction), Materialized.with(keySerde()
-                    , new KryoSerde<>()))
+                new ApplyLeftJoinToEdgeValuesOnEitherSourceOrTarget<>(edgeJoinFunction),
+                Materialized.with(keySerde(), new KryoSerde<>()))
             .toStream()
             .flatMap((k, edgeWithValues) -> {
                 List<KeyValue<Edge<K>, EV>> edges = new ArrayList<>();
@@ -285,7 +287,8 @@ public class KGraph<K, VV, EV> {
                 return edges;
             })
             .groupByKey(Serialized.with(new KryoSerde<>(), edgeValueSerde()))
-            .<EV>reduce((v1, v2) -> v2, Materialized.with(new KryoSerde<>(), edgeValueSerde()));
+            .<EV>reduce((v1, v2) -> v2, Materialized.<Edge<K>, EV, KeyValueStore<Bytes, byte[]>>as(
+                generateStoreName()).withKeySerde(new KryoSerde<>()).withValueSerde(edgeValueSerde()));
 
         return new KGraph<>(vertices, resultedEdges, serialized);
     }
@@ -336,7 +339,6 @@ public class KGraph<K, VV, EV> {
         return new KGraph<>(filteredVertices, filteredEdges, serialized);
     }
 
-    // TODO test
     public KGraph<K, VV, EV> filterOnVertices(Predicate<K, VV> vertexFilter) {
         KTable<K, VV> filteredVertices = vertices.filter(vertexFilter);
 
@@ -346,28 +348,26 @@ public class KGraph<K, VV, EV> {
             .join(filteredVertices, (e, v) -> e, Joined.with(keySerde(), new KryoSerde<>(), vertexValueSerde()))
             .map((k, edge) -> new KeyValue<>(new Edge<>(edge.source(), edge.target()), edge.value()))
             .groupByKey(Serialized.with(new KryoSerde<>(), edgeValueSerde()))
-            .reduce((v1, v2) -> v2, Materialized.with(new KryoSerde<>(), edgeValueSerde()));
+            .reduce((v1, v2) -> v2, Materialized.<Edge<K>, EV, KeyValueStore<Bytes, byte[]>>as(generateStoreName()).withKeySerde(new KryoSerde<>()).withValueSerde(edgeValueSerde()));
 
         return new KGraph<>(filteredVertices, remainingEdges, serialized);
     }
 
-    // TODO test
     public KGraph<K, VV, EV> filterOnEdges(Predicate<Edge<K>, EV> edgeFilter) {
         KTable<Edge<K>, EV> filteredEdges = edges
-            .filter(edgeFilter, Materialized.with(new KryoSerde<>(), edgeValueSerde()));
+            .filter(edgeFilter, Materialized.<Edge<K>, EV, KeyValueStore<Bytes, byte[]>>as(generateStoreName()).withKeySerde(new KryoSerde<>()).withValueSerde(edgeValueSerde()));
 
         return new KGraph<>(vertices, filteredEdges, serialized);
     }
 
     public KTable<K, Long> outDegrees() {
         return vertices.leftJoin(edgesGroupedBySource(), new CountNeighborsLeftJoin<>(),
-            Materialized.with(keySerde(), Serdes.Long()));
+            Materialized.<K, Long, KeyValueStore<Bytes, byte[]>>as(generateStoreName()).withKeySerde(keySerde()).withValueSerde(Serdes.Long()));
     }
 
-    // TODO test
     public KTable<K, Long> inDegrees() {
         return vertices.leftJoin(edgesGroupedByTarget(), new CountNeighborsLeftJoin<>(),
-            Materialized.with(keySerde(), Serdes.Long()));
+            Materialized.<K, Long, KeyValueStore<Bytes, byte[]>>as(generateStoreName()).withKeySerde(keySerde()).withValueSerde(Serdes.Long()));
     }
 
     private static final class CountNeighborsLeftJoin<K, VV, EV>
