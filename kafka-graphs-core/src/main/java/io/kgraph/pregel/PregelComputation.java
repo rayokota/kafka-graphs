@@ -373,7 +373,6 @@ public class PregelComputation<K, VV, EV, Message> {
                             }
                         }
 
-                        // Sync on receive barrier
                         if (pregelState.stage() == Stage.RECEIVE) {
                             if (pregelState.superstep() == 0) {
                                 if (!ZKUtils.hasChild(curator, applicationId, pregelState, workerName)) {
@@ -402,9 +401,7 @@ public class PregelComputation<K, VV, EV, Message> {
                                     }
                                 }
                             }
-                        }
-                        // Sync on send barrier
-                        if (pregelState.stage() == Stage.SEND) {
+                        } else if (pregelState.stage() == Stage.SEND) {
                             if (ZKUtils.isReady(curator, applicationId, pregelState)) {
                                 Map<K, Map<K, Message>> messages = localworkSetStore.get(pregelState.superstep());
                                 if (hasVerticesToForward(messages)) {

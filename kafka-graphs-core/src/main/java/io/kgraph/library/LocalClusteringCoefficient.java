@@ -88,6 +88,7 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
             Iterable<EdgeWithValue<Long, Double>> edges,
             Callback<Long, Double, LCCMessage> cb
         ) {
+            log.debug("step {} vertex {} value {} nummsgs {}", superstep, vertex.id(), vertex.value(), messages.size());
 
             if (superstep == 0) {
                 LCCMessage message = new LCCMessage(vertex.id());
