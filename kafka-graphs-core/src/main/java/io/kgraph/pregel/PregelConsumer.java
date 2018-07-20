@@ -93,32 +93,38 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
         return records;
     }
 
-    //@Override
+    /*
+    @Override
     public ConsumerRecords<byte[], byte[]> poll(Duration timeout) {
         ConsumerRecords<byte[], byte[]> records = kafkaConsumer.poll(timeout);
         log.trace("poll {}", records.partitions());
         return records;
     }
+    */
 
     @Override
     public void commitSync() {
         kafkaConsumer.commitSync();
     }
 
-    //@Override
+    /*
+    @Override
     public void commitSync(Duration timeout) {
         kafkaConsumer.commitSync(timeout);
     }
+    */
 
     @Override
     public void commitSync(Map<TopicPartition, OffsetAndMetadata> offsets) {
         kafkaConsumer.commitSync(offsets);
     }
 
-    //@Override
+    /*
+    @Override
     public void commitSync(Map<TopicPartition, OffsetAndMetadata> offsets, Duration timeout) {
         kafkaConsumer.commitSync(offsets, timeout);
     }
+    */
 
     @Override
     public void commitAsync() {
@@ -155,20 +161,24 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
         return kafkaConsumer.position(partition);
     }
 
-    //@Override
+    /*
+    @Override
     public long position(TopicPartition partition, Duration timeout) {
         return kafkaConsumer.position(partition, timeout);
     }
+    */
 
     @Override
     public OffsetAndMetadata committed(TopicPartition partition) {
         return kafkaConsumer.committed(partition);
     }
 
-    //@Override
+    /*
+    @Override
     public OffsetAndMetadata committed(TopicPartition partition, Duration timeout) {
         return kafkaConsumer.committed(partition, timeout);
     }
+    */
 
     @Override
     public Map<MetricName, ? extends Metric> metrics() {
@@ -180,20 +190,24 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
         return kafkaConsumer.partitionsFor(topic);
     }
 
-    //@Override
+    /*
+    @Override
     public List<PartitionInfo> partitionsFor(String topic, Duration timeout) {
         return kafkaConsumer.partitionsFor(topic, timeout);
     }
+    */
 
     @Override
     public Map<String, List<PartitionInfo>> listTopics() {
         return kafkaConsumer.listTopics();
     }
 
-    //@Override
+    /*
+    @Override
     public Map<String, List<PartitionInfo>> listTopics(Duration timeout) {
         return kafkaConsumer.listTopics(timeout);
     }
+    */
 
     @Override
     public Set<TopicPartition> paused() {
@@ -215,30 +229,36 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
         return kafkaConsumer.offsetsForTimes(timestampsToSearch);
     }
 
-    //@Override
+    /*
+    @Override
     public Map<TopicPartition, OffsetAndTimestamp> offsetsForTimes(Map<TopicPartition, Long> timestampsToSearch, Duration timeout) {
         return kafkaConsumer.offsetsForTimes(timestampsToSearch, timeout);
     }
+    */
 
     @Override
     public Map<TopicPartition, Long> beginningOffsets(Collection<TopicPartition> partitions) {
         return kafkaConsumer.beginningOffsets(partitions);
     }
 
-    //@Override
+    /*
+    @Override
     public Map<TopicPartition, Long> beginningOffsets(Collection<TopicPartition> partitions, Duration timeout) {
         return kafkaConsumer.beginningOffsets(partitions, timeout);
     }
+    */
 
     @Override
     public Map<TopicPartition, Long> endOffsets(Collection<TopicPartition> partitions) {
         return kafkaConsumer.endOffsets(partitions);
     }
 
-    //@Override
+    /*
+    @Override
     public Map<TopicPartition, Long> endOffsets(Collection<TopicPartition> partitions, Duration timeout) {
         return kafkaConsumer.endOffsets(partitions, timeout);
     }
+    */
 
     @Override
     public void close() {
@@ -250,10 +270,12 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
         kafkaConsumer.close(timeout, unit);
     }
 
-    //@Override
+    /*
+    @Override
     public void close(Duration timeout) {
         kafkaConsumer.close(timeout);
     }
+    */
 
     @Override
     public void wakeup() {

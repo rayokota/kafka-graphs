@@ -26,6 +26,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.state.QueryableStoreTypes;
@@ -168,7 +169,7 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
 
         Topology topology = builder.build();
         log.info("Topology description {}", topology.describe());
-        streams = new KafkaStreams(topology, streamsConfig, new PregelClientSupplier());
+        streams = new KafkaStreams(topology, new StreamsConfig(streamsConfig), new PregelClientSupplier());
         streams.start();
 
         return new GraphAlgorithmState<>(streams, GraphAlgorithmState.State.CREATED, 0, 0L, null);

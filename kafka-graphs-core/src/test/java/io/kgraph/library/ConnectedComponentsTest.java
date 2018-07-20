@@ -30,7 +30,7 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.Consumed;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.ValueMapper;
 import org.apache.kafka.streams.kstream.ValueMapperWithKey;
@@ -91,6 +91,8 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
 
         GraphAlgorithmState<KTable<Long, Long>> paths = algorithm.run();
         paths.result().get();
+
+        Thread.sleep(2000);
 
         Map<Long, Long> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);
@@ -154,6 +156,8 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         GraphAlgorithmState<KTable<Long, Long>> paths = algorithm.run();
         paths.result().get();
 
+        Thread.sleep(2000);
+
         Map<Long, Long> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);
 
@@ -208,6 +212,8 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
 
         paths.result().get();
         paths2.result().get();
+
+        Thread.sleep(2000);
 
         Map<Long, Long> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         Map<Long, Long> map2 = StreamUtils.mapFromStore(paths2.streams(), "solutionSetStore-" + suffix);
@@ -279,6 +285,8 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
 
         paths.result().get();
         paths2.result().get();
+
+        Thread.sleep(2000);
 
         Map<Long, Long> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         Map<Long, Long> map2 = StreamUtils.mapFromStore(paths2.streams(), "solutionSetStore-" + suffix);
