@@ -88,7 +88,7 @@ public class LocalClusteringCoefficientTest extends AbstractIntegrationTest {
         GraphAlgorithmState<KTable<Long, Double>> paths = algorithm.run();
         paths.result().get();
 
-        Map<Long, Long> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore");
+        Map<Long, Double> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore");
         log.debug("result: {}", map);
 
         Map<Long, Double> expectedResult = new HashMap<>();

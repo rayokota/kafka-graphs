@@ -204,7 +204,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
 
     private PregelGraphAlgorithm<Long, ?, ?, ?> getAlgorithm(String appId, GraphAlgorithmCreateRequest input) {
         try {
-            long srcVertexId = 0L;
+            long srcVertexId;
             PregelGraphAlgorithm<Long, ?, ?, ?> algorithm;
             switch (input.getAlgorithm()) {
                 case bfs:

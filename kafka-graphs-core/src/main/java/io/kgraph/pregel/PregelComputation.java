@@ -273,7 +273,6 @@ public class PregelComputation<K, VV, EV, Message> {
         } catch (Exception e) {
             throw toRuntimeException(e);
         }
-        // ignore
     }
 
     public PregelState state() {
@@ -285,7 +284,6 @@ public class PregelComputation<K, VV, EV, Message> {
         } catch (Exception e) {
             throw toRuntimeException(e);
         }
-        // ignore
     }
 
     private final class BarrierSync
@@ -643,6 +641,7 @@ public class PregelComputation<K, VV, EV, Message> {
     }
 
     private static <K> int vertexToPartition(K vertex, Serializer<K> serializer, int numPartitions) {
+        // TODO make configurable, currently this is tied to DefaultStreamPartitioner
         byte[] keyBytes = serializer.serialize(null, vertex);
         int partition = Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions;
         return partition;

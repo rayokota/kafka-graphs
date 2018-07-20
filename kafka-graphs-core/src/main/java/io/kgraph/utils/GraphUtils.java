@@ -165,7 +165,7 @@ public class GraphUtils {
 
         private final CompletableFuture<Boolean> future;
         private ProcessorContext context;
-        private ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         private ScheduledFuture<Boolean> scheduledFuture = null;
 
         public EndOfBatchCheck(CompletableFuture<Boolean> future) {
