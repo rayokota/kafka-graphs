@@ -22,6 +22,7 @@ package io.kgraph.pregel;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -32,8 +33,11 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.TreeCache;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.nodes.GroupMember;
@@ -76,9 +80,11 @@ import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.PregelState.Stage;
+import io.kgraph.pregel.aggregators.Aggregator;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.KryoSerde;
 import io.kgraph.utils.KryoSerializer;
+import io.kgraph.utils.KryoUtils;
 import io.vavr.Tuple2;
 import io.vavr.Tuple3;
 import io.vavr.Tuple4;
@@ -110,6 +116,7 @@ public class PregelComputation<K, VV, EV, Message> {
 
     private final Optional<Message> initialMessage;
     private final ComputeFunction<K, VV, EV, Message> computeFunction;
+    private final Map<String, Class<? extends Aggregator<?>>> registeredAggregators;
 
     private Properties streamsConfig;
 
@@ -122,6 +129,8 @@ public class PregelComputation<K, VV, EV, Message> {
     private final String localSolutionSetStoreName;
 
     private final Map<Integer, Map<Integer, Set<K>>> activeVertices = new ConcurrentHashMap<>();
+    private final Map<Integer, Map<Integer, Map<String, Aggregator<?>>>> aggregators = new ConcurrentHashMap<>();
+    private final Map<Integer, Map<String, ?>> previousAggregates = new ConcurrentHashMap<>();
 
     public PregelComputation(
         String hostAndPort,
@@ -136,7 +145,8 @@ public class PregelComputation<K, VV, EV, Message> {
         String workSetTopic,
         int numPartitions,
         Optional<Message> initialMessage,
-        ComputeFunction<K, VV, EV, Message> cf
+        ComputeFunction<K, VV, EV, Message> cf,
+        Map<String, Class<? extends Aggregator<?>>> registeredAggregators
     ) {
 
         this.hostAndPort = hostAndPort;
@@ -152,6 +162,7 @@ public class PregelComputation<K, VV, EV, Message> {
         this.serialized = serialized;
         this.initialMessage = initialMessage;
         this.computeFunction = cf;
+        this.registeredAggregators = registeredAggregators;
 
         this.edgesStoreName = "edgesStore-" + applicationId;
         this.verticesStoreName = "verticesStore-" + applicationId;
@@ -286,6 +297,28 @@ public class PregelComputation<K, VV, EV, Message> {
         }
     }
 
+    protected Map<String, Aggregator<?>> newAggregators() {
+        Set<Map.Entry<String, Class<? extends Aggregator<?>>>> entries = registeredAggregators.entrySet();
+        return entries.stream().collect(Collectors.toConcurrentMap(Map.Entry::getKey, entry -> {
+            try {
+                return entry.getValue().newInstance();
+            } catch (Exception e) {
+                throw toRuntimeException(e);
+            }
+        }));
+    }
+
+    @SuppressWarnings("unchecked")
+    protected Map<String, Aggregator<?>> mergeAggregators(Map<String, Aggregator<?>> agg1, Map<String, Aggregator<?>> agg2) {
+        return Stream.of(agg1, agg2).map(Map::entrySet).flatMap(Collection::stream).collect(
+            Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> {
+                Aggregator<Object> a1 = (Aggregator<Object>) v1;
+                Aggregator<Object> a2 = (Aggregator<Object>) v2;
+                a1.aggregate(a2.getAggregate());
+                return a1;
+            }));
+    }
+
     private final class BarrierSync
         implements Transformer<K, Tuple3<Integer, K, Message>,
         KeyValue<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, Map<K, Message>>>> {
@@ -297,7 +330,8 @@ public class PregelComputation<K, VV, EV, Message> {
         private LeaderLatch leaderLatch;
         private GroupMember group;
         private SharedValue sharedValue;
-        private TreeCache treeCache;
+        private TreeCache aggregateCache;
+        private TreeCache barrierCache;
         private PregelState pregelState = new PregelState(GraphAlgorithmState.State.CREATED, 0, Stage.RECEIVE);
 
         private final Map<Integer, Set<K>> forwardedVertices = new HashMap<>();
@@ -342,14 +376,18 @@ public class PregelComputation<K, VV, EV, Message> {
                         }
 
                         if (leaderLatch.hasLeadership()) {
-                            if (treeCache == null) {
-                                treeCache = new TreeCache(curator, ZKPaths.makePath(ZKUtils.PREGEL_PATH + applicationId, ZKUtils.BARRIERS));
-                                treeCache.start();
+                            if (aggregateCache == null) {
+                                aggregateCache = new TreeCache(curator, ZKPaths.makePath(ZKUtils.PREGEL_PATH + applicationId, ZKUtils.AGGREGATES));
+                                aggregateCache.start();
+                            }
+                            if (barrierCache == null) {
+                                barrierCache = new TreeCache(curator, ZKPaths.makePath(ZKUtils.PREGEL_PATH + applicationId, ZKUtils.BARRIERS));
+                                barrierCache.start();
                             }
 
                             if (pregelState.stage() == Stage.RECEIVE) {
                                 int groupSize = group.getCurrentMembers().size();
-                                PregelState nextPregelState = ZKUtils.maybeCreateReadyToSendNode(curator, applicationId, pregelState, treeCache, groupSize);
+                                PregelState nextPregelState = ZKUtils.maybeCreateReadyToSendNode(curator, applicationId, pregelState, barrierCache, groupSize);
                                 if (!pregelState.equals(nextPregelState)) {
                                     pregelState = nextPregelState;
                                     sharedValue.setValue(pregelState.toBytes());
@@ -358,8 +396,9 @@ public class PregelComputation<K, VV, EV, Message> {
                                 }
                             }
                             if (pregelState.stage() == Stage.SEND) {
-                                PregelState nextPregelState = ZKUtils.maybeCreateReadyToReceiveNode(curator, applicationId, pregelState, treeCache);
+                                PregelState nextPregelState = ZKUtils.maybeCreateReadyToReceiveNode(curator, applicationId, pregelState, barrierCache);
                                 if (!pregelState.equals(nextPregelState)) {
+                                    reduceAggregates(pregelState.superstep());
                                     pregelState = nextPregelState;
                                     sharedValue.setValue(pregelState.toBytes());
                                 } else {
@@ -413,9 +452,12 @@ public class PregelComputation<K, VV, EV, Message> {
                                 }
 
                                 // clean up previous step
-                                activeVertices.remove(pregelState.superstep() - 1);
-                                forwardedVertices.remove(pregelState.superstep() - 1);
-                                localworkSetStore.delete(pregelState.superstep() - 1);
+                                int previousStep = pregelState.superstep() - 1;
+                                activeVertices.remove(previousStep);
+                                forwardedVertices.remove(previousStep);
+                                aggregators.remove(previousStep);
+                                previousAggregates.remove(previousStep);
+                                localworkSetStore.delete(previousStep);
                             }
                         }
                     } catch (Exception e) {
@@ -425,6 +467,30 @@ public class PregelComputation<K, VV, EV, Message> {
             } catch (Exception e) {
                 throw toRuntimeException(e);
             }
+        }
+
+        @SuppressWarnings("unchecked")
+        private void reduceAggregates(int superstep) throws Exception {
+            String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
+            Map<String, Aggregator<?>> newAggregators = newAggregators();
+            Map<String, ChildData> children = aggregateCache.getCurrentChildren(rootPath);
+            if (children != null) {
+                for (Map.Entry<String, ChildData> entry : children.entrySet()) {
+                    ChildData childData = entry.getValue();
+                    String path = childData.getPath();
+                    if (!path.endsWith("all")) {
+                        byte[] data = childData.getData();
+                        if (data.length > 0) {
+                            Map<String, Aggregator<?>> aggregators = KryoUtils.deserialize(data);
+                            newAggregators = mergeAggregators(newAggregators, aggregators);
+                        }
+                    }
+                }
+            }
+            Set<Map.Entry<String, Aggregator<?>>> entries = newAggregators.entrySet();
+            Map<String, ?> newAggregates = entries.stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getAggregate()));
+            ZKUtils.addChild(curator, rootPath, "all", CreateMode.PERSISTENT, KryoUtils.serialize(newAggregates));
         }
 
         private boolean hasVerticesToForward(Map<K, Map<K, Message>> messages) {
@@ -493,8 +559,11 @@ public class PregelComputation<K, VV, EV, Message> {
 
         @Override
         public void close() {
-            if (treeCache != null) {
-                treeCache.close();
+            if (aggregateCache != null) {
+                aggregateCache.close();
+            }
+            if (barrierCache != null) {
+                barrierCache.close();
             }
             if (sharedValue != null) {
                 try {
@@ -561,14 +630,36 @@ public class PregelComputation<K, VV, EV, Message> {
             Map<K, Message> incomingMessages,
             Iterable<EdgeWithValue<K, EV>> edges
         ) {
-
             // Find the value that applies to this step
             VV oldVertexValue = vertex._3 <= superstep ? vertex._4 : vertex._2;
-            ComputeFunction.Callback<K, VV, Message> cb = new ComputeFunction.Callback<>();
+            ComputeFunction.Callback<K, VV, Message> cb = new ComputeFunction.Callback<>(
+                previousAggregates(superstep), aggregators(key, superstep));
             computeFunction.compute(superstep, new VertexWithValue<>(key, oldVertexValue), incomingMessages, edges, cb);
             Tuple4<Integer, VV, Integer, VV> newVertex = cb.newVertexValue != null
                 ? new Tuple4<>(superstep, oldVertexValue, superstep + 1, cb.newVertexValue) : null;
             return new Tuple3<>(superstep + 1, newVertex, cb.outgoingMessages);
+        }
+
+        private Map<String, ?> previousAggregates(int superstep) {
+            return previousAggregates.computeIfAbsent(superstep, k -> {
+                try {
+                    String path = ZKPaths.makePath(ZKUtils.aggregatePath(applicationId, superstep - 1), "all");
+                    if (curator.checkExists().forPath(path) == null) {
+                        return new HashMap<>();
+                    }
+                    byte[] data = curator.getData().forPath(path);
+                    return data.length > 0 ? KryoUtils.deserialize(data) : new HashMap<>();
+                } catch (Exception e) {
+                    throw toRuntimeException(e);
+                }
+            });
+        }
+
+        private Map<String, Aggregator<?>> aggregators(K vertex, int superstep) {
+            int partition = vertexToPartition(vertex, serialized.keySerde().serializer(), numPartitions);
+            Map<Integer, Map<String, Aggregator<?>>> stepAggregators =
+                aggregators.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
+            return stepAggregators.computeIfAbsent(partition, k -> newAggregators());
         }
 
         @Override
@@ -610,7 +701,7 @@ public class PregelComputation<K, VV, EV, Message> {
                     });
                 }
                 producer.flush();
-                deactivateVertex(value._1, readOnlyKey);
+                deactivateVertex(value._1 - 1, readOnlyKey);
             } catch (Exception e) {
                 throw toRuntimeException(e);
             }
@@ -618,13 +709,25 @@ public class PregelComputation<K, VV, EV, Message> {
 
         private void deactivateVertex(int superstep, K vertex) throws Exception {
             int partition = vertexToPartition(vertex, serialized.keySerde().serializer(), numPartitions);
-            Map<Integer, Set<K>> active = activeVertices.get(superstep - 1);
+            Map<Integer, Set<K>> active = activeVertices.get(superstep);
             Set<K> vertices = active.get(partition);
             vertices.remove(vertex);
-            log.debug("vertex {} for part {} for step {} is NOT active", vertex, partition, superstep - 1);
+            log.debug("vertex {} for part {} for step {} is NOT active", vertex, partition, superstep);
             if (vertices.isEmpty()) {
                 log.debug("removing vertex {} for partition {}", vertex, partition);
-                ZKUtils.removeChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.RUNNING, superstep - 1, Stage.SEND), "partition-" + partition);
+                ZKUtils.removeChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.RUNNING, superstep, Stage.SEND), "partition-" + partition);
+                writeAggregate(superstep, partition);
+            }
+        }
+
+        private void writeAggregate(int superstep, int partition) throws Exception {
+            Map<Integer, Map<String, Aggregator<?>>> stepAggregators = aggregators.get(superstep);
+            if (stepAggregators != null) {
+                Map<String, Aggregator<?>> partitionAggregators = stepAggregators.get(partition);
+                if (partitionAggregators != null) {
+                    ZKUtils.addChild(curator, ZKUtils.aggregatePath(applicationId, superstep), "partition-" + partition,
+                        CreateMode.PERSISTENT, KryoUtils.serialize(partitionAggregators));
+                }
             }
         }
 

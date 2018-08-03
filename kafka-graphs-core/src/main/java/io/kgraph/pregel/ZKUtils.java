@@ -38,6 +38,7 @@ public class ZKUtils {
     public static final String GRAPHS_PATH = "/kafka-graphs";
     public static final String PREGEL_PATH = "/kafka-graphs/pregel-";
 
+    public static final String AGGREGATES = "aggregates";
     public static final String BARRIERS = "barriers";
     public static final String GROUP = "group";
     public static final String LEADER = "leader";
@@ -107,6 +108,11 @@ public class ZKUtils {
         return exists;
     }
 
+    public static byte[] getData(CuratorFramework curator, String rootPath, String child) throws Exception {
+        String path = ZKPaths.makePath(rootPath, child);
+        return curator.getData().forPath(path);
+    }
+
     public static <K> boolean hasChild(CuratorFramework curator, String id, PregelState pregelState,
                                        K child, Serializer<K> serializer) throws Exception {
         return hasChild(curator, id, pregelState, base64EncodedString(child, serializer));
@@ -132,11 +138,20 @@ public class ZKUtils {
 
     public static <K> void addChild(CuratorFramework curator, String id, PregelState pregelState,
                                     String child, CreateMode createMode) throws Exception {
-        String barrierPath = barrierPath(id, pregelState);
-        String path = ZKPaths.makePath(barrierPath, child);
+        addChild(curator, barrierPath(id, pregelState), child, createMode);
+    }
+
+    public static <K> void addChild(CuratorFramework curator, String rootPath,
+                                    String child, CreateMode createMode) throws Exception {
+        addChild(curator, rootPath, child, createMode, new byte[0]);
+    }
+
+    public static <K> void addChild(CuratorFramework curator, String rootPath,
+                                    String child, CreateMode createMode, byte[] data) throws Exception {
+        String path = ZKPaths.makePath(rootPath, child);
         try {
             log.debug("adding child {}", path);
-            curator.create().creatingParentContainersIfNeeded().withMode(createMode).forPath(path);
+            curator.create().creatingParentContainersIfNeeded().withMode(createMode).forPath(path, data);
         } catch (KeeperException.NodeExistsException e) {
             // ignore
         }
@@ -149,8 +164,12 @@ public class ZKUtils {
 
     public static <K> void removeChild(CuratorFramework curator, String id, PregelState pregelState,
                                        String child) throws Exception {
-        String barrierPath = barrierPath(id, pregelState);
-        String path = ZKPaths.makePath(barrierPath, child);
+        removeChild(curator, barrierPath(id, pregelState), child);
+    }
+
+    public static <K> void removeChild(CuratorFramework curator, String rootPath,
+                                       String child) throws Exception {
+        String path = ZKPaths.makePath(rootPath, child);
         try {
             log.debug("removing child {}", path);
             curator.delete().forPath(path);
@@ -159,7 +178,11 @@ public class ZKUtils {
         }
     }
 
-    private static String barrierPath(String id, PregelState pregelState) {
+    protected static String aggregatePath(String id, int superstep) {
+        return ZKPaths.makePath(PREGEL_PATH + id, AGGREGATES, String.valueOf(superstep));
+    }
+
+    protected static String barrierPath(String id, PregelState pregelState) {
         return ZKPaths.makePath(
             PREGEL_PATH + id, BARRIERS,
             (pregelState.stage() == PregelState.Stage.RECEIVE ? "rcv-" : "snd-") + String.valueOf(pregelState.superstep()));

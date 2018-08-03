@@ -18,6 +18,8 @@
 
 package io.kgraph.pregel;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
@@ -36,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
+import io.kgraph.pregel.aggregators.Aggregator;
 import io.kgraph.utils.ClientUtils;
 
 public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
@@ -57,6 +60,7 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
     protected final int numPartitions;
     protected final short replicationFactor;
     protected final PregelComputation<K, VV, EV, Message> computation;
+    protected final Map<String, Class<? extends Aggregator<?>>> registeredAggregators = new HashMap<>();
 
     protected KafkaStreams streams;
 
@@ -157,7 +161,11 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
         this.computation = new PregelComputation<>(hostAndPort, applicationId,
             bootstrapServers, curator, verticesTopic, edgesGroupedBySourceTopic, serialized,
             solutionSetTopic, solutionSetStore, workSetTopic, numPartitions,
-            initialMessage, computeFunction());
+            initialMessage, computeFunction(), registeredAggregators);
+    }
+
+    public void registerAggregator(String name, Class<? extends Aggregator<?>> aggregatorClass) {
+        registeredAggregators.put(name, aggregatorClass);
     }
 
     @Override

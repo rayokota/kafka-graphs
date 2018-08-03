@@ -23,6 +23,7 @@ import java.util.Map;
 
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
+import io.kgraph.pregel.aggregators.Aggregator;
 
 /**
  * The user-defined compute function for a Pregel computation.
@@ -51,9 +52,28 @@ public interface ComputeFunction<K, VV, EV, Message> {
 
     final class Callback<K, VV, Message> {
 
+        protected Map<String, ?> previousAggregates;
+
+        protected Map<String, Aggregator<?>> aggregators;
+
         protected VV newVertexValue = null;
 
         protected final Map<K, Message> outgoingMessages = new HashMap<>();
+
+        public Callback(Map<String, ?> previousAggregates, Map<String, Aggregator<?>> aggregators) {
+            this.previousAggregates = previousAggregates;
+            this.aggregators = aggregators;
+        }
+
+        @SuppressWarnings("unchecked")
+        public final <T> T previousAggregate(String name) {
+            return (T) previousAggregates.get(name);
+        }
+
+        @SuppressWarnings("unchecked")
+        public final <T> Aggregator<T> aggregator(String name) {
+            return (Aggregator<T>) aggregators.get(name);
+        }
 
         public final void sendMessageTo(K target, Message m) {
             outgoingMessages.put(target, m);
