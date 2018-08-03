@@ -108,11 +108,6 @@ public class ZKUtils {
         return exists;
     }
 
-    public static byte[] getData(CuratorFramework curator, String rootPath, String child) throws Exception {
-        String path = ZKPaths.makePath(rootPath, child);
-        return curator.getData().forPath(path);
-    }
-
     public static <K> boolean hasChild(CuratorFramework curator, String id, PregelState pregelState,
                                        K child, Serializer<K> serializer) throws Exception {
         return hasChild(curator, id, pregelState, base64EncodedString(child, serializer));
