@@ -106,7 +106,7 @@ Custom Pregel-based graph algorithms can also be added by implementing the `Comp
 
 ## Distributed Graph Processing
 
-Since Kafka Graphs is built on top of Kafka Streams, it is able to leverage the underlying partitioning scheme of Kafka Streams in order to support distributed graph processing.  To facilitate running graph algorithms in a distributed manner, Kafka Streams provides a REST application for managing graph algorithm executions.
+Since Kafka Graphs is built on top of Kafka Streams, it is able to leverage the underlying partitioning scheme of Kafka Streams in order to support distributed graph processing.  To facilitate running graph algorithms in a distributed manner, Kafka Graphs provides a REST application for managing graph algorithm executions.
 
 ```bash
 java -jar kafka-graphs-rest-app-0.1.0.jar \
