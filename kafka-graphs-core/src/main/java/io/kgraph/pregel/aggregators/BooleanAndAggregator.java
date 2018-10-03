@@ -28,6 +28,11 @@ public class BooleanAndAggregator implements Aggregator<Boolean> {
     }
 
     @Override
+    public void setAggregate(Boolean value) {
+        this.value = value;
+    }
+
+    @Override
     public void aggregate(Boolean value) {
         this.value = this.value && value;
     }

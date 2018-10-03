@@ -24,5 +24,7 @@ public interface Aggregator<T> {
 
     T getAggregate();
 
+    void setAggregate(T value);
+
     void reset();
 }

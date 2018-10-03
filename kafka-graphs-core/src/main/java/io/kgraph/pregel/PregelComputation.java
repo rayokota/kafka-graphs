@@ -129,6 +129,7 @@ public class PregelComputation<K, VV, EV, Message> {
     private final String localSolutionSetStoreName;
 
     private final Map<Integer, Map<Integer, Set<K>>> activeVertices = new ConcurrentHashMap<>();
+    private final Map<Integer, Map<Integer, Boolean>> didPreSuperstep = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Map<String, Aggregator<?>>>> aggregators = new ConcurrentHashMap<>();
     private final Map<Integer, Map<String, ?>> previousAggregates = new ConcurrentHashMap<>();
 
@@ -319,6 +320,27 @@ public class PregelComputation<K, VV, EV, Message> {
             }));
     }
 
+    private Map<String, ?> previousAggregates(int superstep) {
+        return previousAggregates.computeIfAbsent(superstep, k -> {
+            try {
+                String path = ZKPaths.makePath(ZKUtils.aggregatePath(applicationId, superstep - 1), "all");
+                if (curator.checkExists().forPath(path) == null) {
+                    return new HashMap<>();
+                }
+                byte[] data = curator.getData().forPath(path);
+                return data.length > 0 ? KryoUtils.deserialize(data) : new HashMap<>();
+            } catch (Exception e) {
+                throw toRuntimeException(e);
+            }
+        });
+    }
+
+    private Map<String, Aggregator<?>> aggregators(int partition, int superstep) {
+        Map<Integer, Map<String, Aggregator<?>>> stepAggregators =
+            aggregators.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
+        return stepAggregators.computeIfAbsent(partition, k -> newAggregators());
+    }
+
     private final class BarrierSync
         implements Transformer<K, Tuple3<Integer, K, Message>,
         KeyValue<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, Map<K, Message>>>> {
@@ -455,6 +477,7 @@ public class PregelComputation<K, VV, EV, Message> {
                                 int previousStep = pregelState.superstep() - 1;
                                 activeVertices.remove(previousStep);
                                 forwardedVertices.remove(previousStep);
+                                didPreSuperstep.remove(previousStep);
                                 aggregators.remove(previousStep);
                                 previousAggregates.remove(previousStep);
                                 localworkSetStore.delete(previousStep);
@@ -632,34 +655,23 @@ public class PregelComputation<K, VV, EV, Message> {
         ) {
             // Find the value that applies to this step
             VV oldVertexValue = vertex._3 <= superstep ? vertex._4 : vertex._2;
+            int partition = vertexToPartition(key, serialized.keySerde().serializer(), numPartitions);
+
+            Map<Integer, Boolean> didFlags = didPreSuperstep.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
+            Boolean flag = didFlags.get(partition);
+            if (flag == null || !flag) {
+                ComputeFunction.Aggregates aggregates = new ComputeFunction.Aggregates(
+                    previousAggregates(superstep), aggregators(partition, superstep));
+                computeFunction.preSuperstep(aggregates);
+                didFlags.put(partition, true);
+            }
+
             ComputeFunction.Callback<K, VV, Message> cb = new ComputeFunction.Callback<>(
-                previousAggregates(superstep), aggregators(key, superstep));
+                previousAggregates(superstep), aggregators(partition, superstep));
             computeFunction.compute(superstep, new VertexWithValue<>(key, oldVertexValue), incomingMessages, edges, cb);
             Tuple4<Integer, VV, Integer, VV> newVertex = cb.newVertexValue != null
                 ? new Tuple4<>(superstep, oldVertexValue, superstep + 1, cb.newVertexValue) : null;
             return new Tuple3<>(superstep + 1, newVertex, cb.outgoingMessages);
-        }
-
-        private Map<String, ?> previousAggregates(int superstep) {
-            return previousAggregates.computeIfAbsent(superstep, k -> {
-                try {
-                    String path = ZKPaths.makePath(ZKUtils.aggregatePath(applicationId, superstep - 1), "all");
-                    if (curator.checkExists().forPath(path) == null) {
-                        return new HashMap<>();
-                    }
-                    byte[] data = curator.getData().forPath(path);
-                    return data.length > 0 ? KryoUtils.deserialize(data) : new HashMap<>();
-                } catch (Exception e) {
-                    throw toRuntimeException(e);
-                }
-            });
-        }
-
-        private Map<String, Aggregator<?>> aggregators(K vertex, int superstep) {
-            int partition = vertexToPartition(vertex, serialized.keySerde().serializer(), numPartitions);
-            Map<Integer, Map<String, Aggregator<?>>> stepAggregators =
-                aggregators.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
-            return stepAggregators.computeIfAbsent(partition, k -> newAggregators());
         }
 
         @Override
@@ -716,6 +728,9 @@ public class PregelComputation<K, VV, EV, Message> {
             if (vertices.isEmpty()) {
                 log.debug("removing vertex {} for partition {}", vertex, partition);
                 ZKUtils.removeChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.RUNNING, superstep, Stage.SEND), "partition-" + partition);
+                ComputeFunction.Aggregates aggregates = new ComputeFunction.Aggregates(
+                    previousAggregates(superstep), aggregators(partition, superstep));
+                computeFunction.postSuperstep(aggregates);
                 writeAggregate(superstep, partition);
             }
         }

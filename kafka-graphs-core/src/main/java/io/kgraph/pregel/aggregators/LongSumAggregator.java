@@ -28,6 +28,11 @@ public class LongSumAggregator implements Aggregator<Long> {
     }
 
     @Override
+    public void setAggregate(Long value) {
+        this.value = value;
+    }
+
+    @Override
     public void aggregate(Long value) {
         this.value += value;
     }

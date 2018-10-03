@@ -35,6 +35,12 @@ import io.kgraph.pregel.aggregators.Aggregator;
  */
 public interface ComputeFunction<K, VV, EV, Message> {
 
+    default void preSuperstep(Aggregates aggregates) {
+    }
+
+    default void postSuperstep(Aggregates aggregates) {
+    }
+
     /**
      * The function for computing a new vertex value or sending messages to the next superstep.
      *
@@ -50,17 +56,13 @@ public interface ComputeFunction<K, VV, EV, Message> {
                  Iterable<EdgeWithValue<K, EV>> edges,
                  Callback<K, VV, Message> cb);
 
-    final class Callback<K, VV, Message> {
+    class Aggregates {
 
         protected Map<String, ?> previousAggregates;
 
         protected Map<String, Aggregator<?>> aggregators;
 
-        protected VV newVertexValue = null;
-
-        protected final Map<K, Message> outgoingMessages = new HashMap<>();
-
-        public Callback(Map<String, ?> previousAggregates, Map<String, Aggregator<?>> aggregators) {
+        public Aggregates(Map<String, ?> previousAggregates, Map<String, Aggregator<?>> aggregators) {
             this.previousAggregates = previousAggregates;
             this.aggregators = aggregators;
         }
@@ -73,6 +75,17 @@ public interface ComputeFunction<K, VV, EV, Message> {
         @SuppressWarnings("unchecked")
         public final <T> Aggregator<T> aggregator(String name) {
             return (Aggregator<T>) aggregators.get(name);
+        }
+    }
+
+    final class Callback<K, VV, Message> extends Aggregates {
+
+        protected VV newVertexValue = null;
+
+        protected final Map<K, Message> outgoingMessages = new HashMap<>();
+
+        public Callback(Map<String, ?> previousAggregates, Map<String, Aggregator<?>> aggregators) {
+            super(previousAggregates, aggregators);
         }
 
         public final void sendMessageTo(K target, Message m) {

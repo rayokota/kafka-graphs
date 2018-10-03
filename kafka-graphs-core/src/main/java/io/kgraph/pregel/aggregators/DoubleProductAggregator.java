@@ -28,6 +28,11 @@ public class DoubleProductAggregator implements Aggregator<Double> {
     }
 
     @Override
+    public void setAggregate(Double value) {
+        this.value = value;
+    }
+
+    @Override
     public void aggregate(Double value) {
         this.value *= value;
     }
