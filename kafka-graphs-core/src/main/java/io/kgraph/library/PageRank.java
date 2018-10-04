@@ -89,6 +89,7 @@ public class PageRank<K> extends PregelGraphAlgorithm<K, Tuple2<Double, Double>,
     public final class PageRankComputeFunction implements ComputeFunction<K, Tuple2<Double, Double>,
         Double, Double> {
 
+        @Override
         public void compute(
             int superstep,
             VertexWithValue<K, Tuple2<Double, Double>> vertex,

@@ -75,6 +75,7 @@ public class LabelPropagation<EV> extends PregelGraphAlgorithm<Long, Long, EV, M
 
     public final class LPComputeFunction implements ComputeFunction<Long, Long, EV, Map<Long, Long>> {
 
+        @Override
         public void compute(
             int superstep,
             VertexWithValue<Long, Long> vertex,

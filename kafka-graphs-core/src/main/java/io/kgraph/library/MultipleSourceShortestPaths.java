@@ -79,6 +79,7 @@ public class MultipleSourceShortestPaths extends PregelGraphAlgorithm<Long, Map<
     public final class MSSPComputeFunction implements ComputeFunction<Long, Map<Long, Double>, Double,
         Map<Long, Double>> {
 
+        @Override
         public void compute(
             int superstep,
             VertexWithValue<Long, Map<Long, Double>> vertex,

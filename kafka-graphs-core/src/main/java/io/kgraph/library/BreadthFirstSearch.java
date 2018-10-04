@@ -87,6 +87,7 @@ public class BreadthFirstSearch<K, EV> extends PregelGraphAlgorithm<K, Long, EV,
 
     public final class BFSComputeFunction implements ComputeFunction<K, Long, EV, Long> {
 
+        @Override
         public void compute(
             int superstep,
             VertexWithValue<K, Long> vertex,

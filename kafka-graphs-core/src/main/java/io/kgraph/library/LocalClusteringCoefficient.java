@@ -81,6 +81,7 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
 
     public final class LCCComputeFunction implements ComputeFunction<Long, Double, Double, LCCMessage> {
 
+        @Override
         public void compute(
             int superstep,
             VertexWithValue<Long, Double> vertex,

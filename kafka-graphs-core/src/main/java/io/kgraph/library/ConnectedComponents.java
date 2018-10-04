@@ -86,6 +86,7 @@ public class ConnectedComponents<EV> extends PregelGraphAlgorithm<Long, Long, EV
 
     public final class CCComputeFunction implements ComputeFunction<Long, Long, EV, Long> {
 
+        @Override
         public void compute(
             int superstep,
             VertexWithValue<Long, Long> vertex,

@@ -76,6 +76,7 @@ public class SingleSourceShortestPaths extends PregelGraphAlgorithm<Long, Double
 
     public final class SSSPComputeFunction implements ComputeFunction<Long, Double, Double, Double> {
 
+        @Override
         public void compute(
             int superstep,
             VertexWithValue<Long, Double> vertex,
