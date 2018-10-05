@@ -18,7 +18,6 @@
 
 package io.kgraph.library;
 
-import java.util.Map;
 import java.util.Optional;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -80,13 +79,13 @@ public class SingleSourceShortestPaths extends PregelGraphAlgorithm<Long, Double
         public void compute(
             int superstep,
             VertexWithValue<Long, Double> vertex,
-            Map<Long, Double> messages,
+            Iterable<Double> messages,
             Iterable<EdgeWithValue<Long, Double>> edges,
             Callback<Long, Double, Double> cb) {
 
             double minDistance = (vertex.id().equals(srcVertexId)) ? 0d : Double.POSITIVE_INFINITY;
 
-            for (Double message : messages.values()) {
+            for (Double message : messages) {
                 minDistance = Math.min(minDistance, message);
             }
 
