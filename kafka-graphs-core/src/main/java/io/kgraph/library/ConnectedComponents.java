@@ -90,13 +90,13 @@ public class ConnectedComponents<EV> extends PregelGraphAlgorithm<Long, Long, EV
         public void compute(
             int superstep,
             VertexWithValue<Long, Long> vertex,
-            Map<Long, Long> messages,
+            Iterable<Long> messages,
             Iterable<EdgeWithValue<Long, EV>> edges,
             Callback<Long, Long, Long> cb) {
 
             Long currentValue = vertex.value();
 
-            for (Long message : messages.values()) {
+            for (Long message : messages) {
                 currentValue = Math.min(currentValue, message);
             }
 

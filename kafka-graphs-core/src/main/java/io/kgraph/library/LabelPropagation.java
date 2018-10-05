@@ -79,14 +79,14 @@ public class LabelPropagation<EV> extends PregelGraphAlgorithm<Long, Long, EV, M
         public void compute(
             int superstep,
             VertexWithValue<Long, Long> vertex,
-            Map<Long, Map<Long, Long>> messages,
+            Iterable<Map<Long, Long>> messages,
             Iterable<EdgeWithValue<Long, EV>> edges,
             Callback<Long, Long, Map<Long, Long>> cb) {
 
             Long vertexValue = vertex.value();
 
             Map<Long, Long> counts = new TreeMap<>();
-            for (Map<Long, Long> message : messages.values()) {
+            for (Map<Long, Long> message : messages) {
                 message.forEach((k, v) -> counts.merge(k, v, (v1, v2) -> v1 + v2));
             }
             if (!counts.isEmpty()) {

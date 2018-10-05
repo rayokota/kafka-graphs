@@ -83,14 +83,14 @@ public class MultipleSourceShortestPaths extends PregelGraphAlgorithm<Long, Map<
         public void compute(
             int superstep,
             VertexWithValue<Long, Map<Long, Double>> vertex,
-            Map<Long, Map<Long, Double>> messages,
+            Iterable<Map<Long, Double>> messages,
             Iterable<EdgeWithValue<Long, Double>> edges,
             Callback<Long, Map<Long, Double>, Map<Long, Double>> cb) {
 
             Map<Long, Double> minDistance = landmarkVertexIds.stream().collect(Collectors.toMap(id -> id,
                 id -> vertex.id().equals(id) ? 0d : Double.POSITIVE_INFINITY));
 
-            for (Map<Long, Double> message : messages.values()) {
+            for (Map<Long, Double> message : messages) {
                 message.forEach((k, v) -> minDistance.merge(k, v, Math::min));
             }
             vertex.value().forEach((k, v) -> minDistance.merge(k, v, Math::min));

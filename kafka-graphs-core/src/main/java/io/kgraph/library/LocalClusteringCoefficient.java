@@ -85,11 +85,11 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
         public void compute(
             int superstep,
             VertexWithValue<Long, Double> vertex,
-            Map<Long, LCCMessage> messages,
+            Iterable<LCCMessage> messages,
             Iterable<EdgeWithValue<Long, Double>> edges,
             Callback<Long, Double, LCCMessage> cb
         ) {
-            log.debug("step {} vertex {} value {} nummsgs {}", superstep, vertex.id(), vertex.value(), messages.size());
+            log.debug("step {} vertex {} value {}", superstep, vertex.id(), vertex.value());
 
             if (superstep == 0) {
                 LCCMessage message = new LCCMessage(vertex.id());
@@ -100,13 +100,13 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
                 // Send to self to keep active
                 cb.sendMessageTo(vertex.id(), message);
             } else if (superstep == 1) {
-                Set<Long> neighbors = neighbors(vertex.id(), edges, messages.values());
+                Set<Long> neighbors = neighbors(vertex.id(), edges, messages);
                 sendConnectionInquiries(vertex.id(), neighbors, cb);
                 cb.setNewVertexValue((double) neighbors.size());
             } else if (superstep == 2) {
-                sendConnectionReplies(vertex.id(), edges, messages.values(), cb);
+                sendConnectionReplies(vertex.id(), edges, messages, cb);
             } else if (superstep == 3) {
-                cb.setNewVertexValue(computeLCC(vertex.value(), messages.values()));
+                cb.setNewVertexValue(computeLCC(vertex.value(), messages));
             }
         }
 

@@ -91,7 +91,7 @@ public class BreadthFirstSearch<K, EV> extends PregelGraphAlgorithm<K, Long, EV,
         public void compute(
             int superstep,
             VertexWithValue<K, Long> vertex,
-            Map<K, Long> messages,
+            Iterable<Long> messages,
             Iterable<EdgeWithValue<K, EV>> edges,
             Callback<K, Long, Long> cb
         ) {

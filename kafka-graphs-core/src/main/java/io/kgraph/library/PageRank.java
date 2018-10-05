@@ -93,7 +93,7 @@ public class PageRank<K> extends PregelGraphAlgorithm<K, Tuple2<Double, Double>,
         public void compute(
             int superstep,
             VertexWithValue<K, Tuple2<Double, Double>> vertex,
-            Map<K, Double> messages,
+            Iterable<Double> messages,
             Iterable<EdgeWithValue<K, Double>> edges,
             Callback<K, Tuple2<Double, Double>, Double> cb) {
 
@@ -101,7 +101,7 @@ public class PageRank<K> extends PregelGraphAlgorithm<K, Tuple2<Double, Double>,
             double oldDelta = vertex.value()._2;
 
             double messageSum = 0.0;
-            for (Double message : messages.values()) {
+            for (Double message : messages) {
                 messageSum += message;
             }
 
@@ -110,7 +110,7 @@ public class PageRank<K> extends PregelGraphAlgorithm<K, Tuple2<Double, Double>,
                 ? 1.0 : oldPageRank + (1.0 - resetProbability) * messageSum;
             double newDelta = newPageRank - oldPageRank;
 
-            log.debug("step {} vertex {} sum {} nummsgs {}", superstep, vertex.id(), messageSum, messages.size());
+            log.debug("step {} vertex {} sum {}", superstep, vertex.id(), messageSum);
             log.debug("old ({},{})", oldPageRank, oldDelta);
             log.debug("new ({},{})", newPageRank, newDelta);
             log.debug("msgs {}", messages);
