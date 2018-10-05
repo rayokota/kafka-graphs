@@ -190,7 +190,7 @@ public class PregelComputation<K, VV, EV, Message> {
     public void prepare(StreamsBuilder builder, Properties streamsConfig) {
         this.streamsConfig = streamsConfig;
 
-        final StoreBuilder<KeyValueStore<Integer, Map<K, List<Tuple2<K, Message>>>>> workSetStoreBuilder =
+        final StoreBuilder<KeyValueStore<Integer, Map<K, Map<K, Message>>>> workSetStoreBuilder =
             Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore(localworkSetStoreName),
                 Serdes.Integer(), new KryoSerde<>()
             );
@@ -249,11 +249,11 @@ public class PregelComputation<K, VV, EV, Message> {
             // 0th iteration does not count as it just sets up the initial message
             .filter((K k, Tuple3<Integer, K, Message> v) -> v._1 <= maxIterations);
 
-        KStream<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, List<Tuple2<K, Message>>>> workSetWithEdges = workSet
+        KStream<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, Map<K, Message>>> workSetWithEdges = workSet
             .transform(BarrierSync::new, edgesGroupedBySource.queryableStoreName(), localworkSetStoreName)
             .peek((k, v) -> log.trace("workset 2 after join: (" + k + ", " + v + ")"));
 
-        KStream<K, Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, List<Tuple2<K, Message>>>> superstepComputation =
+        KStream<K, Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, Message>>> superstepComputation =
             workSetWithEdges
                 .transformValues(VertexComputeUdf::new, localSolutionSetStoreName, vertices.queryableStoreName());
 
@@ -266,7 +266,7 @@ public class PregelComputation<K, VV, EV, Message> {
             .to(solutionSetTopic, Produced.with(serialized.keySerde(), new KryoSerde<>()));
 
         // Compute the inbox of each vertex for the next step (new workset)
-        KStream<K, Tuple2<Integer, List<Tuple2<K, Message>>>> newworkSet = superstepComputation
+        KStream<K, Tuple2<Integer, Map<K, Message>>> newworkSet = superstepComputation
             .mapValues(v -> new Tuple2<>(v._1, v._3))
             .peek((k, v) -> log.trace("workset new: (" + k + ", " + v + ")"));
 
@@ -343,10 +343,10 @@ public class PregelComputation<K, VV, EV, Message> {
 
     private final class BarrierSync
         implements Transformer<K, Tuple3<Integer, K, Message>,
-        KeyValue<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, List<Tuple2<K, Message>>>>> {
+        KeyValue<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, Map<K, Message>>>> {
 
         private ProcessorContext context;
-        private KeyValueStore<Integer, Map<K, List<Tuple2<K, Message>>>> localworkSetStore;
+        private KeyValueStore<Integer, Map<K, Map<K, Message>>> localworkSetStore;
         private KeyValueStore<K, Iterable<EdgeWithValue<K, EV>>> edgesStore;
         private Consumer<byte[], byte[]> internalConsumer;
         private LeaderLatch leaderLatch;
@@ -363,7 +363,7 @@ public class PregelComputation<K, VV, EV, Message> {
         public void init(final ProcessorContext context) {
             try {
                 this.context = context;
-                this.localworkSetStore = (KeyValueStore<Integer, Map<K, List<Tuple2<K, Message>>>>) context.getStateStore(localworkSetStoreName);
+                this.localworkSetStore = (KeyValueStore<Integer, Map<K, Map<K, Message>>>) context.getStateStore(localworkSetStoreName);
                 this.edgesStore = (KeyValueStore<K, Iterable<EdgeWithValue<K, EV>>>) context.getStateStore(edgesGroupedBySource.queryableStoreName());
                 this.internalConsumer = internalConsumer(context);
 
@@ -464,7 +464,7 @@ public class PregelComputation<K, VV, EV, Message> {
                             }
                         } else if (pregelState.stage() == Stage.SEND) {
                             if (ZKUtils.isReady(curator, applicationId, pregelState)) {
-                                Map<K, List<Tuple2<K, Message>>> messages = localworkSetStore.get(pregelState.superstep());
+                                Map<K, Map<K, Message>> messages = localworkSetStore.get(pregelState.superstep());
                                 if (hasVerticesToForward(messages)) {
                                     // This check is to ensure we have all messages produced in the last stage;
                                     // we may get new messages as well but that is fine
@@ -516,9 +516,9 @@ public class PregelComputation<K, VV, EV, Message> {
             ZKUtils.addChild(curator, rootPath, "all", CreateMode.PERSISTENT, KryoUtils.serialize(newAggregates));
         }
 
-        private boolean hasVerticesToForward(Map<K, List<Tuple2<K, Message>>> messages) {
+        private boolean hasVerticesToForward(Map<K, Map<K, Message>> messages) {
             if (messages == null) return false;
-            for (Map.Entry<K, List<Tuple2<K, Message>>> entry : messages.entrySet()) {
+            for (Map.Entry<K, Map<K, Message>> entry : messages.entrySet()) {
                 Set<K> forwarded = forwardedVertices.get(pregelState.superstep());
                 if (forwarded == null || !forwarded.contains(entry.getKey())) {
                     return true;
@@ -527,9 +527,9 @@ public class PregelComputation<K, VV, EV, Message> {
             return false;
         }
 
-        private void forwardVertices(ProcessorContext context, Map<K, List<Tuple2<K, Message>>> messages) {
-            List<Map.Entry<K, List<Tuple2<K, Message>>>> toForward = new ArrayList<>();
-            for (Map.Entry<K, List<Tuple2<K, Message>>> entry : messages.entrySet()) {
+        private void forwardVertices(ProcessorContext context, Map<K, Map<K, Message>> messages) {
+            List<Map.Entry<K, Map<K, Message>>> toForward = new ArrayList<>();
+            for (Map.Entry<K, Map<K, Message>> entry : messages.entrySet()) {
                 Set<K> forwarded = forwardedVertices.computeIfAbsent(pregelState.superstep(), k -> new HashSet<>());
                 if (!forwarded.contains(entry.getKey())) {
                     forwarded.add(entry.getKey());
@@ -537,14 +537,14 @@ public class PregelComputation<K, VV, EV, Message> {
                     toForward.add(entry);
                 }
             }
-            for (Map.Entry<K, List<Tuple2<K, Message>>> entry : toForward) {
+            for (Map.Entry<K, Map<K, Message>> entry : toForward) {
                 Iterable<EdgeWithValue<K, EV>> edges = edgesStore.get(entry.getKey());
                 context.forward(entry.getKey(), new Tuple3<>(pregelState.superstep(), edges, entry.getValue()));
             }
             context.commit();
         }
 
-        private void activateVertex(Map.Entry<K, List<Tuple2<K, Message>>> entry) {
+        private void activateVertex(Map.Entry<K, Map<K, Message>> entry) {
             int partition = vertexToPartition(entry.getKey(), serialized.keySerde().serializer(), numPartitions);
             Map<Integer, Set<K>> active = activeVertices.computeIfAbsent(
                 pregelState.superstep(), k -> new ConcurrentHashMap<>());
@@ -554,17 +554,17 @@ public class PregelComputation<K, VV, EV, Message> {
         }
 
         @Override
-        public KeyValue<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, List<Tuple2<K, Message>>>> transform(
+        public KeyValue<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, Map<K, Message>>> transform(
             final K readOnlyKey, final Tuple3<Integer, K, Message> value
         ) {
 
-            Map<K, List<Tuple2<K, Message>>> messages = localworkSetStore.get(value._1);
+            Map<K, Map<K, Message>> messages = localworkSetStore.get(value._1);
             if (messages == null) {
                 messages = new HashMap<>();
             }
-            List<Tuple2<K, Message>> messagesForSuperstep = messages.computeIfAbsent(readOnlyKey, k -> new ArrayList<>());
+            Map<K, Message> messagesForSuperstep = messages.computeIfAbsent(readOnlyKey, k -> new HashMap<>());
             if (value._3 != null) {
-                messagesForSuperstep.add(new Tuple2<>(value._2, value._3));
+                messagesForSuperstep.put(value._2, value._3);
             }
             localworkSetStore.put(value._1, messages);
 
@@ -576,7 +576,7 @@ public class PregelComputation<K, VV, EV, Message> {
             return null;
         }
 
-        public KeyValue<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, List<Tuple2<K, Message>>>> punctuate(long i) {
+        public KeyValue<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, Map<K, Message>>> punctuate(long i) {
             return null;
         }
 
@@ -609,8 +609,8 @@ public class PregelComputation<K, VV, EV, Message> {
     }
 
     private final class VertexComputeUdf
-        implements ValueTransformerWithKey<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, List<Tuple2<K, Message>>>,
-        Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, List<Tuple2<K, Message>>>> {
+        implements ValueTransformerWithKey<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, Map<K, Message>>,
+        Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, Message>>> {
 
         private KeyValueStore<K, Tuple4<Integer, VV, Integer, VV>> localSolutionSetStore;
         private ReadOnlyKeyValueStore<K, VV> verticesStore;
@@ -623,8 +623,8 @@ public class PregelComputation<K, VV, EV, Message> {
         }
 
         @Override
-        public Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, List<Tuple2<K, Message>>> transform(
-            final K readOnlyKey, final Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, List<Tuple2<K, Message>>> value
+        public Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, Message>> transform(
+            final K readOnlyKey, final Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, Map<K, Message>> value
         ) {
 
             int superstep = value._1;
@@ -637,8 +637,8 @@ public class PregelComputation<K, VV, EV, Message> {
                 }
                 vertex = new Tuple4<>(-1, vertexValue, 0, vertexValue);
             }
-            List<Tuple2<K, Message>> messages = value._3;
-            Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, List<Tuple2<K, Message>>> result =
+            Map<K, Message> messages = value._3;
+            Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, Message>> result =
                 apply(superstep, readOnlyKey, vertex, messages, edgesIter);
             if (result._2 != null) {
                 localSolutionSetStore.put(readOnlyKey, result._2);
@@ -646,11 +646,11 @@ public class PregelComputation<K, VV, EV, Message> {
             return result;
         }
 
-        private Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, List<Tuple2<K, Message>>> apply(
+        private Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, Message>> apply(
             int superstep,
             K key,
             Tuple4<Integer, VV, Integer, VV> vertex,
-            List<Tuple2<K, Message>> incomingMessages,
+            Map<K, Message> incomingMessages,
             Iterable<EdgeWithValue<K, EV>> edges
         ) {
             // Find the value that applies to this step
@@ -668,8 +668,7 @@ public class PregelComputation<K, VV, EV, Message> {
 
             ComputeFunction.Callback<K, VV, Message> cb = new ComputeFunction.Callback<>(
                 previousAggregates(superstep), aggregators(partition, superstep));
-            Iterable<Message> messages = incomingMessages.stream().map(Tuple2::_2).collect(Collectors.toList());
-            computeFunction.compute(superstep, new VertexWithValue<>(key, oldVertexValue), messages, edges, cb);
+            computeFunction.compute(superstep, new VertexWithValue<>(key, oldVertexValue), incomingMessages, edges, cb);
             Tuple4<Integer, VV, Integer, VV> newVertex = cb.newVertexValue != null
                 ? new Tuple4<>(superstep, oldVertexValue, superstep + 1, cb.newVertexValue) : null;
             return new Tuple3<>(superstep + 1, newVertex, cb.outgoingMessages);
@@ -680,7 +679,7 @@ public class PregelComputation<K, VV, EV, Message> {
         }
     }
 
-    private final class SendMessages implements Processor<K, Tuple2<Integer, List<Tuple2<K, Message>>>> {
+    private final class SendMessages implements Processor<K, Tuple2<Integer, Map<K, Message>>> {
 
         private Producer<K, Tuple3<Integer, K, Message>> producer;
 
@@ -694,18 +693,18 @@ public class PregelComputation<K, VV, EV, Message> {
         }
 
         @Override
-        public void process(final K readOnlyKey, final Tuple2<Integer, List<Tuple2<K, Message>>> value) {
+        public void process(final K readOnlyKey, final Tuple2<Integer, Map<K, Message>> value) {
 
             try {
-                for (Tuple2<K, Message> entry : value._2) {
-                    Tuple3<Integer, K, Message> message = new Tuple3<>(value._1, readOnlyKey, entry._2);
+                for (Map.Entry<K, Message> entry : value._2.entrySet()) {
+                    Tuple3<Integer, K, Message> message = new Tuple3<>(value._1, readOnlyKey, entry.getValue());
                     ProducerRecord<K, Tuple3<Integer, K, Message>> producerRecord =
-                        new ProducerRecord<>(workSetTopic, entry._1, message);
+                        new ProducerRecord<>(workSetTopic, entry.getKey(), message);
                     producer.send(producerRecord, (metadata, error) -> {
                         if (error == null) {
                             try {
-                                int p = vertexToPartition(entry._1, serialized.keySerde().serializer(), numPartitions);
-                                log.debug("adding vertex {} for partition {}", entry._1, p);
+                                int p = vertexToPartition(entry.getKey(), serialized.keySerde().serializer(), numPartitions);
+                                log.debug("adding vertex {} for partition {}", entry.getKey(), p);
                                 ZKUtils.addChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.RUNNING, value._1, Stage.SEND), "partition-" + p);
                             } catch (Exception e) {
                                 throw toRuntimeException(e);

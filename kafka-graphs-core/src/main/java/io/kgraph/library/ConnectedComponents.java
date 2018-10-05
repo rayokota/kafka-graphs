@@ -18,6 +18,7 @@
 
 package io.kgraph.library;
 
+import java.util.Map;
 import java.util.Optional;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -89,13 +90,13 @@ public class ConnectedComponents<EV> extends PregelGraphAlgorithm<Long, Long, EV
         public void compute(
             int superstep,
             VertexWithValue<Long, Long> vertex,
-            Iterable<Long> messages,
+            Map<Long, Long> messages,
             Iterable<EdgeWithValue<Long, EV>> edges,
             Callback<Long, Long, Long> cb) {
 
             Long currentValue = vertex.value();
 
-            for (Long message : messages) {
+            for (Long message : messages.values()) {
                 currentValue = Math.min(currentValue, message);
             }
 

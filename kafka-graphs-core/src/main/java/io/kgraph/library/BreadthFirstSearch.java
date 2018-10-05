@@ -18,6 +18,7 @@
 
 package io.kgraph.library;
 
+import java.util.Map;
 import java.util.Optional;
 
 import org.apache.curator.framework.CuratorFramework;
@@ -90,7 +91,7 @@ public class BreadthFirstSearch<K, EV> extends PregelGraphAlgorithm<K, Long, EV,
         public void compute(
             int superstep,
             VertexWithValue<K, Long> vertex,
-            Iterable<Long> messages,
+            Map<K, Long> messages,
             Iterable<EdgeWithValue<K, EV>> edges,
             Callback<K, Long, Long> cb
         ) {
