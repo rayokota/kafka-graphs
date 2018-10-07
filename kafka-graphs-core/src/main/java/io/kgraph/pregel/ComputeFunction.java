@@ -37,10 +37,10 @@ import io.kgraph.pregel.aggregators.Aggregator;
  */
 public interface ComputeFunction<K, VV, EV, Message> {
 
-    default void preSuperstep(Aggregates aggregates) {
+    default void preSuperstep(Aggregators aggregates) {
     }
 
-    default void postSuperstep(Aggregates aggregates) {
+    default void postSuperstep(Aggregators aggregates) {
     }
 
     /**
@@ -58,29 +58,33 @@ public interface ComputeFunction<K, VV, EV, Message> {
                  Iterable<EdgeWithValue<K, EV>> edges,
                  Callback<K, VV, Message> cb);
 
-    class Aggregates {
+    class Aggregators {
 
-        protected Map<String, ?> previousAggregates;
+        protected final Map<String, ?> previousAggregates;
 
-        protected Map<String, Aggregator<?>> aggregators;
+        protected final Map<String, Aggregator<?>> aggregators;
 
-        public Aggregates(Map<String, ?> previousAggregates, Map<String, Aggregator<?>> aggregators) {
+        public Aggregators(Map<String, ?> previousAggregates, Map<String, Aggregator<?>> aggregators) {
             this.previousAggregates = previousAggregates;
             this.aggregators = aggregators;
         }
 
         @SuppressWarnings("unchecked")
-        public final <T> T previousAggregate(String name) {
+        public final <T> T getAggregatedValue(String name) {
             return (T) previousAggregates.get(name);
         }
 
+        public final <T> void aggregate(String name, T value) {
+            aggregator(name).aggregate(value);
+        }
+
         @SuppressWarnings("unchecked")
-        public final <T> Aggregator<T> aggregator(String name) {
+        private <T> Aggregator<T> aggregator(String name) {
             return (Aggregator<T>) aggregators.get(name);
         }
     }
 
-    final class Callback<K, VV, Message> extends Aggregates {
+    final class Callback<K, VV, Message> extends Aggregators {
 
         protected VV newVertexValue = null;
 

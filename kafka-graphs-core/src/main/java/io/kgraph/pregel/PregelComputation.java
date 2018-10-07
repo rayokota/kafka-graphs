@@ -660,9 +660,9 @@ public class PregelComputation<K, VV, EV, Message> {
             Map<Integer, Boolean> didFlags = didPreSuperstep.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
             Boolean flag = didFlags.get(partition);
             if (flag == null || !flag) {
-                ComputeFunction.Aggregates aggregates = new ComputeFunction.Aggregates(
+                ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), aggregators(partition, superstep));
-                computeFunction.preSuperstep(aggregates);
+                computeFunction.preSuperstep(aggregators);
                 didFlags.put(partition, true);
             }
 
@@ -729,9 +729,9 @@ public class PregelComputation<K, VV, EV, Message> {
             if (vertices.isEmpty()) {
                 log.debug("removing vertex {} for partition {}", vertex, partition);
                 ZKUtils.removeChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.RUNNING, superstep, Stage.SEND), "partition-" + partition);
-                ComputeFunction.Aggregates aggregates = new ComputeFunction.Aggregates(
+                ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), aggregators(partition, superstep));
-                computeFunction.postSuperstep(aggregates);
+                computeFunction.postSuperstep(aggregators);
                 writeAggregate(superstep, partition);
             }
         }
