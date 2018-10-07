@@ -662,7 +662,7 @@ public class PregelComputation<K, VV, EV, Message> {
             if (flag == null || !flag) {
                 ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), aggregators(partition, superstep));
-                computeFunction.preSuperstep(aggregators);
+                computeFunction.preSuperstep(superstep, aggregators);
                 didFlags.put(partition, true);
             }
 
@@ -731,7 +731,7 @@ public class PregelComputation<K, VV, EV, Message> {
                 ZKUtils.removeChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.RUNNING, superstep, Stage.SEND), "partition-" + partition);
                 ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), aggregators(partition, superstep));
-                computeFunction.postSuperstep(aggregators);
+                computeFunction.postSuperstep(superstep, aggregators);
                 writeAggregate(superstep, partition);
             }
         }

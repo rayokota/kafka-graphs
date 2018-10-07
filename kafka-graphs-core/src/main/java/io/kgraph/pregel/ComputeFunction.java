@@ -37,10 +37,10 @@ import io.kgraph.pregel.aggregators.Aggregator;
  */
 public interface ComputeFunction<K, VV, EV, Message> {
 
-    default void preSuperstep(Aggregators aggregates) {
+    default void preSuperstep(int superstep, Aggregators aggregates) {
     }
 
-    default void postSuperstep(Aggregators aggregates) {
+    default void postSuperstep(int superstep, Aggregators aggregates) {
     }
 
     /**
