@@ -54,7 +54,7 @@ import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.common.utils.Utils;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.Consumed;
+import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
@@ -379,7 +379,7 @@ public class PregelComputation<K, VV, EV, Message> {
                 sharedValue.start();
 
                 // TODO make interval configurable
-                this.context.schedule(250, PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
+                this.context.schedule(500, PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
                     try {
                         pregelState = PregelState.fromBytes(sharedValue.getValue());
 

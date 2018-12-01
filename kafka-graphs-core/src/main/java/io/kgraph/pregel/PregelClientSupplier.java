@@ -52,11 +52,9 @@ public class PregelClientSupplier implements KafkaClientSupplier {
         return defaultSupplier.getRestoreConsumer(config);
     }
 
-    /*
     @Override
     public Consumer<byte[], byte[]> getGlobalConsumer(final Map<String, Object> config) {
         Consumer<byte[], byte[]> consumer = new PregelConsumer(defaultSupplier.getGlobalConsumer(config));
         return consumer;
     }
-    */
 }
