@@ -300,13 +300,14 @@ public class PregelComputation<K, VV, EV, Message> {
 
     protected Map<String, Aggregator<?>> newAggregators() {
         Set<Map.Entry<String, Class<? extends Aggregator<?>>>> entries = registeredAggregators.entrySet();
-        return entries.stream().collect(Collectors.toConcurrentMap(Map.Entry::getKey, entry -> {
-            try {
-                return entry.getValue().newInstance();
-            } catch (Exception e) {
-                throw toRuntimeException(e);
-            }
-        }));
+        return entries.stream()
+            .collect(Collectors.toConcurrentMap(Map.Entry::getKey, entry -> {
+                try {
+                    return entry.getValue().newInstance();
+                } catch (Exception e) {
+                    throw toRuntimeException(e);
+                }
+            }));
     }
 
     @SuppressWarnings("unchecked")
@@ -392,6 +393,7 @@ public class PregelComputation<K, VV, EV, Message> {
                                 } else {
                                     log.info("Pregel computation converged after {} iterations", pregelState.superstep());
                                 }
+                                this.context.commit();
                                 futureResult.complete(result());
                             }
                             return;
@@ -439,8 +441,8 @@ public class PregelComputation<K, VV, EV, Message> {
                                 if (!ZKUtils.hasChild(curator, applicationId, pregelState, workerName)) {
                                     Set<TopicPartition> workSetTps = localPartitions(internalConsumer, workSetTopic);
                                     Set<TopicPartition> solutionSetTps = localPartitions(internalConsumer, solutionSetTopic);
-                                    if (isTopicSynced(internalConsumer, verticesTopic)
-                                        && isTopicSynced(internalConsumer, edgesGroupedBySourceTopic)) {
+                                    if (isTopicSynced(internalConsumer, verticesTopic, 0)
+                                        && isTopicSynced(internalConsumer, edgesGroupedBySourceTopic, 0)) {
                                         ZKUtils.addChild(curator, applicationId, pregelState, workerName, CreateMode.EPHEMERAL);
                                         // Ensure vertices and edges are read into tables first
                                         internalConsumer.seekToBeginning(workSetTps);
@@ -457,7 +459,7 @@ public class PregelComputation<K, VV, EV, Message> {
                                 if (!ZKUtils.hasChild(curator, applicationId, pregelState, workerName)) {
                                     // Try to ensure we have all messages; however the consumer may not yet
                                     // be in sync so we do another check in the next stage
-                                    if (isTopicSynced(internalConsumer, workSetTopic)) {
+                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep())) {
                                         ZKUtils.addChild(curator, applicationId, pregelState, workerName, CreateMode.EPHEMERAL);
                                     }
                                 }
@@ -468,8 +470,8 @@ public class PregelComputation<K, VV, EV, Message> {
                                 if (hasVerticesToForward(messages)) {
                                     // This check is to ensure we have all messages produced in the last stage;
                                     // we may get new messages as well but that is fine
-                                    if (isTopicSynced(internalConsumer, workSetTopic)) {
-                                        forwardVertices(context, messages);
+                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep())) {
+                                        forwardVertices(messages);
                                     }
                                 }
 
@@ -527,7 +529,7 @@ public class PregelComputation<K, VV, EV, Message> {
             return false;
         }
 
-        private void forwardVertices(ProcessorContext context, Map<K, Map<K, List<Message>>> messages) {
+        private void forwardVertices(Map<K, Map<K, List<Message>>> messages) {
             List<Map.Entry<K, Map<K, List<Message>>>> toForward = new ArrayList<>();
             for (Map.Entry<K, Map<K, List<Message>>> entry : messages.entrySet()) {
                 Set<K> forwarded = forwardedVertices.computeIfAbsent(pregelState.superstep(), k -> new HashSet<>());
@@ -550,7 +552,7 @@ public class PregelComputation<K, VV, EV, Message> {
                 pregelState.superstep(), k -> new ConcurrentHashMap<>());
             Set<K> vertices = active.computeIfAbsent(partition, k -> ConcurrentHashMap.newKeySet());
             vertices.add(entry.getKey());
-            log.debug("vertex {} for part {} for step {} is active", entry.getKey(), partition, pregelState.superstep());
+            log.debug("vertex {} for partition {} for step {} is active", entry.getKey(), partition, pregelState.superstep());
         }
 
         @Override
@@ -573,10 +575,6 @@ public class PregelComputation<K, VV, EV, Message> {
                 forwarded.remove(readOnlyKey);
             }
 
-            return null;
-        }
-
-        public KeyValue<K, Tuple3<Integer, Iterable<EdgeWithValue<K, EV>>, Map<K, List<Message>>>> punctuate(long i) {
             return null;
         }
 
@@ -668,7 +666,9 @@ public class PregelComputation<K, VV, EV, Message> {
 
             ComputeFunction.Callback<K, VV, Message> cb = new ComputeFunction.Callback<>(
                 previousAggregates(superstep), aggregators(partition, superstep));
-            Iterable<Message> messages = incomingMessages.values().stream().flatMap(List::stream).collect(Collectors.toList());
+            Iterable<Message> messages = incomingMessages.values().stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
             computeFunction.compute(superstep, new VertexWithValue<>(key, oldVertexValue), messages, edges, cb);
             Tuple4<Integer, VV, Integer, VV> newVertex = cb.newVertexValue != null
                 ? new Tuple4<>(superstep, oldVertexValue, superstep + 1, cb.newVertexValue) : null;
@@ -704,8 +704,9 @@ public class PregelComputation<K, VV, EV, Message> {
                     producer.send(producerRecord, (metadata, error) -> {
                         if (error == null) {
                             try {
+                                // Activate partition for next step
                                 int p = vertexToPartition(entry.getKey(), serialized.keySerde().serializer(), numPartitions);
-                                log.debug("adding vertex {} for partition {}", entry.getKey(), p);
+                                log.debug("adding partition {} for vertex {}", p, entry.getKey());
                                 ZKUtils.addChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.RUNNING, value._1, Stage.SEND), "partition-" + p);
                             } catch (Exception e) {
                                 throw toRuntimeException(e);
@@ -714,6 +715,7 @@ public class PregelComputation<K, VV, EV, Message> {
                     });
                 }
                 producer.flush();
+                // Deactivate this vertex
                 deactivateVertex(value._1 - 1, readOnlyKey);
             } catch (Exception e) {
                 throw toRuntimeException(e);
@@ -725,9 +727,10 @@ public class PregelComputation<K, VV, EV, Message> {
             Map<Integer, Set<K>> active = activeVertices.get(superstep);
             Set<K> vertices = active.get(partition);
             vertices.remove(vertex);
-            log.debug("vertex {} for part {} for step {} is NOT active", vertex, partition, superstep);
+            log.debug("vertex {} for partition {} for step {} is NOT active", vertex, partition, superstep);
             if (vertices.isEmpty()) {
-                log.debug("removing vertex {} for partition {}", vertex, partition);
+                // Deactivate partition
+                log.debug("removing partition {} for last vertex {}", partition, vertex);
                 ZKUtils.removeChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.RUNNING, superstep, Stage.SEND), "partition-" + partition);
                 ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), aggregators(partition, superstep));
@@ -745,9 +748,6 @@ public class PregelComputation<K, VV, EV, Message> {
                         CreateMode.PERSISTENT, KryoUtils.serialize(partitionAggregators));
                 }
             }
-        }
-
-        public void punctuate(long i) {
         }
 
         @Override
@@ -775,12 +775,15 @@ public class PregelComputation<K, VV, EV, Message> {
         return (Consumer<byte[], byte[]>) consumerField.get(streamTask);
     }
 
-    @SuppressWarnings("unchecked")
-    private static boolean isTopicSynced(Consumer<byte[], byte[]> consumer, String topic) {
+    private static boolean isTopicSynced(Consumer<byte[], byte[]> consumer, String topic, int superstep) {
         Set<TopicPartition> partitions = localPartitions(consumer, topic);
-        Map<TopicPartition, Long> offsets = consumer.endOffsets(partitions);
         Map<TopicPartition, Long> positions = positions(consumer, partitions);
-        return offsets.equals(positions);
+        Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
+        boolean synced = endOffsets.equals(positions);
+        if (synced) {
+            log.debug("Synced topic {}, step {}, offsets {}", topic, superstep, positions);
+        }
+        return synced;
     }
 
     private static Set<TopicPartition> localPartitions(Consumer<byte[], byte[]> consumer, String topic) {

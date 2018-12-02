@@ -182,7 +182,11 @@ public class GraphUtils {
                 if (scheduledFuture != null) {
                     scheduledFuture.cancel(false);
                 }
-                scheduledFuture = executor.schedule(() -> future.complete(true), 5000, TimeUnit.MILLISECONDS);
+                // Assume stream is done if no activity after 5 seconds
+                scheduledFuture = executor.schedule(() -> {
+                    this.context.commit();
+                    return future.complete(true);
+                }, 5000, TimeUnit.MILLISECONDS);
             });
         }
 
@@ -192,13 +196,8 @@ public class GraphUtils {
         }
 
 
-        public V punctuate(long i) {
-            return null;
-        }
-
         @Override
         public void close() {
         }
     }
-
 }
