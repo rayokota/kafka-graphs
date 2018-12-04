@@ -10,7 +10,7 @@ Releases of Kafka Graphs are deployed to Maven Central.
 <dependency>
     <groupId>io.kgraph</groupId>
     <artifactId>kafka-graphs-core</artifactId>
-    <version>0.2.0</version>
+    <version>0.3.0</version>
 </dependency>
 ```
 ## Creating Graphs
