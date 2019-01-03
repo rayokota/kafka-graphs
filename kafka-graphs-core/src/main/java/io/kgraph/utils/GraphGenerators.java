@@ -37,23 +37,6 @@ import io.vavr.Tuple2;
 
 public class GraphGenerators {
 
-    /*
-    def gridGraph(sc: SparkContext, rows: Int, cols: Int): Graph[(Int, Int), Double] = {
-        // Convert row column address into vertex ids (row major order)
-        def sub2ind(r: Int, c: Int)yy: VertexId = r * cols + c
-
-        val vertices: RDD[(VertexId, (Int, Int))] = sc.parallelize(0 until rows).flatMap { r =>
-            (0 until cols).map( c => (sub2ind(r, c), (r, c)) )
-        }
-        val edges: RDD[Edge[Double]] =
-            vertices.flatMap{ case (vid, (r, c)) =>
-            (if (r + 1 < rows) { Seq( (sub2ind(r, c), sub2ind(r + 1, c))) } else { Seq.empty }) ++
-                (if (c + 1 < cols) { Seq( (sub2ind(r, c), sub2ind(r, c + 1))) } else { Seq.empty })
-        }.map{ case (src, dst) => Edge(src, dst, 1.0) }
-        Graph(vertices, edges)
-    } // end of gridGraph
-    */
-
     public static KGraph<Long, Long, Long> completeGraph(
         StreamsBuilder builder, Properties producerConfig, int numVertices) {
         List<KeyValue<Edge<Long>, Long>> edgeList = new ArrayList<>();
