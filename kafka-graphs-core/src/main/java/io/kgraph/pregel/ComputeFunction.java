@@ -90,6 +90,8 @@ public interface ComputeFunction<K, VV, EV, Message> {
 
         protected final Map<K, List<Message>> outgoingMessages = new HashMap<>();
 
+        protected boolean voteToHalt = false;
+
         public Callback(Map<String, ?> previousAggregates, Map<String, Aggregator<?>> aggregators) {
             super(previousAggregates, aggregators);
         }
@@ -101,6 +103,10 @@ public interface ComputeFunction<K, VV, EV, Message> {
 
         public final void setNewVertexValue(VV vertexValue) {
             newVertexValue = vertexValue;
+        }
+
+        public void voteToHalt() {
+            voteToHalt = true;
         }
     }
 }

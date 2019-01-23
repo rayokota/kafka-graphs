@@ -113,6 +113,8 @@ public class ConnectedComponents<EV> extends PregelGraphAlgorithm<Long, Long, EV
                     cb.sendMessageTo(currentValue, e.target());
                 }
             }
+
+            cb.voteToHalt();
         }
     }
 }

@@ -96,8 +96,6 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
                     log.debug(">>> Vertex {} sent self to {}", vertex.id(), edge.target());
                     cb.sendMessageTo(edge.target(), message);
                 }
-                // Send to self to keep active
-                cb.sendMessageTo(vertex.id(), message);
             } else if (superstep == 1) {
                 Set<Long> neighbors = neighbors(vertex.id(), edges, messages);
                 sendConnectionInquiries(vertex.id(), neighbors, cb);
@@ -106,6 +104,7 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
                 sendConnectionReplies(vertex.id(), edges, messages, cb);
             } else if (superstep == 3) {
                 cb.setNewVertexValue(computeLCC(vertex.value(), messages));
+                cb.voteToHalt();
             }
         }
 
@@ -131,9 +130,6 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
             long sourceVertexId, Set<Long> neighbors,
             Callback<Long, Double, LCCMessage> cb
         ) {
-            // Send to self to keep active
-            cb.sendMessageTo(sourceVertexId, new LCCMessage(sourceVertexId, new long[0]));
-
             if (neighbors.size() <= 1) {
                 log.debug(">>> Vertex {} not sending inquiries to {}", sourceVertexId, neighbors);
                 return;
@@ -167,7 +163,6 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
                     }
                 }
                 log.debug(">>> Vertex {} sent reply {} to {}", vertexId, matchCount, msg.source);
-                // Includes sending to self to keep active
                 cb.sendMessageTo(msg.source, new LCCMessage(matchCount));
             }
         }

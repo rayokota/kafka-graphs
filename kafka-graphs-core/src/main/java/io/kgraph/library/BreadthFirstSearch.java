@@ -110,6 +110,8 @@ public class BreadthFirstSearch<K, EV> extends PregelGraphAlgorithm<K, Long, EV,
                     }
                 }
             }
+
+            cb.voteToHalt();
         }
     }
 }

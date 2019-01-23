@@ -122,6 +122,8 @@ public class PageRank<K> extends PregelGraphAlgorithm<K, Tuple2<Double, Double>,
                     cb.sendMessageTo(edge.target(), newDelta * edge.value());
                 }
             }
+
+            cb.voteToHalt();
         }
     }
 }

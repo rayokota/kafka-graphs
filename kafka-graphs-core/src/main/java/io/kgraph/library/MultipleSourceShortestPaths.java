@@ -106,6 +106,8 @@ public class MultipleSourceShortestPaths extends PregelGraphAlgorithm<Long, Map<
                     cb.sendMessageTo(edge.target(), distance);
                 }
             }
+
+            cb.voteToHalt();
         }
     }
 }

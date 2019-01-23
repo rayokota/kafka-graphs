@@ -99,6 +99,8 @@ public class SingleSourceShortestPaths extends PregelGraphAlgorithm<Long, Double
                     cb.sendMessageTo(edge.target(), distance);
                 }
             }
+
+            cb.voteToHalt();
         }
     }
 }

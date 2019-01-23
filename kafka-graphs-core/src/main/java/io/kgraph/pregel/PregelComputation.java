@@ -672,7 +672,12 @@ public class PregelComputation<K, VV, EV, Message> {
             computeFunction.compute(superstep, new VertexWithValue<>(key, oldVertexValue), messages, edges, cb);
             Tuple4<Integer, VV, Integer, VV> newVertex = cb.newVertexValue != null
                 ? new Tuple4<>(superstep, oldVertexValue, superstep + 1, cb.newVertexValue) : null;
-            return new Tuple3<>(superstep + 1, newVertex, cb.outgoingMessages);
+            Map<K, List<Message>> outgoingMessages = cb.outgoingMessages;
+            if (!cb.voteToHalt) {
+                // Send to self to keep active
+                outgoingMessages.computeIfAbsent(key, k -> new ArrayList<>());
+            }
+            return new Tuple3<>(superstep + 1, newVertex, outgoingMessages);
         }
 
         @Override
@@ -698,6 +703,7 @@ public class PregelComputation<K, VV, EV, Message> {
 
             try {
                 for (Map.Entry<K, List<Message>> entry : value._2.entrySet()) {
+                    // List of messages may be empty in case of sending to self
                     Tuple3<Integer, K, List<Message>> message = new Tuple3<>(value._1, readOnlyKey, entry.getValue());
                     ProducerRecord<K, Tuple3<Integer, K, List<Message>>> producerRecord =
                         new ProducerRecord<>(workSetTopic, entry.getKey(), message);
