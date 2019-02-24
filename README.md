@@ -98,6 +98,8 @@ public final class SSSPComputeFunction
         cb.sendMessageTo(edge.target(), distance);
       }
     }
+    
+    cb.voteToHalt();
   }
 }
 ```
