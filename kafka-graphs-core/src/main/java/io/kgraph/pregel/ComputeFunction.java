@@ -20,10 +20,8 @@ package io.kgraph.pregel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.kafka.streams.state.KeyValueStore;
 
@@ -90,9 +88,9 @@ public interface ComputeFunction<K, VV, EV, Message> {
 
     final class Callback<K, VV, EV, Message> extends Aggregators {
 
-        protected K key;
+        protected final K key;
 
-        protected KeyValueStore<K, Map<K, EV>> edgesStore;
+        protected final KeyValueStore<K, Map<K, EV>> edgesStore;
 
         protected VV newVertexValue = null;
 

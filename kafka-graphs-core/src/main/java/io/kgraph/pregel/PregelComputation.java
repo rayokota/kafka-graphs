@@ -495,7 +495,6 @@ public class PregelComputation<K, VV, EV, Message> {
             }
         }
 
-        @SuppressWarnings("unchecked")
         private void reduceAggregates(int superstep) throws Exception {
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
             Map<String, Aggregator<?>> newAggregators = newAggregators();

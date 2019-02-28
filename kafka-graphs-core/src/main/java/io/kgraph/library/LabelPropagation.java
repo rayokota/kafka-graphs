@@ -90,7 +90,6 @@ public class LabelPropagation<EV> extends PregelGraphAlgorithm<Long, Long, EV, M
                 message.forEach((k, v) -> counts.merge(k, v, (v1, v2) -> v1 + v2));
             }
             if (!counts.isEmpty()) {
-                @SuppressWarnings({"ConstantConditions"})
                 Long maxKey = counts.entrySet().stream()
                     .max((e1, e2) -> (int) (e1.getValue() - e2.getValue() != 0
                         ? e1.getValue() - e2.getValue() : e1.getKey() - e2.getKey())).get().getKey();

@@ -180,7 +180,7 @@ public class ZKUtils {
     protected static String barrierPath(String id, PregelState pregelState) {
         return ZKPaths.makePath(
             PREGEL_PATH + id, BARRIERS,
-            (pregelState.stage() == PregelState.Stage.RECEIVE ? "rcv-" : "snd-") + String.valueOf(pregelState.superstep()));
+            (pregelState.stage() == PregelState.Stage.RECEIVE ? "rcv-" : "snd-") + pregelState.superstep());
     }
 
     private static <K> String base64EncodedString(K key, Serializer<K> serializer) {
