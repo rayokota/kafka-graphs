@@ -139,7 +139,7 @@ public interface ComputeFunction<K, VV, EV, Message> {
             if (edges == null) {
                 return;
             }
-            edges.computeIfPresent(target, (k, v) -> value);
+            edges.replace(target, value);
             edgesStore.put(key, edges);
         }
 
