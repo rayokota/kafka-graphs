@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -30,6 +31,8 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
@@ -49,6 +52,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.kgraph.Edge;
+import io.kgraph.EdgeWithValue;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
 
@@ -149,6 +153,8 @@ public class GraphUtils {
             .to(verticesTopic, Produced.with(graph.keySerde(), graph.vertexValueSerde()));
         graph.edgesGroupedBySource()
             .toStream()
+            .mapValues(v -> StreamSupport.stream(v.spliterator(), false)
+                .collect(Collectors.toMap(EdgeWithValue::target, EdgeWithValue::value)))
             .transformValues(() -> new EndOfBatchCheck<>(edgesFuture))
             .to(edgesGroupedBySourceTopic, Produced.with(graph.keySerde(), new KryoSerde<>()));
 

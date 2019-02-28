@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.kgraph.library;
+package io.kgraph.library.basic;
 
 import java.util.Optional;
 
@@ -30,83 +30,74 @@ import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.ComputeFunction;
 import io.kgraph.pregel.PregelGraphAlgorithm;
 
-/**
- * Adapted from the Graphalytics implementation.
- */
-public class BreadthFirstSearch<K, EV> extends PregelGraphAlgorithm<K, Long, EV, Long> {
-    private static final Logger log = LoggerFactory.getLogger(BreadthFirstSearch.class);
+public class ReverseEdges<K, VV, EV> extends PregelGraphAlgorithm<K, VV, EV, EdgeWithValue<K, EV>> {
+    private static final Logger log = LoggerFactory.getLogger(ReverseEdges.class);
 
-    public static final long UNVISITED = Long.MAX_VALUE;
-
-    private final long srcVertexId;
-
-    public BreadthFirstSearch(
+    public ReverseEdges(
         String hostAndPort,
         String applicationId,
         String bootstrapServers,
         CuratorFramework curator,
         String verticesTopic,
         String edgesGroupedBySourceTopic,
-        GraphSerialized<K, Long, EV> serialized,
+        GraphSerialized<K, VV, EV> serialized,
         int numPartitions,
-        short replicationFactor,
-        long srcVertexId
+        short replicationFactor
     ) {
         super(hostAndPort, applicationId, bootstrapServers, curator, verticesTopic, edgesGroupedBySourceTopic, serialized,
             numPartitions, replicationFactor, Optional.empty()
         );
-        this.srcVertexId = srcVertexId;
     }
 
-    public BreadthFirstSearch(
+    public ReverseEdges(
         String hostAndPort,
         String applicationId,
         String bootstrapServers,
         String zookeeperConnect,
         String verticesTopic,
         String edgesGroupedBySourceTopic,
-        GraphSerialized<K, Long, EV> serialized,
+        GraphSerialized<K, VV, EV> serialized,
         String solutionSetTopic,
         String solutionSetStore,
         String workSetTopic,
         int numPartitions,
-        short replicationFactor,
-        long srcVertexId
+        short replicationFactor
     ) {
         super(hostAndPort, applicationId, bootstrapServers, zookeeperConnect, verticesTopic, edgesGroupedBySourceTopic, serialized,
             solutionSetTopic, solutionSetStore, workSetTopic, numPartitions, replicationFactor, Optional.empty()
         );
-        this.srcVertexId = srcVertexId;
     }
 
     @Override
-    protected ComputeFunction<K, Long, EV, Long> computeFunction() {
-        return new BFSComputeFunction();
+    protected ComputeFunction<K, VV, EV, EdgeWithValue<K, EV>> computeFunction() {
+        return new ReverseEdgesComputeFunction();
     }
 
-    public final class BFSComputeFunction implements ComputeFunction<K, Long, EV, Long> {
+    public final class ReverseEdgesComputeFunction implements ComputeFunction<K, VV, EV, EdgeWithValue<K, EV>> {
 
         @Override
         public void compute(
             int superstep,
-            VertexWithValue<K, Long> vertex,
-            Iterable<Long> messages,
+            VertexWithValue<K, VV> vertex,
+            Iterable<EdgeWithValue<K, EV>> messages,
             Iterable<EdgeWithValue<K, EV>> edges,
-            Callback<K, Long, EV, Long> cb
+            Callback<K, VV, EV, EdgeWithValue<K, EV>> cb
         ) {
-
             if (superstep == 0) {
-                if (vertex.id().equals(srcVertexId)) {
-                    cb.setNewVertexValue((long) superstep);
-                    for (EdgeWithValue<K, EV> edge : edges) {
-                        cb.sendMessageTo(edge.target(), (long) superstep);
-                    }
+                for (EdgeWithValue<K, EV> edge : edges) {
+                    cb.sendMessageTo(edge.target(), edge);
                 }
-            } else {
-                if (vertex.value().equals(UNVISITED)) {
-                    cb.setNewVertexValue((long) superstep);
+            } else if (superstep == 1) {
+                for (EdgeWithValue<K, EV> msg : messages) {
+                    boolean hasEdge = false;
                     for (EdgeWithValue<K, EV> edge : edges) {
-                        cb.sendMessageTo(edge.target(), (long) superstep);
+                        if (edge.target().equals(msg.source())) {
+                            hasEdge = true;
+                            break;
+                        }
+                    }
+                    if (!hasEdge) {
+                        cb.addEdge(msg.source(), msg.value());
                     }
                 }
             }

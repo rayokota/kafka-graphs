@@ -81,7 +81,7 @@ public class SingleSourceShortestPaths extends PregelGraphAlgorithm<Long, Double
             VertexWithValue<Long, Double> vertex,
             Iterable<Double> messages,
             Iterable<EdgeWithValue<Long, Double>> edges,
-            Callback<Long, Double, Double> cb) {
+            Callback<Long, Double, Double, Double> cb) {
 
             double minDistance = (vertex.id().equals(srcVertexId)) ? 0d : Double.POSITIVE_INFINITY;
 

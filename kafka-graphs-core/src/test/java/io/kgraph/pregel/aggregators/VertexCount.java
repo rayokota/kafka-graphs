@@ -68,7 +68,7 @@ public class VertexCount<K, EV> extends PregelGraphAlgorithm<K, Long, EV, Long> 
             VertexWithValue<K, Long> vertex,
             Iterable<Long> messages,
             Iterable<EdgeWithValue<K, EV>> edges,
-            Callback<K, Long, Long> cb
+            Callback<K, Long, EV, Long> cb
         ) {
 
             if (superstep == 0) {

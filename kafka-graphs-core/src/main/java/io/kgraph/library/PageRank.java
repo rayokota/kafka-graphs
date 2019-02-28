@@ -94,7 +94,7 @@ public class PageRank<K> extends PregelGraphAlgorithm<K, Tuple2<Double, Double>,
             VertexWithValue<K, Tuple2<Double, Double>> vertex,
             Iterable<Double> messages,
             Iterable<EdgeWithValue<K, Double>> edges,
-            Callback<K, Tuple2<Double, Double>, Double> cb) {
+            Callback<K, Tuple2<Double, Double>, Double, Double> cb) {
 
             double oldPageRank = vertex.value()._1;
             double oldDelta = vertex.value()._2;

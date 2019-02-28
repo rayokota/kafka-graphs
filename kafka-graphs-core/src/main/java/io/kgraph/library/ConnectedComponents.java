@@ -91,7 +91,7 @@ public class ConnectedComponents<EV> extends PregelGraphAlgorithm<Long, Long, EV
             VertexWithValue<Long, Long> vertex,
             Iterable<Long> messages,
             Iterable<EdgeWithValue<Long, EV>> edges,
-            Callback<Long, Long, Long> cb) {
+            Callback<Long, Long, EV, Long> cb) {
 
             Long currentValue = vertex.value();
 

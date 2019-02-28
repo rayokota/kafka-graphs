@@ -20,8 +20,12 @@ package io.kgraph.pregel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+
+import org.apache.kafka.streams.state.KeyValueStore;
 
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
@@ -56,7 +60,7 @@ public interface ComputeFunction<K, VV, EV, Message> {
                  VertexWithValue<K, VV> vertex,
                  Iterable<Message> messages,
                  Iterable<EdgeWithValue<K, EV>> edges,
-                 Callback<K, VV, Message> cb);
+                 Callback<K, VV, EV, Message> cb);
 
     class Aggregators {
 
@@ -84,7 +88,11 @@ public interface ComputeFunction<K, VV, EV, Message> {
         }
     }
 
-    final class Callback<K, VV, Message> extends Aggregators {
+    final class Callback<K, VV, EV, Message> extends Aggregators {
+
+        protected K key;
+
+        protected KeyValueStore<K, Map<K, EV>> edgesStore;
 
         protected VV newVertexValue = null;
 
@@ -92,8 +100,13 @@ public interface ComputeFunction<K, VV, EV, Message> {
 
         protected boolean voteToHalt = false;
 
-        public Callback(Map<String, ?> previousAggregates, Map<String, Aggregator<?>> aggregators) {
+        public Callback(K key,
+                        KeyValueStore<K, Map<K, EV>> edgesStore,
+                        Map<String, ?> previousAggregates,
+                        Map<String, Aggregator<?>> aggregators) {
             super(previousAggregates, aggregators);
+            this.key = key;
+            this.edgesStore = edgesStore;
         }
 
         public final void sendMessageTo(K target, Message m) {
@@ -103,6 +116,33 @@ public interface ComputeFunction<K, VV, EV, Message> {
 
         public final void setNewVertexValue(VV vertexValue) {
             newVertexValue = vertexValue;
+        }
+
+        public final void addEdge(K target, EV value) {
+            Map<K, EV> edges = edgesStore.get(key);
+            if (edges == null) {
+                edges = new HashMap<>();
+            }
+            edges.put(target, value);
+            edgesStore.put(key, edges);
+        }
+
+        public final void removeEdge(K target) {
+            Map<K, EV> edges = edgesStore.get(key);
+            if (edges == null) {
+                return;
+            }
+            edges.remove(target);
+            edgesStore.put(key, edges);
+        }
+
+        public final void setNewEdgeValue(K target, EV value) {
+            Map<K, EV> edges = edgesStore.get(key);
+            if (edges == null) {
+                return;
+            }
+            edges.computeIfPresent(target, (k, v) -> value);
+            edgesStore.put(key, edges);
         }
 
         public void voteToHalt() {

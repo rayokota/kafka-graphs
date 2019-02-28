@@ -81,7 +81,7 @@ public class LabelPropagation<EV> extends PregelGraphAlgorithm<Long, Long, EV, M
             VertexWithValue<Long, Long> vertex,
             Iterable<Map<Long, Long>> messages,
             Iterable<EdgeWithValue<Long, EV>> edges,
-            Callback<Long, Long, Map<Long, Long>> cb) {
+            Callback<Long, Long, EV, Map<Long, Long>> cb) {
 
             Long vertexValue = vertex.value();
 

@@ -86,7 +86,7 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
             VertexWithValue<Long, Double> vertex,
             Iterable<LCCMessage> messages,
             Iterable<EdgeWithValue<Long, Double>> edges,
-            Callback<Long, Double, LCCMessage> cb
+            Callback<Long, Double, Double, LCCMessage> cb
         ) {
             log.debug("step {} vertex {} value {}", superstep, vertex.id(), vertex.value());
 
@@ -128,7 +128,7 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
 
         private void sendConnectionInquiries(
             long sourceVertexId, Set<Long> neighbors,
-            Callback<Long, Double, LCCMessage> cb
+            Callback<Long, Double, Double, LCCMessage> cb
         ) {
             if (neighbors.size() <= 1) {
                 log.debug(">>> Vertex {} not sending inquiries to {}", sourceVertexId, neighbors);
@@ -149,7 +149,7 @@ public class LocalClusteringCoefficient extends PregelGraphAlgorithm<Long, Doubl
             Long vertexId,
             Iterable<EdgeWithValue<Long, Double>> edges,
             Iterable<LCCMessage> inquiries,
-            Callback<Long, Double, LCCMessage> cb
+            Callback<Long, Double, Double, LCCMessage> cb
         ) {
             Set<Long> neighbors = new HashSet<>();
             for (EdgeWithValue<Long, Double> edge : edges) {
