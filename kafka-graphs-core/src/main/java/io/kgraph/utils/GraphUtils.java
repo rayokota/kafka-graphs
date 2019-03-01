@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
@@ -182,7 +183,7 @@ public class GraphUtils {
             this.context = context;
 
             // TODO make interval configurable
-            this.context.schedule(500, PunctuationType.STREAM_TIME, (timestamp) -> {
+            this.context.schedule(Duration.ofMillis(500), PunctuationType.STREAM_TIME, (timestamp) -> {
                 if (scheduledFuture != null) {
                     scheduledFuture.cancel(false);
                 }

@@ -169,7 +169,7 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
     }
 
     public <T> void registerAggregator(String name, Class<? extends Aggregator<T>> aggregatorClass, boolean persistent) {
-        registeredAggregators.put(name, new AggregatorWrapper<T>(aggregatorClass, persistent));
+        registeredAggregators.put(name, new AggregatorWrapper<>(aggregatorClass, persistent));
     }
 
     @Override
@@ -181,7 +181,7 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
 
         Topology topology = builder.build();
         log.info("Topology description {}", topology.describe());
-        streams = new KafkaStreams(topology, new StreamsConfig(streamsConfig), new PregelClientSupplier());
+        streams = new KafkaStreams(topology, streamsConfig, new PregelClientSupplier());
         streams.start();
 
         return new GraphAlgorithmState<>(streams, GraphAlgorithmState.State.CREATED, 0, 0L, null);
@@ -217,8 +217,8 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
     }
 
     protected static class AggregatorWrapper<T> {
-        private Class<? extends Aggregator<T>> aggregatorClass;
-        private boolean persistent;
+        private final Class<? extends Aggregator<T>> aggregatorClass;
+        private final boolean persistent;
 
         public AggregatorWrapper(
             Class<? extends Aggregator<T>> aggregatorClass,

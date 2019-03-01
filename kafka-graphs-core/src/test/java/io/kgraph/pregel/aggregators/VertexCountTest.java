@@ -18,7 +18,6 @@
 
 package io.kgraph.pregel.aggregators;
 
-import static io.kgraph.library.BreadthFirstSearch.UNVISITED;
 import static org.junit.Assert.assertEquals;
 
 import java.util.HashMap;
@@ -44,7 +43,6 @@ import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
 import io.kgraph.TestGraphUtils;
-import io.kgraph.library.BreadthFirstSearch;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphUtils;
 import io.kgraph.utils.KryoSerde;

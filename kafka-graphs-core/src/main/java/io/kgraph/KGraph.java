@@ -33,6 +33,7 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.utils.Bytes;
 import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.Joined;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.KTable;
@@ -112,7 +113,7 @@ public class KGraph<K, VV, EV> {
 
     private KTable<K, Iterable<EdgeWithValue<K, EV>>> edgesGroupedBy(Function<Edge<K>, K> fun) {
         return edges()
-            .groupBy(new GroupEdges(fun), Serialized.with(keySerde(), new KryoSerde<>()))
+            .groupBy(new GroupEdges(fun), Grouped.with(keySerde(), new KryoSerde<>()))
             .aggregate(
                 HashSet::new,
                 (aggKey, value, aggregate) -> {
@@ -148,7 +149,7 @@ public class KGraph<K, VV, EV> {
         KTable<K, VV> vertices = edges
             .toStream()
             .flatMap(new EmitSrcAndTargetAsTuple1<>(vertexValueInitializer))
-            .groupByKey(Serialized.with(serialized.keySerde(), new KryoSerde<>()))
+            .groupByKey(Grouped.with(serialized.keySerde(), new KryoSerde<>()))
             .<VV>reduce((v1, v2) -> v2,
                 Materialized.with(serialized.keySerde(), serialized.vertexValueSerde()));
 
@@ -264,7 +265,7 @@ public class KGraph<K, VV, EV> {
                 }
                 return edges;
             })
-            .groupByKey(Serialized.with(new KryoSerde<>(), edgeValueSerde()))
+            .groupByKey(Grouped.with(new KryoSerde<>(), edgeValueSerde()))
             .<EV>reduce((v1, v2) -> v2, Materialized.<Edge<K>, EV, KeyValueStore<Bytes, byte[]>>as(
                 generateStoreName()).withKeySerde(new KryoSerde<>()).withValueSerde(edgeValueSerde()));
 
@@ -286,7 +287,7 @@ public class KGraph<K, VV, EV> {
                 }
                 return edges;
             })
-            .groupByKey(Serialized.with(new KryoSerde<>(), edgeValueSerde()))
+            .groupByKey(Grouped.with(new KryoSerde<>(), edgeValueSerde()))
             .<EV>reduce((v1, v2) -> v2, Materialized.<Edge<K>, EV, KeyValueStore<Bytes, byte[]>>as(
                 generateStoreName()).withKeySerde(new KryoSerde<>()).withValueSerde(edgeValueSerde()));
 
@@ -330,7 +331,7 @@ public class KGraph<K, VV, EV> {
             .map((k, edge) -> new KeyValue<>(edge.target(), edge))
             .join(filteredVertices, (e, v) -> e, Joined.with(keySerde(), new KryoSerde<>(), vertexValueSerde()))
             .map((k, edge) -> new KeyValue<>(new Edge<>(edge.source(), edge.target()), edge.value()))
-            .groupByKey(Serialized.with(new KryoSerde<>(), edgeValueSerde()))
+            .groupByKey(Grouped.with(new KryoSerde<>(), edgeValueSerde()))
             .reduce((v1, v2) -> v2, Materialized.with(new KryoSerde<>(), edgeValueSerde()));
 
         KTable<Edge<K>, EV> filteredEdges = remainingEdges
@@ -347,7 +348,7 @@ public class KGraph<K, VV, EV> {
             .map((k, edge) -> new KeyValue<>(edge.target(), edge))
             .join(filteredVertices, (e, v) -> e, Joined.with(keySerde(), new KryoSerde<>(), vertexValueSerde()))
             .map((k, edge) -> new KeyValue<>(new Edge<>(edge.source(), edge.target()), edge.value()))
-            .groupByKey(Serialized.with(new KryoSerde<>(), edgeValueSerde()))
+            .groupByKey(Grouped.with(new KryoSerde<>(), edgeValueSerde()))
             .reduce((v1, v2) -> v2, Materialized.<Edge<K>, EV, KeyValueStore<Bytes, byte[]>>as(generateStoreName()).withKeySerde(new KryoSerde<>()).withValueSerde(edgeValueSerde()));
 
         return new KGraph<>(filteredVertices, remainingEdges, serialized);
@@ -390,7 +391,7 @@ public class KGraph<K, VV, EV> {
         KTable<Edge<K>, EV> undirectedEdges = edges
             .toStream()
             .flatMap(new RegularAndReversedEdgesMap<>())
-            .groupByKey(Serialized.with(new KryoSerde<>(), serialized.edgeValueSerde()))
+            .groupByKey(Grouped.with(new KryoSerde<>(), serialized.edgeValueSerde()))
             .reduce((v1, v2) -> v2, Materialized.<Edge<K>, EV, KeyValueStore<Bytes, byte[]>>as(generateStoreName())
                 .withKeySerde(new KryoSerde<>()).withValueSerde(serialized.edgeValueSerde()));
 
@@ -437,7 +438,7 @@ public class KGraph<K, VV, EV> {
                         .join(vertices, Tuple2::new, Joined.with(keySerde(), new KryoSerde<>(), vertexValueSerde()));
                 KTable<K, Map<EdgeWithValue<K, EV>, VV>> neighborsGroupedByTarget = edgesWithSources
                     .map(new MapNeighbors(EdgeWithValue::target))
-                    .groupByKey(Serialized.with(keySerde(), new KryoSerde<>()))
+                    .groupByKey(Grouped.with(keySerde(), new KryoSerde<>()))
                     .aggregate(
                         HashMap::new,
                         (aggKey, value, aggregate) -> {
@@ -454,7 +455,7 @@ public class KGraph<K, VV, EV> {
                         .join(vertices, Tuple2::new, Joined.with(keySerde(), new KryoSerde<>(), vertexValueSerde()));
                 KTable<K, Map<EdgeWithValue<K, EV>, VV>> neighborsGroupedBySource = edgesWithTargets
                     .map(new MapNeighbors(EdgeWithValue::source))
-                    .groupByKey(Serialized.with(keySerde(), new KryoSerde<>()))
+                    .groupByKey(Grouped.with(keySerde(), new KryoSerde<>()))
                     .aggregate(
                         HashMap::new,
                         (aggKey, value, aggregate) -> {
@@ -511,7 +512,7 @@ public class KGraph<K, VV, EV> {
                         .join(vertices, Tuple2::new, Joined.with(keySerde(), new KryoSerde<>(), vertexValueSerde()));
                 KTable<K, Map<EdgeWithValue<K, EV>, VV>> neighborsGroupedByTarget = edgesWithSources
                     .map(new MapNeighbors(EdgeWithValue::target))
-                    .groupByKey(Serialized.with(keySerde(), new KryoSerde<>()))
+                    .groupByKey(Grouped.with(keySerde(), new KryoSerde<>()))
                     .aggregate(
                         HashMap::new,
                         (aggKey, value, aggregate) -> {
@@ -530,7 +531,7 @@ public class KGraph<K, VV, EV> {
                         .join(vertices, Tuple2::new, Joined.with(keySerde(), new KryoSerde<>(), vertexValueSerde()));
                 KTable<K, Map<EdgeWithValue<K, EV>, VV>> neighborsGroupedBySource = edgesWithTargets
                     .map(new MapNeighbors(EdgeWithValue::source))
-                    .groupByKey(Serialized.with(keySerde(), new KryoSerde<>()))
+                    .groupByKey(Grouped.with(keySerde(), new KryoSerde<>()))
                     .aggregate(
                         HashMap::new,
                         (aggKey, value, aggregate) -> {

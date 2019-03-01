@@ -18,9 +18,9 @@
 
 package io.kgraph.pregel;
 
-
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -300,7 +300,6 @@ public class PregelComputation<K, VV, EV, Message> {
         }
     }
 
-    @SuppressWarnings("unchecked")
     protected Map<String, Aggregator<?>> newAggregators() {
         Set<Map.Entry<String, AggregatorWrapper<?>>> entries = registeredAggregators.entrySet();
         return entries.stream()
@@ -397,7 +396,7 @@ public class PregelComputation<K, VV, EV, Message> {
                 sharedValue.start();
 
                 // TODO make interval configurable
-                this.context.schedule(500, PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
+                this.context.schedule(Duration.ofMillis(500), PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
                     try {
                         pregelState = PregelState.fromBytes(sharedValue.getValue());
 

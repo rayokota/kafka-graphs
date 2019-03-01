@@ -20,7 +20,6 @@ package io.kgraph.pregel.aggregators;
 
 import java.util.Optional;
 
-import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

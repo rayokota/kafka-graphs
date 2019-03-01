@@ -26,6 +26,7 @@ import java.util.function.BiFunction;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.kstream.Grouped;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.Serialized;
@@ -78,7 +79,7 @@ public class GraphGenerators {
                 }
                 return result;
             })
-            .groupByKey(Serialized.with(new KryoSerde<>(), Serdes.Long()))
+            .groupByKey(Grouped.with(new KryoSerde<>(), Serdes.Long()))
             .reduce((v1, v2) -> v2, Materialized.with(new KryoSerde<>(), Serdes.Long()));
 
         return new KGraph<>(vertices, edges, GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Long()));

@@ -18,7 +18,6 @@
 
 package io.kgraph.library.basic;
 
-import static io.kgraph.library.BreadthFirstSearch.UNVISITED;
 import static org.junit.Assert.assertEquals;
 
 import java.util.HashMap;
@@ -39,7 +38,6 @@ import org.slf4j.LoggerFactory;
 
 import io.kgraph.AbstractIntegrationTest;
 import io.kgraph.Edge;
-import io.kgraph.EdgeWithValue;
 import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;

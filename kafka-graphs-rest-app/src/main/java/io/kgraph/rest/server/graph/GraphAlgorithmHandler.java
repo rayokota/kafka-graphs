@@ -96,7 +96,6 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
     private GroupMember group;
     private final ConcurrentMap<String, PregelGraphAlgorithm<Long, ?, ?, ?>> algorithms = new ConcurrentHashMap<>();
 
-    @SuppressWarnings("unchecked")
     public GraphAlgorithmHandler(KafkaGraphsProperties props, CuratorFramework curator) {
         this.props = props;
         this.curator = curator;
@@ -438,7 +437,6 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
         return flux;
     }
 
-    @SuppressWarnings("unchecked")
     public Mono<ServerResponse> result(ServerRequest request) {
         List<String> appIdHeaders = request.headers().header(X_KGRAPH_APPID);
         String appId = request.pathVariable("id");
