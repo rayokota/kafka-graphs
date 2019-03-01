@@ -79,6 +79,7 @@ import io.kgraph.EdgeWithValue;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.VertexWithValue;
+import io.kgraph.pregel.PregelGraphAlgorithm.AggregatorWrapper;
 import io.kgraph.pregel.PregelState.Stage;
 import io.kgraph.pregel.aggregators.Aggregator;
 import io.kgraph.utils.ClientUtils;
@@ -116,7 +117,7 @@ public class PregelComputation<K, VV, EV, Message> {
 
     private final Optional<Message> initialMessage;
     private final ComputeFunction<K, VV, EV, Message> computeFunction;
-    private final Map<String, Class<? extends Aggregator<?>>> registeredAggregators;
+    private final Map<String, AggregatorWrapper<?>> registeredAggregators;
 
     private Properties streamsConfig;
 
@@ -147,7 +148,7 @@ public class PregelComputation<K, VV, EV, Message> {
         int numPartitions,
         Optional<Message> initialMessage,
         ComputeFunction<K, VV, EV, Message> cf,
-        Map<String, Class<? extends Aggregator<?>>> registeredAggregators
+        Map<String, AggregatorWrapper<?>> registeredAggregators
     ) {
 
         this.hostAndPort = hostAndPort;
@@ -299,15 +300,30 @@ public class PregelComputation<K, VV, EV, Message> {
         }
     }
 
+    @SuppressWarnings("unchecked")
     protected Map<String, Aggregator<?>> newAggregators() {
-        Set<Map.Entry<String, Class<? extends Aggregator<?>>>> entries = registeredAggregators.entrySet();
+        Set<Map.Entry<String, AggregatorWrapper<?>>> entries = registeredAggregators.entrySet();
         return entries.stream()
             .collect(Collectors.toConcurrentMap(Map.Entry::getKey, entry -> {
-                try {
-                    return entry.getValue().newInstance();
+                try
+                {
+                    return entry.getValue().getAggregatorClass().newInstance();
                 } catch (Exception e) {
                     throw toRuntimeException(e);
                 }
+            }));
+    }
+
+    @SuppressWarnings("unchecked")
+    protected Map<String, Aggregator<?>> initAggregators(Map<String, Aggregator<?>> agg, Map<String, ?> values) {
+        return agg.entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> {
+                Aggregator<Object> a = (Aggregator<Object>) e.getValue();
+                Object value = values.get(e.getKey());
+                if (value != null && registeredAggregators.get(e.getKey()).isPersistent()) {
+                    a.aggregate(value);
+                }
+                return a;
             }));
     }
 
@@ -498,6 +514,7 @@ public class PregelComputation<K, VV, EV, Message> {
         private void reduceAggregates(int superstep) throws Exception {
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
             Map<String, Aggregator<?>> newAggregators = newAggregators();
+            newAggregators = initAggregators(newAggregators, previousAggregates(superstep));
             Map<String, ChildData> children = aggregateCache.getCurrentChildren(rootPath);
             if (children != null) {
                 for (Map.Entry<String, ChildData> entry : children.entrySet()) {

@@ -60,7 +60,7 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
     protected final int numPartitions;
     protected final short replicationFactor;
     protected final PregelComputation<K, VV, EV, Message> computation;
-    protected final Map<String, Class<? extends Aggregator<?>>> registeredAggregators = new HashMap<>();
+    protected final Map<String, AggregatorWrapper<?>> registeredAggregators = new HashMap<>();
 
     protected KafkaStreams streams;
 
@@ -164,8 +164,12 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
             initialMessage, computeFunction(), registeredAggregators);
     }
 
-    public void registerAggregator(String name, Class<? extends Aggregator<?>> aggregatorClass) {
-        registeredAggregators.put(name, aggregatorClass);
+    public <T> void registerAggregator(String name, Class<? extends Aggregator<T>> aggregatorClass) {
+        registerAggregator(name, aggregatorClass, false);
+    }
+
+    public <T> void registerAggregator(String name, Class<? extends Aggregator<T>> aggregatorClass, boolean persistent) {
+        registeredAggregators.put(name, new AggregatorWrapper<T>(aggregatorClass, persistent));
     }
 
     @Override
@@ -210,5 +214,26 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
     @Override
     public void close() {
         streams.close();
+    }
+
+    protected static class AggregatorWrapper<T> {
+        private Class<? extends Aggregator<T>> aggregatorClass;
+        private boolean persistent;
+
+        public AggregatorWrapper(
+            Class<? extends Aggregator<T>> aggregatorClass,
+            boolean persistent
+        ) {
+            this.aggregatorClass = aggregatorClass;
+            this.persistent = persistent;
+        }
+
+        public Class<? extends Aggregator<T>> getAggregatorClass() {
+            return aggregatorClass;
+        }
+
+        public boolean isPersistent() {
+            return persistent;
+        }
     }
 }
