@@ -39,6 +39,9 @@ import io.kgraph.pregel.aggregators.Aggregator;
  */
 public interface ComputeFunction<K, VV, EV, Message> {
 
+    default void masterCompute(int superstep, MasterCallback cb) {
+    }
+
     default void preSuperstep(int superstep, Aggregators aggregators) {
     }
 
@@ -59,6 +62,31 @@ public interface ComputeFunction<K, VV, EV, Message> {
                  Iterable<Message> messages,
                  Iterable<EdgeWithValue<K, EV>> edges,
                  Callback<K, VV, EV, Message> cb);
+
+    final class MasterCallback {
+
+        protected final Map<String, Aggregator<?>> previousAggregators;
+
+        protected boolean haltComputation = false;
+
+        public MasterCallback(Map<String, Aggregator<?>> previousAggregators) {
+            this.previousAggregators = previousAggregators;
+        }
+
+        @SuppressWarnings("unchecked")
+        public final <T> T getAggregatedValue(String name) {
+            return (T) previousAggregators.get(name).getAggregate();
+        }
+
+        @SuppressWarnings("unchecked")
+        public final <T> void setAggregatedValue(String name, T value) {
+            ((Aggregator<T>) previousAggregators.get(name)).setAggregate(value);
+        }
+
+        public void haltComputation() {
+            haltComputation = true;
+        }
+    }
 
     class Aggregators {
 

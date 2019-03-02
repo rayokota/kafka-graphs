@@ -89,8 +89,8 @@ public class PregelState {
         }
     }
 
-    public PregelState complete() {
-        return new PregelState(State.COMPLETED, superstep, stage, startTime, System.currentTimeMillis());
+    public PregelState state(State state) {
+        return new PregelState(state, superstep, stage, startTime, System.currentTimeMillis());
     }
 
     public int superstep() {

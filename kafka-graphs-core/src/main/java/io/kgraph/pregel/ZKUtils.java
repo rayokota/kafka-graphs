@@ -32,6 +32,8 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import io.kgraph.GraphAlgorithmState;
+
 public class ZKUtils {
     private static final Logger log = LoggerFactory.getLogger(ZKUtils.class);
 
@@ -54,6 +56,9 @@ public class ZKUtils {
 
     public static PregelState maybeCreateReadyToSendNode(
         CuratorFramework curator, String id, PregelState pregelState, TreeCache treeCache, int groupSize) throws Exception {
+        if (pregelState.superstep() < 0) {
+            return pregelState.next();
+        }
         String barrierPath = barrierPath(id, pregelState);
         Map<String, ChildData> children = treeCache.getCurrentChildren(barrierPath);
         if (children == null) {
@@ -65,12 +70,12 @@ public class ZKUtils {
             String nextBarrierPath = barrierPath(id, pregelState.next());
             Map<String, ChildData> nextChildren = treeCache.getCurrentChildren(nextBarrierPath);
             if (nextChildren == null) {
-                return pregelState.complete();
+                return pregelState.state(GraphAlgorithmState.State.COMPLETED);
             }
             int nextChildrenSize = nextChildren.size();
             if (nextChildren.containsKey(READY)) nextChildrenSize--;
             if (nextChildrenSize == 0) {
-                return pregelState.complete();
+                return pregelState.state(GraphAlgorithmState.State.COMPLETED);
             } else {
                 // only advance superstep if there is more work to do
                 String path = ZKPaths.makePath(nextBarrierPath, READY);
@@ -84,6 +89,9 @@ public class ZKUtils {
 
     public static PregelState maybeCreateReadyToReceiveNode(
         CuratorFramework curator, String id, PregelState pregelState, TreeCache treeCache) throws Exception {
+        if (pregelState.superstep() < 0) {
+            return pregelState.next();
+        }
         String barrierPath = barrierPath(id, pregelState);
         Map<String, ChildData> children = treeCache.getCurrentChildren(barrierPath);
         if (children == null) {

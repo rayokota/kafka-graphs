@@ -76,7 +76,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.kgraph.EdgeWithValue;
-import io.kgraph.GraphAlgorithmState;
+import io.kgraph.GraphAlgorithmState.State;
 import io.kgraph.GraphSerialized;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.PregelGraphAlgorithm.AggregatorWrapper;
@@ -233,7 +233,7 @@ public class PregelComputation<K, VV, EV, Message> {
             .peek((k, v) -> {
                 try {
                     int partition = PregelComputation.vertexToPartition(k, serialized.keySerde().serializer(), numPartitions);
-                    ZKUtils.addChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.CREATED, 0, Stage.SEND), "partition-" + partition);
+                    ZKUtils.addChild(curator, applicationId, new PregelState(State.CREATED, 0, Stage.SEND), "partition-" + partition);
                 } catch (Exception e) {
                     throw e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
                 }
@@ -279,7 +279,7 @@ public class PregelComputation<K, VV, EV, Message> {
         this.maxIterations = maxIterations;
         this.futureResult = futureResult;
 
-        PregelState pregelState = new PregelState(GraphAlgorithmState.State.RUNNING, 0, Stage.RECEIVE);
+        PregelState pregelState = new PregelState(State.RUNNING, -1, Stage.SEND);
         try (SharedValue sharedValue = new SharedValue(curator, ZKPaths.makePath(ZKUtils.PREGEL_PATH + applicationId, ZKUtils.SUPERSTEP), pregelState.toBytes())) {
             sharedValue.start();
             sharedValue.setValue(pregelState.toBytes());
@@ -290,7 +290,7 @@ public class PregelComputation<K, VV, EV, Message> {
     }
 
     public PregelState state() {
-        PregelState pregelState = new PregelState(GraphAlgorithmState.State.RUNNING, 0, Stage.RECEIVE);
+        PregelState pregelState = new PregelState(State.RUNNING, -1, Stage.SEND);
         try (SharedValue sharedValue = new SharedValue(curator, ZKPaths.makePath(ZKUtils.PREGEL_PATH + applicationId, ZKUtils.SUPERSTEP), pregelState.toBytes())) {
             sharedValue.start();
             pregelState = PregelState.fromBytes(sharedValue.getValue());
@@ -371,7 +371,7 @@ public class PregelComputation<K, VV, EV, Message> {
         private SharedValue sharedValue;
         private TreeCache aggregateCache;
         private TreeCache barrierCache;
-        private PregelState pregelState = new PregelState(GraphAlgorithmState.State.CREATED, 0, Stage.RECEIVE);
+        private PregelState pregelState = new PregelState(State.CREATED, -1, Stage.SEND);
 
         private final Map<Integer, Set<K>> forwardedVertices = new HashMap<>();
 
@@ -399,12 +399,13 @@ public class PregelComputation<K, VV, EV, Message> {
                 this.context.schedule(Duration.ofMillis(500), PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
                     try {
                         pregelState = PregelState.fromBytes(sharedValue.getValue());
+                        State state = pregelState.state();
 
-                        if (pregelState.state() == GraphAlgorithmState.State.CREATED) {
+                        if (state == State.CREATED) {
                             return;
-                        } else if (pregelState.state() == GraphAlgorithmState.State.COMPLETED) {
+                        } else if (state == State.COMPLETED || state == State.CANCELLED) {
                             if (futureResult != null && !futureResult.isDone()) {
-                                if (pregelState.superstep() > maxIterations) {
+                                if (pregelState.superstep() > maxIterations || state == State.CANCELLED) {
                                     log.info("Pregel computation halted after {} iterations", maxIterations);
                                 } else {
                                     log.info("Pregel computation converged after {} iterations", pregelState.superstep());
@@ -438,15 +439,19 @@ public class PregelComputation<K, VV, EV, Message> {
                             if (pregelState.stage() == Stage.SEND) {
                                 PregelState nextPregelState = ZKUtils.maybeCreateReadyToReceiveNode(curator, applicationId, pregelState, barrierCache);
                                 if (!pregelState.equals(nextPregelState)) {
-                                    reduceAggregates(pregelState.superstep());
                                     pregelState = nextPregelState;
                                     sharedValue.setValue(pregelState.toBytes());
+                                    boolean halt = masterCompute(pregelState.superstep());
+                                    if (halt) {
+                                        pregelState = pregelState.state(State.CANCELLED);
+                                        sharedValue.setValue(pregelState.toBytes());
+                                    }
                                 } else {
                                     log.debug("Not ready to create rcv: state {}", pregelState);
                                 }
                             }
                             if (pregelState.superstep() > maxIterations) {
-                                pregelState = pregelState.complete();
+                                pregelState = pregelState.state(State.COMPLETED);
                                 sharedValue.setValue(pregelState.toBytes());
                                 return;
                             }
@@ -510,7 +515,17 @@ public class PregelComputation<K, VV, EV, Message> {
             }
         }
 
-        private void reduceAggregates(int superstep) throws Exception {
+        private boolean masterCompute(int superstep) throws Exception {
+            // Collect aggregator values, then run the masterCompute() and
+            // finally save the aggregator values
+            Map<String, Aggregator<?>> newAggregators = reduceAggregates(superstep - 1);
+            ComputeFunction.MasterCallback cb = new ComputeFunction.MasterCallback(newAggregators);
+            computeFunction.masterCompute(superstep, cb);
+            saveAggregates(superstep - 1, newAggregators);
+            return cb.haltComputation;
+        }
+
+        private Map<String, Aggregator<?>> reduceAggregates(int superstep) {
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
             Map<String, Aggregator<?>> newAggregators = newAggregators();
             newAggregators = initAggregators(newAggregators, previousAggregates(superstep));
@@ -528,6 +543,11 @@ public class PregelComputation<K, VV, EV, Message> {
                     }
                 }
             }
+            return newAggregators;
+        }
+
+        private void saveAggregates(int superstep, Map<String, Aggregator<?>> newAggregators) throws Exception {
+            String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
             Set<Map.Entry<String, Aggregator<?>>> entries = newAggregators.entrySet();
             Map<String, ?> newAggregates = entries.stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getAggregate()));
@@ -734,7 +754,7 @@ public class PregelComputation<K, VV, EV, Message> {
                                 // Activate partition for next step
                                 int p = vertexToPartition(entry.getKey(), serialized.keySerde().serializer(), numPartitions);
                                 log.debug("adding partition {} for vertex {}", p, entry.getKey());
-                                ZKUtils.addChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.RUNNING, value._1, Stage.SEND), "partition-" + p);
+                                ZKUtils.addChild(curator, applicationId, new PregelState(State.RUNNING, value._1, Stage.SEND), "partition-" + p);
                             } catch (Exception e) {
                                 throw toRuntimeException(e);
                             }
@@ -758,7 +778,7 @@ public class PregelComputation<K, VV, EV, Message> {
             if (vertices.isEmpty()) {
                 // Deactivate partition
                 log.debug("removing partition {} for last vertex {}", partition, vertex);
-                ZKUtils.removeChild(curator, applicationId, new PregelState(GraphAlgorithmState.State.RUNNING, superstep, Stage.SEND), "partition-" + partition);
+                ZKUtils.removeChild(curator, applicationId, new PregelState(State.RUNNING, superstep, Stage.SEND), "partition-" + partition);
                 ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), aggregators(partition, superstep));
                 computeFunction.postSuperstep(superstep, aggregators);
