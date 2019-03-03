@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
@@ -44,6 +45,7 @@ import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
 import io.kgraph.TestGraphUtils;
+import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphUtils;
 import io.kgraph.utils.KryoSerde;
@@ -69,10 +71,13 @@ public class BreadthFirstSearchTest extends AbstractIntegrationTest {
         KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(BreadthFirstSearch.SRC_VERTEX_ID, 0L);
         algorithm =
-            new BreadthFirstSearch<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
-                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1, 0L);
+                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
+                configs, Optional.empty(), new BreadthFirstSearch<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());

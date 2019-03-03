@@ -20,8 +20,10 @@ package io.kgraph.library;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
@@ -46,6 +48,7 @@ import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
 import io.kgraph.TestGraphUtils;
+import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphGenerators;
 import io.kgraph.utils.GraphUtils;
@@ -74,9 +77,10 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
         algorithm =
-            new ConnectedComponents<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
-                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1);
+                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
+                Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
@@ -138,9 +142,10 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
         algorithm =
-            new ConnectedComponents<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
-                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1);
+                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
+                Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
@@ -182,14 +187,16 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm =
-            new ConnectedComponents<>(null, "run-" + suffix, bootstrapServers,
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
                 zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
-                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1);
+                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
+                Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
 
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm2 =
-            new ConnectedComponents<>(null, "run-" + suffix, bootstrapServers,
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
                 zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
-                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1);
+                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
+                Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             bootstrapServers, graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
@@ -255,14 +262,16 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm =
-            new ConnectedComponents<>(null, "run-" + suffix, bootstrapServers,
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
                 zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
-                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1);
+                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
+                Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
 
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm2 =
-            new ConnectedComponents<>(null, "run-" + suffix, bootstrapServers,
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
                 zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
-                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1);
+                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
+                Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             bootstrapServers, graph.keySerde().getClass(), graph.vertexValueSerde().getClass());

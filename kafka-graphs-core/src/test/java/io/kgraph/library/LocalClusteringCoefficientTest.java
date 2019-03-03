@@ -20,8 +20,10 @@ package io.kgraph.library;
 
 import static org.junit.Assert.assertEquals;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
@@ -44,6 +46,7 @@ import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
 import io.kgraph.TestGraphUtils;
+import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphUtils;
 import io.kgraph.utils.KryoSerde;
@@ -70,9 +73,10 @@ public class LocalClusteringCoefficientTest extends AbstractIntegrationTest {
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
 
         algorithm =
-            new LocalClusteringCoefficient(null, "run", CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run", CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
-                "solutionSet", "solutionSetStore", "workSet", 2, (short) 1);
+                "solutionSet", "solutionSetStore", "workSet", 2, (short) 1,
+                Collections.emptyMap(), Optional.empty(), new LocalClusteringCoefficient());
 
         Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());

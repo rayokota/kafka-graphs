@@ -21,6 +21,7 @@ package io.kgraph.library;
 import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -49,6 +50,7 @@ import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
 import io.kgraph.TestGraphUtils;
+import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphGenerators;
 import io.kgraph.utils.GraphUtils;
@@ -91,11 +93,15 @@ public class PageRankTest extends AbstractIntegrationTest {
 
         double resetProb = 0.15;
         double tol = 0.0001;
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(PageRank.RESET_PROBABILITY, resetProb);
+        configs.put(PageRank.TOLERANCE, tol);
+        Optional<Double> initMsg = Optional.of(resetProb / (1.0 - resetProb));
         algorithm =
-            new PageRank<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
-                tol, resetProb, Optional.empty());
+                configs, initMsg, new PageRank<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
                 .bootstrapServers(),
@@ -167,11 +173,15 @@ public class PageRankTest extends AbstractIntegrationTest {
 
         double resetProb = 0.15;
         double tol = 0.0001;
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(PageRank.RESET_PROBABILITY, resetProb);
+        configs.put(PageRank.TOLERANCE, tol);
+        Optional<Double> initMsg = Optional.of(resetProb / (1.0 - resetProb));
         algorithm =
-            new PageRank<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
-                tol, resetProb, Optional.empty());
+                configs, initMsg, new PageRank<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
                 .bootstrapServers(),
@@ -245,11 +255,15 @@ public class PageRankTest extends AbstractIntegrationTest {
 
         double resetProb = 0.15;
         double tol = 0.0001;
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(PageRank.RESET_PROBABILITY, resetProb);
+        configs.put(PageRank.TOLERANCE, tol);
+        configs.put(PageRank.SRC_VERTEX_ID, srcVertexId);
         algorithm =
-            new PageRank<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
-                tol, resetProb, Optional.of(srcVertexId));
+                configs, Optional.of(0.0), new PageRank<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
                 .bootstrapServers(),
@@ -320,11 +334,15 @@ public class PageRankTest extends AbstractIntegrationTest {
 
         double resetProb = 0.15;
         double tol = 0.0001;
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(PageRank.RESET_PROBABILITY, resetProb);
+        configs.put(PageRank.TOLERANCE, tol);
+        Optional<Double> initMsg = Optional.of(resetProb / (1.0 - resetProb));
         algorithm =
-            new PageRank<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
-                tol, resetProb, Optional.empty());
+                configs, initMsg, new PageRank<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
                 .bootstrapServers(),
@@ -384,11 +402,15 @@ public class PageRankTest extends AbstractIntegrationTest {
 
         double resetProb = 0.15;
         double tol = 0.0001;
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(PageRank.RESET_PROBABILITY, resetProb);
+        configs.put(PageRank.TOLERANCE, tol);
+        Optional<Double> initMsg = Optional.of(resetProb / (1.0 - resetProb));
         algorithm =
-            new PageRank<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
-                tol, resetProb, Optional.empty());
+                configs, initMsg, new PageRank<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
                 .bootstrapServers(),
@@ -497,11 +519,15 @@ public class PageRankTest extends AbstractIntegrationTest {
 
         double resetProb = 0.15;
         double tol = 0.0001;
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(PageRank.RESET_PROBABILITY, resetProb);
+        configs.put(PageRank.TOLERANCE, tol);
+        Optional<Double> initMsg = Optional.of(resetProb / (1.0 - resetProb));
         algorithm =
-            new PageRank<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
-                tol, resetProb, Optional.empty());
+                configs, initMsg, new PageRank<>());
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
                 .bootstrapServers(),

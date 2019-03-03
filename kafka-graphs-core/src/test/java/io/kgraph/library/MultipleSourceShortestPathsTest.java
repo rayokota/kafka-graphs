@@ -25,6 +25,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -48,6 +49,7 @@ import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
+import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphUtils;
 import io.kgraph.utils.KryoSerde;
@@ -93,10 +95,13 @@ public class MultipleSourceShortestPathsTest extends AbstractIntegrationTest {
         Set<Long> landmarks = new HashSet<>();
         landmarks.add(1L);
         landmarks.add(4L);
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(MultipleSourceShortestPaths.LANDMARK_VERTEX_IDS, landmarks);
         algorithm =
-            new MultipleSourceShortestPaths(null, "run", CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run", CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
-                "solutionSet", "solutionSetStore", "workSet", 2, (short) 1, landmarks);
+                "solutionSet", "solutionSetStore", "workSet", 2, (short) 1,
+                configs, Optional.empty(), new MultipleSourceShortestPaths());
 
         Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());

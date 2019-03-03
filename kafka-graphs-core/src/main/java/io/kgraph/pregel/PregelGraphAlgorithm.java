@@ -18,7 +18,6 @@
 
 package io.kgraph.pregel;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -37,10 +36,9 @@ import org.slf4j.LoggerFactory;
 import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
-import io.kgraph.pregel.aggregators.Aggregator;
 import io.kgraph.utils.ClientUtils;
 
-public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
+public class PregelGraphAlgorithm<K, VV, EV, Message>
     implements GraphAlgorithm<K, VV, EV, KTable<K, VV>> {
 
     private static final Logger log = LoggerFactory.getLogger(PregelGraphAlgorithm.class);
@@ -59,7 +57,6 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
     protected final int numPartitions;
     protected final short replicationFactor;
     protected final PregelComputation<K, VV, EV, Message> computation;
-    protected final Map<String, AggregatorWrapper<?>> registeredAggregators = new HashMap<>();
 
     protected KafkaStreams streams;
 
@@ -71,7 +68,9 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
                                 GraphSerialized<K, VV, EV> serialized,
                                 int numPartitions,
                                 short replicationFactor,
-                                Optional<Message> initialMessage) {
+                                Map<String, ?> configs,
+                                Optional<Message> initialMessage,
+                                ComputeFunction<K, VV, EV, Message> cf) {
         this(hostAndPort,
             applicationId,
             bootstrapServers,
@@ -84,7 +83,9 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
             "workSet-" + applicationId,
             numPartitions,
             replicationFactor,
-            initialMessage);
+            configs,
+            initialMessage,
+            cf);
     }
 
     public PregelGraphAlgorithm(String hostAndPort,
@@ -96,7 +97,9 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
                                 GraphSerialized<K, VV, EV> serialized,
                                 int numPartitions,
                                 short replicationFactor,
-                                Optional<Message> initialMessage) {
+                                Map<String, ?> configs,
+                                Optional<Message> initialMessage,
+                                ComputeFunction<K, VV, EV, Message> cf) {
         this(hostAndPort,
             applicationId,
             bootstrapServers,
@@ -109,7 +112,9 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
             "workSet-" + applicationId,
             numPartitions,
             replicationFactor,
-            initialMessage);
+            configs,
+            initialMessage,
+            cf);
     }
 
     // visible for testing
@@ -125,9 +130,24 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
                                 String workSetTopic,
                                 int numPartitions,
                                 short replicationFactor,
-                                Optional<Message> initialMessage) {
-        this(hostAndPort, applicationId, bootstrapServers, ZKUtils.createCurator(zookeeperConnect), verticesTopic, edgesGroupedBySourceTopic,
-            serialized, solutionSetTopic, solutionSetStore, workSetTopic, numPartitions, replicationFactor, initialMessage);
+                                Map<String, ?> configs,
+                                Optional<Message> initialMessage,
+                                ComputeFunction<K, VV, EV, Message> cf) {
+        this(hostAndPort,
+            applicationId,
+            bootstrapServers,
+            ZKUtils.createCurator(zookeeperConnect),
+            verticesTopic,
+            edgesGroupedBySourceTopic,
+            serialized,
+            solutionSetTopic,
+            solutionSetStore,
+            workSetTopic,
+            numPartitions,
+            replicationFactor,
+            configs,
+            initialMessage,
+            cf);
     }
 
     public PregelGraphAlgorithm(String hostAndPort,
@@ -142,7 +162,9 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
                                 String workSetTopic,
                                 int numPartitions,
                                 short replicationFactor,
-                                Optional<Message> initialMessage) {
+                                Map<String, ?> configs,
+                                Optional<Message> initialMessage,
+                                ComputeFunction<K, VV, EV, Message> cf) {
         this.hostAndPort = hostAndPort;
         this.applicationId = applicationId;
         this.bootstrapServers = bootstrapServers;
@@ -160,15 +182,7 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
         this.computation = new PregelComputation<>(hostAndPort, applicationId,
             bootstrapServers, curator, verticesTopic, edgesGroupedBySourceTopic, serialized,
             solutionSetTopic, solutionSetStore, workSetTopic, numPartitions,
-            initialMessage, computeFunction(), registeredAggregators);
-    }
-
-    public <T> void registerAggregator(String name, Class<? extends Aggregator<T>> aggregatorClass) {
-        registerAggregator(name, aggregatorClass, false);
-    }
-
-    public <T> void registerAggregator(String name, Class<? extends Aggregator<T>> aggregatorClass, boolean persistent) {
-        registeredAggregators.put(name, new AggregatorWrapper<>(aggregatorClass, persistent));
+            configs, initialMessage, cf);
     }
 
     @Override
@@ -208,31 +222,8 @@ public abstract class PregelGraphAlgorithm<K, VV, EV, Message>
         return () -> streams.store(solutionSetStore, QueryableStoreTypes.<K, VV>keyValueStore()).all();
     }
 
-    protected abstract ComputeFunction<K, VV, EV, Message> computeFunction();
-
     @Override
     public void close() {
         streams.close();
-    }
-
-    protected static class AggregatorWrapper<T> {
-        private final Class<? extends Aggregator<T>> aggregatorClass;
-        private final boolean persistent;
-
-        public AggregatorWrapper(
-            Class<? extends Aggregator<T>> aggregatorClass,
-            boolean persistent
-        ) {
-            this.aggregatorClass = aggregatorClass;
-            this.persistent = persistent;
-        }
-
-        public Class<? extends Aggregator<T>> getAggregatorClass() {
-            return aggregatorClass;
-        }
-
-        public boolean isPersistent() {
-            return persistent;
-        }
     }
 }

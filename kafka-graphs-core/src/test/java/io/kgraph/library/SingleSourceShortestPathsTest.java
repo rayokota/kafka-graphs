@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
@@ -44,6 +45,7 @@ import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
 import io.kgraph.TestGraphUtils;
+import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphUtils;
 import io.kgraph.utils.KryoSerde;
@@ -69,10 +71,13 @@ public class SingleSourceShortestPathsTest extends AbstractIntegrationTest {
         KGraph<Long, Double, Double> graph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
 
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(SingleSourceShortestPaths.SRC_VERTEX_ID, 1L);
         algorithm =
-            new SingleSourceShortestPaths(null, "run", CLUSTER.bootstrapServers(),
+            new PregelGraphAlgorithm<>(null, "run", CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
-                "solutionSet", "solutionSetStore", "workSet", 2, (short) 1, 1L);
+                "solutionSet", "solutionSetStore", "workSet", 2, (short) 1,
+                configs, Optional.empty(), new SingleSourceShortestPaths());
 
         Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());

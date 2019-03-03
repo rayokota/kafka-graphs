@@ -18,89 +18,52 @@
 
 package io.kgraph.library;
 
-import java.util.Optional;
+import java.util.Map;
 
-import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.kgraph.EdgeWithValue;
-import io.kgraph.GraphSerialized;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.ComputeFunction;
-import io.kgraph.pregel.PregelGraphAlgorithm;
 
-public class SingleSourceShortestPaths extends PregelGraphAlgorithm<Long, Double, Double, Double> {
+public class SingleSourceShortestPaths implements ComputeFunction<Long, Double, Double, Double> {
     private static final Logger log = LoggerFactory.getLogger(SingleSourceShortestPaths.class);
 
-    private final long srcVertexId;
+    public static final String SRC_VERTEX_ID = "srcVertexId";
 
-    public SingleSourceShortestPaths(String hostAndPort,
-                                     String applicationId,
-                                     String bootstrapServers,
-                                     CuratorFramework curator,
-                                     String verticesTopic,
-                                     String edgesGroupedBySourceTopic,
-                                     GraphSerialized<Long, Double, Double> serialized,
-                                     int numPartitions,
-                                     short replicationFactor,
-                                     long srcVertexId) {
-        super(hostAndPort, applicationId, bootstrapServers, curator, verticesTopic, edgesGroupedBySourceTopic, serialized,
-            numPartitions, replicationFactor, Optional.empty());
-        this.srcVertexId = srcVertexId;
-    }
+    private long srcVertexId;
 
-    public SingleSourceShortestPaths(String hostAndPort,
-                                     String applicationId,
-                                     String bootstrapServers,
-                                     String zookeeperConnect,
-                                     String verticesTopic,
-                                     String edgesGroupedBySourceTopic,
-                                     GraphSerialized<Long, Double, Double> serialized,
-                                     String solutionSetTopic,
-                                     String solutionSetStore,
-                                     String workSetTopic,
-                                     int numPartitions,
-                                     short replicationFactor,
-                                     long srcVertexId) {
-        super(hostAndPort, applicationId, bootstrapServers, zookeeperConnect, verticesTopic, edgesGroupedBySourceTopic, serialized,
-            solutionSetTopic, solutionSetStore, workSetTopic, numPartitions, replicationFactor, Optional.empty());
-        this.srcVertexId = srcVertexId;
+    @Override
+    public void init(Map<String, ?> configs, InitCallback cb) {
+        srcVertexId = (Long) configs.get(SRC_VERTEX_ID);
     }
 
     @Override
-    protected ComputeFunction<Long, Double, Double, Double> computeFunction() {
-        return new SSSPComputeFunction();
-    }
+    public void compute(
+        int superstep,
+        VertexWithValue<Long, Double> vertex,
+        Iterable<Double> messages,
+        Iterable<EdgeWithValue<Long, Double>> edges,
+        Callback<Long, Double, Double, Double> cb) {
 
-    public final class SSSPComputeFunction implements ComputeFunction<Long, Double, Double, Double> {
+        double minDistance = (vertex.id().equals(srcVertexId)) ? 0d : Double.POSITIVE_INFINITY;
 
-        @Override
-        public void compute(
-            int superstep,
-            VertexWithValue<Long, Double> vertex,
-            Iterable<Double> messages,
-            Iterable<EdgeWithValue<Long, Double>> edges,
-            Callback<Long, Double, Double, Double> cb) {
-
-            double minDistance = (vertex.id().equals(srcVertexId)) ? 0d : Double.POSITIVE_INFINITY;
-
-            for (Double message : messages) {
-                minDistance = Math.min(minDistance, message);
-            }
-
-            log.debug(">>> Vertex {} got minDist = {} vertex value {}", vertex.id(), minDistance, vertex.value());
-
-            if (minDistance < vertex.value()) {
-                cb.setNewVertexValue(minDistance);
-                for (EdgeWithValue<Long, Double> edge : edges) {
-                    double distance = minDistance + edge.value();
-                    log.debug(">>> Vertex {} sent to {} = {}", vertex.id(), edge.target(), distance);
-                    cb.sendMessageTo(edge.target(), distance);
-                }
-            }
-
-            cb.voteToHalt();
+        for (Double message : messages) {
+            minDistance = Math.min(minDistance, message);
         }
+
+        log.debug(">>> Vertex {} got minDist = {} vertex value {}", vertex.id(), minDistance, vertex.value());
+
+        if (minDistance < vertex.value()) {
+            cb.setNewVertexValue(minDistance);
+            for (EdgeWithValue<Long, Double> edge : edges) {
+                double distance = minDistance + edge.value();
+                log.debug(">>> Vertex {} sent to {} = {}", vertex.id(), edge.target(), distance);
+                cb.sendMessageTo(edge.target(), distance);
+            }
+        }
+
+        cb.voteToHalt();
     }
 }

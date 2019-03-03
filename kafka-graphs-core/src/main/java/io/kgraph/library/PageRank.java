@@ -18,112 +18,70 @@
 
 package io.kgraph.library;
 
-import java.util.Optional;
+import java.util.Map;
 
-import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.kgraph.EdgeWithValue;
-import io.kgraph.GraphSerialized;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.ComputeFunction;
-import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.vavr.Tuple2;
 
-public class PageRank<K> extends PregelGraphAlgorithm<K, Tuple2<Double, Double>, Double, Double> {
+public class PageRank<K> implements ComputeFunction<K, Tuple2<Double, Double>, Double, Double> {
     private static final Logger log = LoggerFactory.getLogger(PageRank.class);
 
-    private final double tolerance;
-    private final double resetProbability;
-    private final K srcVertexId;
+    public static final String TOLERANCE = "tolerance";
+    public static final String RESET_PROBABILITY = "resetProbability";
+    public static final String SRC_VERTEX_ID = "srcVertexId";
 
-    public PageRank(String hostAndPort,
-                    String applicationId,
-                    String bootstrapServers,
-                    CuratorFramework curator,
-                    String verticesTopic,
-                    String edgesGroupedBySourceTopic,
-                    GraphSerialized<K, Tuple2<Double, Double>, Double> serialized,
-                    int numPartitions,
-                    short replicationFactor,
-                    double tolerance,
-                    double resetProbability,
-                    Optional<K> srcVertexId) {
-        super(hostAndPort, applicationId, bootstrapServers, curator, verticesTopic, edgesGroupedBySourceTopic, serialized,
-            numPartitions, replicationFactor, Optional.empty());
-        this.tolerance = tolerance;
-        this.resetProbability = resetProbability;
-        this.srcVertexId = srcVertexId.orElse(null);
-    }
+    private double tolerance;
+    private double resetProbability;
+    private K srcVertexId;
 
-    public PageRank(String hostAndPort,
-                    String applicationId,
-                    String bootstrapServers,
-                    String zookeeperConnect,
-                    String verticesTopic,
-                    String edgesGroupedBySourceTopic,
-                    GraphSerialized<K, Tuple2<Double, Double>, Double> serialized,
-                    String solutionSetTopic,
-                    String solutionSetStore,
-                    String workSetTopic,
-                    int numPartitions,
-                    short replicationFactor,
-                    double tolerance,
-                    double resetProbability,
-                    Optional<K> srcVertexId) {
-        super(hostAndPort, applicationId, bootstrapServers, zookeeperConnect, verticesTopic, edgesGroupedBySourceTopic, serialized,
-            solutionSetTopic, solutionSetStore, workSetTopic, numPartitions, replicationFactor,
-            Optional.of(srcVertexId.isPresent() ? 0.0 : resetProbability / (1.0 - resetProbability)));
-        this.tolerance = tolerance;
-        this.resetProbability = resetProbability;
-        this.srcVertexId = srcVertexId.orElse(null);
+    @Override
+    @SuppressWarnings("unchecked")
+    public void init(Map<String, ?> configs, InitCallback cb) {
+        tolerance = (Double) configs.get(TOLERANCE);
+        resetProbability = (Double) configs.get(RESET_PROBABILITY);
+        srcVertexId = (K) configs.get(SRC_VERTEX_ID);
     }
 
     @Override
-    protected ComputeFunction<K, Tuple2<Double, Double>, Double, Double> computeFunction() {
-        return new PageRankComputeFunction();
-    }
+    public void compute(
+        int superstep,
+        VertexWithValue<K, Tuple2<Double, Double>> vertex,
+        Iterable<Double> messages,
+        Iterable<EdgeWithValue<K, Double>> edges,
+        Callback<K, Tuple2<Double, Double>, Double, Double> cb) {
 
-    public final class PageRankComputeFunction implements ComputeFunction<K, Tuple2<Double, Double>,
-        Double, Double> {
+        double oldPageRank = vertex.value()._1;
+        double oldDelta = vertex.value()._2;
 
-        @Override
-        public void compute(
-            int superstep,
-            VertexWithValue<K, Tuple2<Double, Double>> vertex,
-            Iterable<Double> messages,
-            Iterable<EdgeWithValue<K, Double>> edges,
-            Callback<K, Tuple2<Double, Double>, Double, Double> cb) {
-
-            double oldPageRank = vertex.value()._1;
-            double oldDelta = vertex.value()._2;
-
-            double messageSum = 0.0;
-            for (Double message : messages) {
-                messageSum += message;
-            }
-
-            boolean isPersonalized = srcVertexId != null;
-            double newPageRank = isPersonalized && oldDelta == Double.NEGATIVE_INFINITY
-                ? 1.0 : oldPageRank + (1.0 - resetProbability) * messageSum;
-            double newDelta = newPageRank - oldPageRank;
-
-            log.debug("step {} vertex {} sum {}", superstep, vertex.id(), messageSum);
-            log.debug("old ({},{})", oldPageRank, oldDelta);
-            log.debug("new ({},{})", newPageRank, newDelta);
-            log.debug("msgs {}", messages);
-
-            cb.setNewVertexValue(new Tuple2<>(newPageRank, newDelta));
-
-            for (EdgeWithValue<K, Double> edge : edges) {
-                if (newDelta > tolerance) {
-                    log.debug("sending to target {} edge {} msg {}", edge.target(), edge.value(), newDelta * edge.value());
-                    cb.sendMessageTo(edge.target(), newDelta * edge.value());
-                }
-            }
-
-            cb.voteToHalt();
+        double messageSum = 0.0;
+        for (Double message : messages) {
+            messageSum += message;
         }
+
+        boolean isPersonalized = srcVertexId != null;
+        double newPageRank = isPersonalized && oldDelta == Double.NEGATIVE_INFINITY
+            ? 1.0 : oldPageRank + (1.0 - resetProbability) * messageSum;
+        double newDelta = newPageRank - oldPageRank;
+
+        log.debug("step {} vertex {} sum {}", superstep, vertex.id(), messageSum);
+        log.debug("old ({},{})", oldPageRank, oldDelta);
+        log.debug("new ({},{})", newPageRank, newDelta);
+        log.debug("msgs {}", messages);
+
+        cb.setNewVertexValue(new Tuple2<>(newPageRank, newDelta));
+
+        for (EdgeWithValue<K, Double> edge : edges) {
+            if (newDelta > tolerance) {
+                log.debug("sending to target {} edge {} msg {}", edge.target(), edge.value(), newDelta * edge.value());
+                cb.sendMessageTo(edge.target(), newDelta * edge.value());
+            }
+        }
+
+        cb.voteToHalt();
     }
 }

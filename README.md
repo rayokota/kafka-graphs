@@ -179,7 +179,7 @@ As you can see above, a graph algorithm may have specific parameters.  Here are 
 |-----------|------------|---------|
 | bfs  | srcVertexId | "params": { "srcVertexId": 0 } |
 | lcc | | |
-| lp | srcVertexId | "params": { "srcVertexId": 0 } |
+| lp | | |
 | mssp | landmarkVertexIds | "params": { "landmarkVertexIds": "0,1,2" } |
 | pagerank | tolerance, resetProbability | "params": { "tolerance": 0.0001, "resetProbability": 0.15 } |
 | sssp | srcVertexId | "params": { "srcVertexId": 0 } |

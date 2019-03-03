@@ -27,6 +27,7 @@ import org.apache.kafka.streams.state.KeyValueStore;
 
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
+import io.kgraph.pregel.PregelComputation.AggregatorWrapper;
 import io.kgraph.pregel.aggregators.Aggregator;
 
 /**
@@ -38,6 +39,9 @@ import io.kgraph.pregel.aggregators.Aggregator;
  * @param <Message> The type of the message sent between vertices along the edges.
  */
 public interface ComputeFunction<K, VV, EV, Message> {
+
+    default void init(Map<String, ?> configs, InitCallback cb) {
+    }
 
     default void masterCompute(int superstep, MasterCallback cb) {
     }
@@ -62,6 +66,26 @@ public interface ComputeFunction<K, VV, EV, Message> {
                  Iterable<Message> messages,
                  Iterable<EdgeWithValue<K, EV>> edges,
                  Callback<K, VV, EV, Message> cb);
+
+    final class InitCallback {
+
+        protected final Map<String, AggregatorWrapper<?>> aggregators;
+
+        public InitCallback(Map<String, AggregatorWrapper<?>> aggregators) {
+            this.aggregators = aggregators;
+        }
+
+        public <T> void registerAggregator(String name,
+                                           Class<? extends Aggregator<T>> aggregatorClass) {
+            registerAggregator(name, aggregatorClass, false);
+        }
+
+        public <T> void registerAggregator(String name,
+                                           Class<? extends Aggregator<T>> aggregatorClass,
+                                           boolean persistent) {
+            aggregators.put(name, new AggregatorWrapper<>(aggregatorClass, persistent));
+        }
+    }
 
     final class MasterCallback {
 

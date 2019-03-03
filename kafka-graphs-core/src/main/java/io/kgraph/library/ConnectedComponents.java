@@ -18,103 +18,45 @@
 
 package io.kgraph.library;
 
-import java.util.Optional;
-
-import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.kgraph.EdgeWithValue;
-import io.kgraph.GraphSerialized;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.ComputeFunction;
-import io.kgraph.pregel.PregelGraphAlgorithm;
 
-public class ConnectedComponents<EV> extends PregelGraphAlgorithm<Long, Long, EV, Long> {
+public class ConnectedComponents<EV> implements ComputeFunction<Long, Long, EV, Long> {
     private static final Logger log = LoggerFactory.getLogger(ConnectedComponents.class);
 
-    public ConnectedComponents(String hostAndPort,
-                               String applicationId,
-                               String bootstrapServers,
-                               CuratorFramework curator,
-                               String verticesTopic,
-                               String edgesGroupedBySourceTopic,
-                               GraphSerialized<Long, Long, EV> serialized,
-                               int numPartitions,
-                               short replicationFactor) {
-        super(hostAndPort, applicationId, bootstrapServers, curator, verticesTopic, edgesGroupedBySourceTopic, serialized,
-            numPartitions, replicationFactor, Optional.empty());
-    }
-
-    public ConnectedComponents(String hostAndPort,
-                               String applicationId,
-                               String bootstrapServers,
-                               CuratorFramework curator,
-                               String verticesTopic,
-                               String edgesGroupedBySourceTopic,
-                               GraphSerialized<Long, Long, EV> serialized,
-                               String solutionSetTopic,
-                               String solutionSetStore,
-                               String workSetTopic,
-                               int numPartitions,
-                               short replicationFactor) {
-        super(hostAndPort, applicationId, bootstrapServers, curator, verticesTopic, edgesGroupedBySourceTopic, serialized,
-            solutionSetTopic, solutionSetStore, workSetTopic, numPartitions, replicationFactor, Optional.empty());
-    }
-
-    public ConnectedComponents(String hostAndPort,
-                               String applicationId,
-                               String bootstrapServers,
-                               String zookeeperConnect,
-                               String verticesTopic,
-                               String edgesGroupedBySourceTopic,
-                               GraphSerialized<Long, Long, EV> serialized,
-                               String solutionSetTopic,
-                               String solutionSetStore,
-                               String workSetTopic,
-                               int numPartitions,
-                               short replicationFactor) {
-        super(hostAndPort, applicationId, bootstrapServers, zookeeperConnect, verticesTopic, edgesGroupedBySourceTopic, serialized,
-            solutionSetTopic, solutionSetStore, workSetTopic, numPartitions, replicationFactor, Optional.empty());
-    }
-
     @Override
-    protected ComputeFunction<Long, Long, EV, Long> computeFunction() {
-        return new CCComputeFunction();
-    }
+    public void compute(
+        int superstep,
+        VertexWithValue<Long, Long> vertex,
+        Iterable<Long> messages,
+        Iterable<EdgeWithValue<Long, EV>> edges,
+        Callback<Long, Long, EV, Long> cb) {
 
-    public final class CCComputeFunction implements ComputeFunction<Long, Long, EV, Long> {
+        Long currentValue = vertex.value();
 
-        @Override
-        public void compute(
-            int superstep,
-            VertexWithValue<Long, Long> vertex,
-            Iterable<Long> messages,
-            Iterable<EdgeWithValue<Long, EV>> edges,
-            Callback<Long, Long, EV, Long> cb) {
-
-            Long currentValue = vertex.value();
-
-            for (Long message : messages) {
-                currentValue = Math.min(currentValue, message);
-            }
-
-            if (currentValue < vertex.value()) {
-                log.debug(">>> Vertex {} has new value {}", vertex.id(), currentValue);
-                cb.setNewVertexValue(currentValue);
-            }
-
-            for (EdgeWithValue<Long, EV> e : edges) {
-                if (currentValue < e.target()) {
-                    log.debug(">>> Vertex {} sent to {} = {}", vertex.id(), e.target(), currentValue);
-                    cb.sendMessageTo(e.target(), currentValue);
-                } else if (currentValue > e.target()) {
-                    log.debug(">>> Vertex {} sent to {} = {}", vertex.id(), currentValue, e.target());
-                    cb.sendMessageTo(currentValue, e.target());
-                }
-            }
-
-            cb.voteToHalt();
+        for (Long message : messages) {
+            currentValue = Math.min(currentValue, message);
         }
+
+        if (currentValue < vertex.value()) {
+            log.debug(">>> Vertex {} has new value {}", vertex.id(), currentValue);
+            cb.setNewVertexValue(currentValue);
+        }
+
+        for (EdgeWithValue<Long, EV> e : edges) {
+            if (currentValue < e.target()) {
+                log.debug(">>> Vertex {} sent to {} = {}", vertex.id(), e.target(), currentValue);
+                cb.sendMessageTo(e.target(), currentValue);
+            } else if (currentValue > e.target()) {
+                log.debug(">>> Vertex {} sent to {} = {}", vertex.id(), currentValue, e.target());
+                cb.sendMessageTo(currentValue, e.target());
+            }
+        }
+
+        cb.voteToHalt();
     }
 }

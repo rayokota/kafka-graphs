@@ -20,88 +20,40 @@ package io.kgraph.library;
 
 import java.util.Collections;
 import java.util.Map;
-import java.util.Optional;
 import java.util.TreeMap;
 
-import org.apache.curator.framework.CuratorFramework;
-
 import io.kgraph.EdgeWithValue;
-import io.kgraph.GraphSerialized;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.ComputeFunction;
-import io.kgraph.pregel.PregelGraphAlgorithm;
 
-public class LabelPropagation<EV> extends PregelGraphAlgorithm<Long, Long, EV, Map<Long, Long>> {
-
-    private final long srcVertexId;
-
-    public LabelPropagation(String hostAndPort,
-                            String applicationId,
-                            String bootstrapServers,
-                            CuratorFramework curator,
-                            String verticesTopic,
-                            String edgesGroupedBySourceTopic,
-                            GraphSerialized<Long, Long, EV> serialized,
-                            int numPartitions,
-                            short replicationFactor,
-                            long srcVertexId) {
-        super(hostAndPort, applicationId, bootstrapServers, curator, verticesTopic, edgesGroupedBySourceTopic, serialized,
-            numPartitions, replicationFactor, Optional.empty());
-        this.srcVertexId = srcVertexId;
-    }
-
-    public LabelPropagation(String hostAndPort,
-                            String applicationId,
-                            String bootstrapServers,
-                            String zookeeperConnect,
-                            String verticesTopic,
-                            String edgesGroupedBySourceTopic,
-                            GraphSerialized<Long, Long, EV> serialized,
-                            String solutionSetTopic,
-                            String solutionSetStore,
-                            String workSetTopic,
-                            int numPartitions,
-                            short replicationFactor,
-                            long srcVertexId) {
-        super(hostAndPort, applicationId, bootstrapServers, zookeeperConnect, verticesTopic, edgesGroupedBySourceTopic, serialized,
-            solutionSetTopic, solutionSetStore, workSetTopic, numPartitions, replicationFactor, Optional.empty());
-        this.srcVertexId = srcVertexId;
-    }
+public class LabelPropagation<EV> implements ComputeFunction<Long, Long, EV, Map<Long, Long>> {
 
     @Override
-    protected ComputeFunction<Long, Long, EV, Map<Long, Long>> computeFunction() {
-        return new LPComputeFunction();
-    }
+    public void compute(
+        int superstep,
+        VertexWithValue<Long, Long> vertex,
+        Iterable<Map<Long, Long>> messages,
+        Iterable<EdgeWithValue<Long, EV>> edges,
+        Callback<Long, Long, EV, Map<Long, Long>> cb) {
 
-    public final class LPComputeFunction implements ComputeFunction<Long, Long, EV, Map<Long, Long>> {
+        Long vertexValue = vertex.value();
 
-        @Override
-        public void compute(
-            int superstep,
-            VertexWithValue<Long, Long> vertex,
-            Iterable<Map<Long, Long>> messages,
-            Iterable<EdgeWithValue<Long, EV>> edges,
-            Callback<Long, Long, EV, Map<Long, Long>> cb) {
+        Map<Long, Long> counts = new TreeMap<>();
+        for (Map<Long, Long> message : messages) {
+            message.forEach((k, v) -> counts.merge(k, v, (v1, v2) -> v1 + v2));
+        }
+        if (!counts.isEmpty()) {
+            Long maxKey = counts.entrySet().stream()
+                .max((e1, e2) -> (int) (e1.getValue() - e2.getValue() != 0
+                    ? e1.getValue() - e2.getValue() : e1.getKey() - e2.getKey())).get().getKey();
 
-            Long vertexValue = vertex.value();
-
-            Map<Long, Long> counts = new TreeMap<>();
-            for (Map<Long, Long> message : messages) {
-                message.forEach((k, v) -> counts.merge(k, v, (v1, v2) -> v1 + v2));
+            if (vertexValue < maxKey) {
+                vertexValue = maxKey;
+                cb.setNewVertexValue(vertexValue);
             }
-            if (!counts.isEmpty()) {
-                Long maxKey = counts.entrySet().stream()
-                    .max((e1, e2) -> (int) (e1.getValue() - e2.getValue() != 0
-                        ? e1.getValue() - e2.getValue() : e1.getKey() - e2.getKey())).get().getKey();
-
-                if (vertexValue < maxKey) {
-                    vertexValue = maxKey;
-                    cb.setNewVertexValue(vertexValue);
-                }
-            }
-            for (EdgeWithValue<Long, EV> edge : edges) {
-                cb.sendMessageTo(edge.target(), Collections.singletonMap(vertexValue, 1L));
-            }
+        }
+        for (EdgeWithValue<Long, EV> edge : edges) {
+            cb.sendMessageTo(edge.target(), Collections.singletonMap(vertexValue, 1L));
         }
     }
 }

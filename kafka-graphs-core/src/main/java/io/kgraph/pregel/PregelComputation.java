@@ -79,7 +79,6 @@ import io.kgraph.EdgeWithValue;
 import io.kgraph.GraphAlgorithmState.State;
 import io.kgraph.GraphSerialized;
 import io.kgraph.VertexWithValue;
-import io.kgraph.pregel.PregelGraphAlgorithm.AggregatorWrapper;
 import io.kgraph.pregel.PregelState.Stage;
 import io.kgraph.pregel.aggregators.Aggregator;
 import io.kgraph.utils.ClientUtils;
@@ -115,6 +114,7 @@ public class PregelComputation<K, VV, EV, Message> {
 
     private final GraphSerialized<K, VV, EV> serialized;
 
+    private final Map<String, ?> configs;
     private final Optional<Message> initialMessage;
     private final ComputeFunction<K, VV, EV, Message> computeFunction;
     private final Map<String, AggregatorWrapper<?>> registeredAggregators;
@@ -146,9 +146,9 @@ public class PregelComputation<K, VV, EV, Message> {
         String solutionSetStore,
         String workSetTopic,
         int numPartitions,
+        Map<String, ?> configs,
         Optional<Message> initialMessage,
-        ComputeFunction<K, VV, EV, Message> cf,
-        Map<String, AggregatorWrapper<?>> registeredAggregators
+        ComputeFunction<K, VV, EV, Message> cf
     ) {
 
         this.hostAndPort = hostAndPort;
@@ -162,14 +162,17 @@ public class PregelComputation<K, VV, EV, Message> {
         this.workSetTopic = workSetTopic;
         this.numPartitions = numPartitions;
         this.serialized = serialized;
+        this.configs = configs;
         this.initialMessage = initialMessage;
         this.computeFunction = cf;
-        this.registeredAggregators = registeredAggregators;
+        this.registeredAggregators = new ConcurrentHashMap<>();
 
         this.edgesStoreName = "edgesStore-" + applicationId;
         this.verticesStoreName = "verticesStore-" + applicationId;
         this.localworkSetStoreName = "localworkSetStore-" + applicationId;
         this.localSolutionSetStoreName = "localSolutionSetStore-" + applicationId;
+
+        cf.init(configs, new ComputeFunction.InitCallback(registeredAggregators));
     }
 
     public KTable<K, VV> vertices() {
@@ -800,6 +803,27 @@ public class PregelComputation<K, VV, EV, Message> {
         @Override
         public void close() {
             producer.close();
+        }
+    }
+
+    protected static class AggregatorWrapper<T> {
+        private final Class<? extends Aggregator<T>> aggregatorClass;
+        private final boolean persistent;
+
+        public AggregatorWrapper(
+            Class<? extends Aggregator<T>> aggregatorClass,
+            boolean persistent
+        ) {
+            this.aggregatorClass = aggregatorClass;
+            this.persistent = persistent;
+        }
+
+        public Class<? extends Aggregator<T>> getAggregatorClass() {
+            return aggregatorClass;
+        }
+
+        public boolean isPersistent() {
+            return persistent;
         }
     }
 

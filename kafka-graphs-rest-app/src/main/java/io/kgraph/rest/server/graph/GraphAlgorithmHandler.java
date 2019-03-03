@@ -24,6 +24,7 @@ import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -60,6 +61,7 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
 
+import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.library.BreadthFirstSearch;
@@ -69,6 +71,7 @@ import io.kgraph.library.LocalClusteringCoefficient;
 import io.kgraph.library.MultipleSourceShortestPaths;
 import io.kgraph.library.PageRank;
 import io.kgraph.library.SingleSourceShortestPaths;
+import io.kgraph.pregel.ComputeFunction;
 import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.pregel.ZKUtils;
 import io.kgraph.rest.server.KafkaGraphsProperties;
@@ -201,167 +204,89 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                 .body(Mono.just(new GraphAlgorithmId(appId)), GraphAlgorithmId.class));
     }
 
+    @SuppressWarnings("unchecked")
     private PregelGraphAlgorithm<Long, ?, ?, ?> getAlgorithm(String appId, GraphAlgorithmCreateRequest input) {
         try {
             long srcVertexId;
-            PregelGraphAlgorithm<Long, ?, ?, ?> algorithm;
+            ComputeFunction<Long, ?, ?, ?> cf;
+            Map<String, Object> configs = new HashMap<>();
+            Optional<?> initMsg = Optional.empty();
+            GraphSerialized<Long, ?, ?> graphSerialized;
             switch (input.getAlgorithm()) {
                 case bfs:
+                    cf = new BreadthFirstSearch<>();
                     srcVertexId = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
+                    configs.put(BreadthFirstSearch.SRC_VERTEX_ID, srcVertexId);
                     if (input.isValuesOfTypeDouble()) {
-                        algorithm = new BreadthFirstSearch<>(
-                            getHostAndPort(),
-                            appId,
-                            props.getBootstrapServers(),
-                            curator,
-                            input.getVerticesTopic(),
-                            input.getEdgesGroupedBySourceTopic(),
-                            GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double()),
-                            input.getNumPartitions(),
-                            input.getReplicationFactor(),
-                            srcVertexId
-                            );
+                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double());
                     } else {
-                        algorithm = new BreadthFirstSearch<>(
-                            getHostAndPort(),
-                            appId,
-                            props.getBootstrapServers(),
-                            curator,
-                            input.getVerticesTopic(),
-                            input.getEdgesGroupedBySourceTopic(),
-                            GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()),
-                            input.getNumPartitions(),
-                            input.getReplicationFactor(),
-                            srcVertexId
-                        );
+                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long());
                     }
                     break;
                 case wcc:
+                    cf = new ConnectedComponents<>();
                     if (input.isValuesOfTypeDouble()) {
-                        algorithm = new ConnectedComponents<>(
-                            getHostAndPort(),
-                            appId,
-                            props.getBootstrapServers(),
-                            curator,
-                            input.getVerticesTopic(),
-                            input.getEdgesGroupedBySourceTopic(),
-                            GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double()),
-                            input.getNumPartitions(),
-                            input.getReplicationFactor()
-                        );
+                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double());
                     } else {
-                        algorithm = new ConnectedComponents<>(
-                            getHostAndPort(),
-                            appId,
-                            props.getBootstrapServers(),
-                            curator,
-                            input.getVerticesTopic(),
-                            input.getEdgesGroupedBySourceTopic(),
-                            GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()),
-                            input.getNumPartitions(),
-                            input.getReplicationFactor()
-                        );
+                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long());
                     }
                     break;
                 case lcc:
-                    algorithm = new LocalClusteringCoefficient(
-                        getHostAndPort(),
-                        appId,
-                        props.getBootstrapServers(),
-                        curator,
-                        input.getVerticesTopic(),
-                        input.getEdgesGroupedBySourceTopic(),
-                        GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()),
-                        input.getNumPartitions(),
-                        input.getReplicationFactor()
-                    );
+                    cf = new LocalClusteringCoefficient();
+                    graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double());
                     break;
                 case lp:
-                    srcVertexId = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
+                    cf = new LabelPropagation<>();
                     if (input.isValuesOfTypeDouble()) {
-                        algorithm = new LabelPropagation<>(
-                            getHostAndPort(),
-                            appId,
-                            props.getBootstrapServers(),
-                            curator,
-                            input.getVerticesTopic(),
-                            input.getEdgesGroupedBySourceTopic(),
-                            GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double()),
-                            input.getNumPartitions(),
-                            input.getReplicationFactor(),
-                            srcVertexId
-                        );
+                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double());
                     } else {
-                        algorithm = new LabelPropagation<>(
-                            getHostAndPort(),
-                            appId,
-                            props.getBootstrapServers(),
-                            curator,
-                            input.getVerticesTopic(),
-                            input.getEdgesGroupedBySourceTopic(),
-                            GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()),
-                            input.getNumPartitions(),
-                            input.getReplicationFactor(),
-                            srcVertexId
-                        );
+                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long());
                     }
                     break;
                 case mssp:
+                    cf = new MultipleSourceShortestPaths();
                     String[] values = getParam(input.getParams(), "landmarkVertexIds", true).split(",");
                     Set<Long> landmarkVertexIds = Arrays.stream(values).map((Long::parseLong)).collect(Collectors.toSet());
-                    algorithm = new MultipleSourceShortestPaths(
-                        getHostAndPort(),
-                        appId,
-                        props.getBootstrapServers(),
-                        curator,
-                        input.getVerticesTopic(),
-                        input.getEdgesGroupedBySourceTopic(),
-                        GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double()),
-                        input.getNumPartitions(),
-                        input.getReplicationFactor(),
-                        landmarkVertexIds
-                    );
+                    configs.put(MultipleSourceShortestPaths.LANDMARK_VERTEX_IDS, landmarkVertexIds);
+                    graphSerialized = GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double());
                     break;
                 case pagerank:
+                    cf = new PageRank<>();
                     double tolerance = Double.parseDouble(getParam(input.getParams(), "tolerance", true));
                     double resetProbability = Double.parseDouble(getParam(input.getParams(), "resetProbability", true));
                     String srcVertexIdStr = getParam(input.getParams(), "srcVertexId", false);
-                    Optional<Long> optSrcVertexId = srcVertexIdStr != null
-                        ? Optional.of(Long.parseLong(srcVertexIdStr)) : Optional.empty();
-                    algorithm = new PageRank<>(
-                        getHostAndPort(),
-                        appId,
-                        props.getBootstrapServers(),
-                        curator,
-                        input.getVerticesTopic(),
-                        input.getEdgesGroupedBySourceTopic(),
-                        GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double()),
-                        input.getNumPartitions(),
-                        input.getReplicationFactor(),
-                        tolerance,
-                        resetProbability,
-                        optSrcVertexId
-                    );
+                    configs.put(PageRank.TOLERANCE, tolerance);
+                    configs.put(PageRank.RESET_PROBABILITY, resetProbability);
+                    if (srcVertexIdStr != null) {
+                        configs.put(PageRank.SRC_VERTEX_ID, Long.parseLong(srcVertexIdStr));
+                        initMsg = Optional.of(0.0);
+                    } else {
+                        initMsg = Optional.of(resetProbability / (1.0 - resetProbability));
+                    }
+                    graphSerialized = GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double());
                     break;
                 case sssp:
+                    cf = new SingleSourceShortestPaths();
                     srcVertexId = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
-                    algorithm = new SingleSourceShortestPaths(
-                        getHostAndPort(),
-                        appId,
-                        props.getBootstrapServers(),
-                        curator,
-                        input.getVerticesTopic(),
-                        input.getEdgesGroupedBySourceTopic(),
-                        GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()),
-                        input.getNumPartitions(),
-                        input.getReplicationFactor(),
-                        srcVertexId
-                    );
+                    configs.put(SingleSourceShortestPaths.SRC_VERTEX_ID, srcVertexId);
+                    graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double());
                     break;
                 default:
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid algorithm: " + input.getAlgorithm());
             }
-            return algorithm;
+            return new PregelGraphAlgorithm<>(
+                getHostAndPort(),
+                appId,
+                props.getBootstrapServers(),
+                curator,
+                input.getVerticesTopic(),
+                input.getEdgesGroupedBySourceTopic(),
+                (GraphSerialized<Long, Object, Object>) graphSerialized,
+                input.getNumPartitions(),
+                input.getReplicationFactor(),
+                configs,
+                (Optional<Object>) initMsg,
+                (ComputeFunction<Long, Object, Object, Object>) cf);
         } catch (NumberFormatException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid number", e);
         }
