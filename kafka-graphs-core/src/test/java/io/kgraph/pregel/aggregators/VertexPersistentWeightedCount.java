@@ -19,16 +19,13 @@
 package io.kgraph.pregel.aggregators;
 
 import java.util.Map;
-import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.kgraph.EdgeWithValue;
-import io.kgraph.GraphSerialized;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.ComputeFunction;
-import io.kgraph.pregel.PregelGraphAlgorithm;
 
 public class VertexPersistentWeightedCount<K, EV> implements ComputeFunction<K, Long, EV, Long> {
     private static final Logger log = LoggerFactory.getLogger(VertexPersistentWeightedCount.class);

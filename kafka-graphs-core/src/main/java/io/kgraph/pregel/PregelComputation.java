@@ -114,7 +114,6 @@ public class PregelComputation<K, VV, EV, Message> {
 
     private final GraphSerialized<K, VV, EV> serialized;
 
-    private final Map<String, ?> configs;
     private final Optional<Message> initialMessage;
     private final ComputeFunction<K, VV, EV, Message> computeFunction;
     private final Map<String, AggregatorWrapper<?>> registeredAggregators;
@@ -162,7 +161,6 @@ public class PregelComputation<K, VV, EV, Message> {
         this.workSetTopic = workSetTopic;
         this.numPartitions = numPartitions;
         this.serialized = serialized;
-        this.configs = configs;
         this.initialMessage = initialMessage;
         this.computeFunction = cf;
         this.registeredAggregators = new ConcurrentHashMap<>();

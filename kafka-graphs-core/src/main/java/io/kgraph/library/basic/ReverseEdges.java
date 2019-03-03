@@ -18,17 +18,12 @@
 
 package io.kgraph.library.basic;
 
-import java.util.Optional;
-
-import org.apache.curator.framework.CuratorFramework;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import io.kgraph.EdgeWithValue;
-import io.kgraph.GraphSerialized;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.ComputeFunction;
-import io.kgraph.pregel.PregelGraphAlgorithm;
 
 public class ReverseEdges<K, VV, EV> implements ComputeFunction<K, VV, EV, EdgeWithValue<K, EV>> {
     private static final Logger log = LoggerFactory.getLogger(ReverseEdges.class);

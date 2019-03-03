@@ -61,7 +61,6 @@ import org.springframework.web.reactive.function.server.ServerRequest;
 import org.springframework.web.reactive.function.server.ServerResponse;
 import org.springframework.web.server.ResponseStatusException;
 
-import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.library.BreadthFirstSearch;

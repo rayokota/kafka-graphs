@@ -37,6 +37,7 @@ public class MultipleSourceShortestPaths implements ComputeFunction<Long, Map<Lo
     private Set<Long> landmarkVertexIds;
 
     @Override
+    @SuppressWarnings("unchecked")
     public void init(Map<String, ?> configs, InitCallback cb) {
         landmarkVertexIds = (Set<Long>) configs.get(LANDMARK_VERTEX_IDS);
     }
