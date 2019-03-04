@@ -38,16 +38,8 @@ public class Edge<K> {
         return new Edge<>(target(), source());
     }
 
-    public void setSource(K source) {
-        this.source = source;
-    }
-
     public K source() {
         return source;
-    }
-
-    public void setTarget(K target) {
-        this.target = target;
     }
 
     public K target() {

@@ -251,12 +251,12 @@ public class PregelComputation<K, VV, EV, Message> {
             // 0th iteration does not count as it just sets up the initial message
             .filter((K k, Tuple3<Integer, K, List<Message>> v) -> v._1 <= maxIterations);
 
-        KStream<K, Tuple3<Integer, Map<K, EV>, Map<K, List<Message>>>> workSetWithEdges = workSet
-            .transform(BarrierSync::new, edgesGroupedBySource.queryableStoreName(), localworkSetStoreName)
+        KStream<K, Tuple2<Integer, Map<K, List<Message>>>> syncedWorkSet = workSet
+            .transform(BarrierSync::new, localworkSetStoreName)
             .peek((k, v) -> log.trace("workset 2 after join: (" + k + ", " + v + ")"));
 
         KStream<K, Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, List<Message>>>> superstepComputation =
-            workSetWithEdges
+            syncedWorkSet
                 .transformValues(VertexComputeUdf::new, localSolutionSetStoreName, vertices.queryableStoreName(),
                     edgesGroupedBySource.queryableStoreName());
 
@@ -361,11 +361,10 @@ public class PregelComputation<K, VV, EV, Message> {
 
     private final class BarrierSync
         implements Transformer<K, Tuple3<Integer, K, List<Message>>,
-        KeyValue<K, Tuple3<Integer, Map<K, EV>, Map<K, List<Message>>>>> {
+        KeyValue<K, Tuple2<Integer, Map<K, List<Message>>>>> {
 
         private ProcessorContext context;
         private KeyValueStore<Integer, Map<K, Map<K, List<Message>>>> localworkSetStore;
-        private KeyValueStore<K, Map<K, EV>> edgesStore;
         private Consumer<byte[], byte[]> internalConsumer;
         private LeaderLatch leaderLatch;
         private GroupMember group;
@@ -382,7 +381,6 @@ public class PregelComputation<K, VV, EV, Message> {
             try {
                 this.context = context;
                 this.localworkSetStore = (KeyValueStore<Integer, Map<K, Map<K, List<Message>>>>) context.getStateStore(localworkSetStoreName);
-                this.edgesStore = (KeyValueStore<K, Map<K, EV>>) context.getStateStore(edgesGroupedBySource.queryableStoreName());
                 this.internalConsumer = internalConsumer(context);
 
                 String threadId = String.valueOf(Thread.currentThread().getId());
@@ -577,8 +575,7 @@ public class PregelComputation<K, VV, EV, Message> {
                 }
             }
             for (Map.Entry<K, Map<K, List<Message>>> entry : toForward) {
-                Map<K, EV> edges = edgesStore.get(entry.getKey());
-                context.forward(entry.getKey(), new Tuple3<>(pregelState.superstep(), edges, entry.getValue()));
+                context.forward(entry.getKey(), new Tuple2<>(pregelState.superstep(), entry.getValue()));
             }
             context.commit();
         }
@@ -593,7 +590,7 @@ public class PregelComputation<K, VV, EV, Message> {
         }
 
         @Override
-        public KeyValue<K, Tuple3<Integer, Map<K, EV>, Map<K, List<Message>>>> transform(
+        public KeyValue<K, Tuple2<Integer, Map<K, List<Message>>>> transform(
             final K readOnlyKey, final Tuple3<Integer, K, List<Message>> value
         ) {
 
@@ -644,7 +641,7 @@ public class PregelComputation<K, VV, EV, Message> {
     }
 
     private final class VertexComputeUdf
-        implements ValueTransformerWithKey<K, Tuple3<Integer, Map<K, EV>, Map<K, List<Message>>>,
+        implements ValueTransformerWithKey<K, Tuple2<Integer, Map<K, List<Message>>>,
         Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, List<Message>>>> {
 
         private KeyValueStore<K, Tuple4<Integer, VV, Integer, VV>> localSolutionSetStore;
@@ -661,11 +658,10 @@ public class PregelComputation<K, VV, EV, Message> {
 
         @Override
         public Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, List<Message>>> transform(
-            final K readOnlyKey, final Tuple3<Integer, Map<K, EV>, Map<K, List<Message>>> value
+            final K readOnlyKey, final Tuple2<Integer, Map<K, List<Message>>> value
         ) {
 
             int superstep = value._1;
-            Map<K, EV> edgesIter = value._2 != null ? value._2 : Collections.emptyMap();
             Tuple4<Integer, VV, Integer, VV> vertex = localSolutionSetStore.get(readOnlyKey);
             if (vertex == null) {
                 VV vertexValue = verticesStore.get(readOnlyKey);
@@ -674,9 +670,9 @@ public class PregelComputation<K, VV, EV, Message> {
                 }
                 vertex = new Tuple4<>(-1, vertexValue, 0, vertexValue);
             }
-            Map<K, List<Message>> messages = value._3;
+            Map<K, List<Message>> messages = value._2;
             Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, List<Message>>> result =
-                apply(superstep, readOnlyKey, vertex, messages, edgesIter);
+                apply(superstep, readOnlyKey, vertex, messages);
             if (result._2 != null) {
                 localSolutionSetStore.put(readOnlyKey, result._2);
             }
@@ -687,8 +683,7 @@ public class PregelComputation<K, VV, EV, Message> {
             int superstep,
             K key,
             Tuple4<Integer, VV, Integer, VV> vertex,
-            Map<K, List<Message>> incomingMessages,
-            Map<K, EV> outgoingEdges
+            Map<K, List<Message>> incomingMessages
         ) {
             // Find the value that applies to this step
             VV oldVertexValue = vertex._3 <= superstep ? vertex._4 : vertex._2;
@@ -708,9 +703,15 @@ public class PregelComputation<K, VV, EV, Message> {
             Iterable<Message> messages = () -> incomingMessages.values().stream()
                 .flatMap(List::stream)
                 .iterator();
-            Iterable<EdgeWithValue<K, EV>> edges = () -> outgoingEdges.entrySet().stream()
-                .map(e -> new EdgeWithValue<>(key, e.getKey(), e.getValue()))
-                .iterator();
+            Iterable<EdgeWithValue<K, EV>> edges = () -> {
+                Map<K, EV> outgoingEdges = edgesStore.get(key);
+                if (outgoingEdges == null) {
+                    outgoingEdges = Collections.emptyMap();
+                }
+                return outgoingEdges.entrySet().stream()
+                    .map(e -> new EdgeWithValue<>(key, e.getKey(), e.getValue()))
+                    .iterator();
+            };
             computeFunction.compute(superstep, new VertexWithValue<>(key, oldVertexValue), messages, edges, cb);
             Tuple4<Integer, VV, Integer, VV> newVertex = cb.newVertexValue != null
                 ? new Tuple4<>(superstep, oldVertexValue, superstep + 1, cb.newVertexValue) : null;

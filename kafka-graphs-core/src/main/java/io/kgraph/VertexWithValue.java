@@ -41,14 +41,6 @@ public class VertexWithValue<K, V> {
         return value;
     }
 
-    public void setId(K id) {
-        this.id = id;
-    }
-
-    public void setValue(V value) {
-        this.value = value;
-    }
-
     public String toString() {
         return "Vertex{id=" + id + ",val=" + value + "}";
     }

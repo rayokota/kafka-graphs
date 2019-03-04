@@ -87,7 +87,11 @@ public interface ComputeFunction<K, VV, EV, Message> {
         }
     }
 
-    final class MasterCallback {
+    interface ReadAggregators {
+        <T> T getAggregatedValue(String name);
+    }
+
+    final class MasterCallback implements ReadAggregators {
 
         protected final Map<String, Aggregator<?>> previousAggregators;
 
@@ -112,7 +116,7 @@ public interface ComputeFunction<K, VV, EV, Message> {
         }
     }
 
-    class Aggregators {
+    class Aggregators implements ReadAggregators {
 
         protected final Map<String, ?> previousAggregates;
 

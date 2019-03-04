@@ -20,10 +20,10 @@ package io.kgraph.utils;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -132,7 +132,7 @@ public class StreamUtils {
             storeName, QueryableStoreTypes.keyValueStore());
 
         final KeyValueIterator<K, V> all = store.all();
-        Map<K, V> result = new HashMap<>();
+        Map<K, V> result = new TreeMap<>();
         while (all.hasNext()) {
             KeyValue<K, V> next = all.next();
             result.put(next.key, next.value);

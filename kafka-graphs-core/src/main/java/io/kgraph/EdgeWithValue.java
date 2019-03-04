@@ -44,24 +44,12 @@ public class EdgeWithValue<K, V> {
         return new EdgeWithValue<>(target(), source(), value());
     }
 
-    public void setSource(K source) {
-        this.source = source;
-    }
-
     public K source() {
         return source;
     }
 
-    public void setTarget(K target) {
-        this.target = target;
-    }
-
     public K target() {
         return target;
-    }
-
-    public void setValue(V value) {
-        this.value = value;
     }
 
     public V value() {
