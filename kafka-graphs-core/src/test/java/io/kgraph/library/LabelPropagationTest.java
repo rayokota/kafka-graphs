@@ -60,34 +60,29 @@ public class LabelPropagationTest extends AbstractIntegrationTest {
     public void testLabelPropagation() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
+
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
         );
-
         KTable<Edge<Long>, Long> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Long(),
                 TestGraphUtils.getTwoCliques(5));
-
         KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
+
+        Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
+            graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        state.get();
 
         algorithm =
             new PregelGraphAlgorithm<>(null, "run", CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet", "solutionSetStore", "workSet", 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new LabelPropagation<>());
-
-        Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
-            graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-
-        state.get();
-
         props = ClientUtils.streamsConfig("run", "run-client", CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), KryoSerde.class);
-        builder = new StreamsBuilder();
-        KafkaStreams streams = algorithm.configure(builder, props).streams();
-
+        KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
         GraphAlgorithmState<KTable<Long, Long>> paths = algorithm.run(10);
         paths.result().get();
 

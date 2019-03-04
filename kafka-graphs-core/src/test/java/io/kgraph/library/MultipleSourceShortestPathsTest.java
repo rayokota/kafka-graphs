@@ -64,9 +64,6 @@ public class MultipleSourceShortestPathsTest extends AbstractIntegrationTest {
     public void testMultipleSourceShortestPaths() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
-        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
-            DoubleSerializer.class, new Properties()
-        );
 
         List<KeyValue<Edge<Long>, Double>> edges = new ArrayList<>();
         edges.add(new KeyValue<>(new Edge<>(1L, 2L), 1.0));
@@ -84,13 +81,19 @@ public class MultipleSourceShortestPathsTest extends AbstractIntegrationTest {
         edges.add(new KeyValue<>(new Edge<>(4L, 3L), 1.0));
         edges.add(new KeyValue<>(new Edge<>(5L, 4L), 1.0));
         edges.add(new KeyValue<>(new Edge<>(6L, 4L), 1.0));
-
+        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
+            DoubleSerializer.class, new Properties()
+        );
         KTable<Edge<Long>, Double> table =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 edges);
-
         KGraph<Long, Map<Long, Double>, Double> graph = KGraph.fromEdges(table, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double()));
+
+        Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
+            graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        state.get();
 
         Set<Long> landmarks = new HashSet<>();
         landmarks.add(1L);
@@ -102,18 +105,9 @@ public class MultipleSourceShortestPathsTest extends AbstractIntegrationTest {
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet", "solutionSetStore", "workSet", 2, (short) 1,
                 configs, Optional.empty(), new MultipleSourceShortestPaths());
-
-        Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
-            graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-
-        state.get();
-
         props = ClientUtils.streamsConfig("run", "run-client", CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), KryoSerde.class);
-        builder = new StreamsBuilder();
-        KafkaStreams streams = algorithm.configure(builder, props).streams();
-
+        KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
         GraphAlgorithmState<KTable<Long, Map<Long, Double>>> paths = algorithm.run();
         paths.result().get();
 

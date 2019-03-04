@@ -63,21 +63,24 @@ public class SvdppTest extends AbstractIntegrationTest {
     public void testSvdpp() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
-        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), KryoSerializer.class,
-            FloatSerializer.class, new Properties()
-        );
 
         List<KeyValue<Edge<CfLongId>, Float>> list = new ArrayList<>();
         list.add(new KeyValue<>(new Edge<>(new CfLongId((byte) 0, 1), new CfLongId((byte) 1, 1)), 1.0f));
         list.add(new KeyValue<>(new Edge<>(new CfLongId((byte) 0, 1), new CfLongId((byte) 1, 2)), 2.0f));
         list.add(new KeyValue<>(new Edge<>(new CfLongId((byte) 0, 2), new CfLongId((byte) 1, 1)), 3.0f));
         list.add(new KeyValue<>(new Edge<>(new CfLongId((byte) 0, 2), new CfLongId((byte) 1, 2)), 4.0f));
-
+        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), KryoSerializer.class,
+            FloatSerializer.class, new Properties()
+        );
         KTable<Edge<CfLongId>, Float> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Float(), list);
-
         KGraph<CfLongId, Svdpp.SvdppValue, Float> graph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(new KryoSerde<>(), new KryoSerde<>(), Serdes.Float()));
+
+        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        state.get();
 
         Map<String, Object> configs = new HashMap<>();
         configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
@@ -93,18 +96,9 @@ public class SvdppTest extends AbstractIntegrationTest {
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 configs, Optional.empty(), new Svdpp());
-
-        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
-            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-
-        state.get();
-
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
-            CLUSTER .bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
-        builder = new StreamsBuilder();
-        KafkaStreams streams = algorithm.configure(builder, streamsConfiguration).streams();
-
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
+        KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
         GraphAlgorithmState<KTable<CfLongId, Svdpp.SvdppValue>> paths = algorithm.run();
         paths.result().get();
 

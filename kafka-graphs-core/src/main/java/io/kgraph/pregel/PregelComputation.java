@@ -405,7 +405,7 @@ public class PregelComputation<K, VV, EV, Message> {
                         } else if (state == State.COMPLETED || state == State.CANCELLED) {
                             if (futureResult != null && !futureResult.isDone()) {
                                 if (pregelState.superstep() > maxIterations || state == State.CANCELLED) {
-                                    log.info("Pregel computation halted after {} iterations", maxIterations);
+                                    log.info("Pregel computation halted after {} iterations", pregelState.superstep());
                                 } else {
                                     log.info("Pregel computation converged after {} iterations", pregelState.superstep());
                                 }

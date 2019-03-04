@@ -60,16 +60,20 @@ public class SingleSourceShortestPathsTest extends AbstractIntegrationTest {
     public void testSingleSourceShortestPaths() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
+
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             DoubleSerializer.class, new Properties()
         );
-
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getLongDoubleEdges());
-
         KGraph<Long, Double, Double> graph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
+
+        Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
+            graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        state.get();
 
         Map<String, Object> configs = new HashMap<>();
         configs.put(SingleSourceShortestPaths.SRC_VERTEX_ID, 1L);
@@ -78,18 +82,9 @@ public class SingleSourceShortestPathsTest extends AbstractIntegrationTest {
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet", "solutionSetStore", "workSet", 2, (short) 1,
                 configs, Optional.empty(), new SingleSourceShortestPaths());
-
-        Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
-            graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-
-        state.get();
-
         props = ClientUtils.streamsConfig("run", "run-client", CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), KryoSerde.class);
-        builder = new StreamsBuilder();
-        KafkaStreams streams = algorithm.configure(builder, props).streams();
-
+        KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
         GraphAlgorithmState<KTable<Long, Double>> paths = algorithm.run();
         paths.result().get();
 

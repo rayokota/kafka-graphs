@@ -65,34 +65,29 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
     public void testConnectedComponents() throws Exception {
         String suffix = "cc";
         StreamsBuilder builder = new StreamsBuilder();
+
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
         );
-
         KTable<Edge<Long>, Long> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Long(),
                 TestGraphUtils.getTwoChains());
-
         KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
+
+        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        state.get();
 
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
-
-        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
-            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-
-        state.get();
-
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
-            CLUSTER .bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
-        builder = new StreamsBuilder();
-        KafkaStreams streams = algorithm.configure(builder, props).streams();
-
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
+        KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
         GraphAlgorithmState<KTable<Long, Long>> paths = algorithm.run();
         paths.result().get();
 
@@ -131,33 +126,28 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
     public void testGridConnectedComponents() throws Exception {
         String suffix = "grid";
         StreamsBuilder builder = new StreamsBuilder();
+
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
         );
-
-
         KGraph<Long, Tuple2<Long, Long>, Long> gridGraph = GraphGenerators.gridGraph(builder, producerConfig, 10, 10);
         KTable<Long, Long> initialVertices = gridGraph.vertices().mapValues(new InitVerticesFromId<>());
         KGraph<Long, Long, Long> graph = new KGraph<>(initialVertices, gridGraph.edges(),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
+
+        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        state.get();
 
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
-
-        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
-            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-
-        state.get();
-
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), KryoSerde.class);
-        builder = new StreamsBuilder();
-        KafkaStreams streams = algorithm.configure(builder, props).streams();
-
+        KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
         GraphAlgorithmState<KTable<Long, Long>> paths = algorithm.run();
         paths.result().get();
 
@@ -177,46 +167,38 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         String zookeeperConnect = "localhost:2181";
         String suffix = "grid";
         StreamsBuilder builder = new StreamsBuilder();
+
         Properties producerConfig = ClientUtils.producerConfig(bootstrapServers, LongSerializer.class,
             LongSerializer.class, new Properties()
         );
-
         KGraph<Long, Tuple2<Long, Long>, Long> gridGraph = GraphGenerators.gridGraph(builder, producerConfig, 10, 10);
         KTable<Long, Long> initialVertices = gridGraph.vertices().mapValues(new InitVerticesFromId<>());
         KGraph<Long, Long, Long> graph = new KGraph<>(initialVertices, gridGraph.edges(),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
+
+        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
+            bootstrapServers, graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        state.get();
 
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
                 zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
-
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm2 =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
                 zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
-
-        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
-            bootstrapServers, graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-
-        state.get();
-
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, bootstrapServers,
             graph.keySerde().getClass(), KryoSerde.class);
-        builder = new StreamsBuilder();
-        StreamsBuilder builder2 = new StreamsBuilder();
-        algorithm.configure(builder, props);
+        algorithm.configure(new StreamsBuilder(), props);
         // Need separate STATE_DIR_CONFIG
         props.put(StreamsConfig.STATE_DIR_CONFIG, ClientUtils.tempDirectory().getAbsolutePath());
-        KafkaStreams streams = algorithm2.configure(builder2, props).streams();
-
+        KafkaStreams streams = algorithm2.configure(new StreamsBuilder(), props).streams();
         GraphAlgorithmState<KTable<Long, Long>> paths = algorithm.run(Integer.MAX_VALUE);
-
         GraphAlgorithmState<KTable<Long, Long>> paths2 = algorithm2.run(Integer.MAX_VALUE);
-
         paths.result().get();
         paths2.result().get();
 
@@ -255,43 +237,34 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
             Long::parseLong,
             new LongSerializer(),
             producerConfig, "initEdges-" + suffix, 50, (short) 1);
-
         KGraph<Long, Long, Long> graph = new KGraph<>(
             builder.table("initVertices-" + suffix, Consumed.with(Serdes.Long(), Serdes.Long())),
             builder.table("initEdges-"+ suffix, Consumed.with(new KryoSerde<>(), Serdes.Long())),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
+
+        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
+            bootstrapServers, graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        state.get();
 
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
                 zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
-
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm2 =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
                 zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
-
-        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
-            bootstrapServers, graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-
-        state.get();
-
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, bootstrapServers,
             graph.keySerde().getClass(), KryoSerde.class);
-        builder = new StreamsBuilder();
-        StreamsBuilder builder2 = new StreamsBuilder();
-        KafkaStreams streams = algorithm.configure(builder, props).streams();
+        KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
         // Need separate STATE_DIR_CONFIG
         props.put(StreamsConfig.STATE_DIR_CONFIG, ClientUtils.tempDirectory().getAbsolutePath());
-        KafkaStreams streams2 = algorithm2.configure(builder2, props).streams();
-
+        KafkaStreams streams2 = algorithm2.configure(new StreamsBuilder(), props).streams();
         GraphAlgorithmState<KTable<Long, Long>> paths = algorithm.run();
-
         GraphAlgorithmState<KTable<Long, Long>> paths2 = algorithm2.run();
-
         paths.result().get();
         paths2.result().get();
 

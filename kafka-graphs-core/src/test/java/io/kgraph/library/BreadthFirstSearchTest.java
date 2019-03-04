@@ -60,16 +60,20 @@ public class BreadthFirstSearchTest extends AbstractIntegrationTest {
     public void testBFS() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
+
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
         );
-
         KTable<Edge<Long>, Long> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Long(),
                 TestGraphUtils.getTwoChains());
-
         KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
+
+        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        state.get();
 
         Map<String, Object> configs = new HashMap<>();
         configs.put(BreadthFirstSearch.SRC_VERTEX_ID, 0L);
@@ -78,17 +82,9 @@ public class BreadthFirstSearchTest extends AbstractIntegrationTest {
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 configs, Optional.empty(), new BreadthFirstSearch<>());
-
-        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
-            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-
-        state.get();
-
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
-            CLUSTER .bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
-        builder = new StreamsBuilder();
-        KafkaStreams streams = algorithm.configure(builder, streamsConfiguration).streams();
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
+        KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
 
         GraphAlgorithmState<KTable<Long, Long>> paths = algorithm.run();
         paths.result().get();
