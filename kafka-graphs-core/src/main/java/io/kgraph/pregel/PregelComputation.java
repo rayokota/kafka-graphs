@@ -18,6 +18,8 @@
 
 package io.kgraph.pregel;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -88,7 +90,7 @@ import io.vavr.Tuple2;
 import io.vavr.Tuple3;
 import io.vavr.Tuple4;
 
-public class PregelComputation<K, VV, EV, Message> {
+public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private static final Logger log = LoggerFactory.getLogger(PregelComputation.class);
 
     private final String hostAndPort;
@@ -628,13 +630,6 @@ public class PregelComputation<K, VV, EV, Message> {
             }
             if (leaderLatch != null) {
                 try {
-                    if (leaderLatch.hasLeadership()) {
-                        ZKUtils.removeRoot(curator, applicationId);
-                    }
-                } catch (Exception e) {
-                    // ignore
-                }
-                try {
                     leaderLatch.close();
                 } catch (Exception e) {
                     // ignore
@@ -808,6 +803,16 @@ public class PregelComputation<K, VV, EV, Message> {
         @Override
         public void close() {
             producer.close();
+        }
+    }
+
+    @Override
+    public void close() {
+        try {
+            // Clean up ZK
+            ZKUtils.removeRoot(curator, applicationId);
+        } catch (Exception e) {
+            // ignore
         }
     }
 

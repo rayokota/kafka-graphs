@@ -225,5 +225,7 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
     @Override
     public void close() {
         streams.close();
+        // Clean up ZK after all ZK clients are closed
+        computation.close();
     }
 }
