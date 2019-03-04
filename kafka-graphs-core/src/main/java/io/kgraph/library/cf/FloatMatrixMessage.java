@@ -15,6 +15,8 @@
  */
 package io.kgraph.library.cf;
 
+import java.util.Objects;
+
 import org.jblas.FloatMatrix;
 
 /**
@@ -51,48 +53,28 @@ public class FloatMatrixMessage {
         return senderId;
     }
 
-    public void setSenderId(CfLongId senderId) {
-        this.senderId = senderId;
-    }
-
     public FloatMatrix getFactors() {
         return factors;
-    }
-
-    public void setFactors(FloatMatrix factors) {
-        this.factors = factors;
     }
 
     public float getScore() {
         return score;
     }
 
-    public void setScore(float score) {
-        this.score = score;
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        FloatMatrixMessage that = (FloatMatrixMessage) o;
+        return Float.compare(that.score, score) == 0 &&
+            Objects.equals(senderId, that.senderId) &&
+            Objects.equals(factors, that.factors);
     }
 
     @Override
-    public boolean equals(Object matrix) {
-        if (matrix == null) {
-            return false;
-        }
-        FloatMatrixMessage other = (FloatMatrixMessage) matrix;
-        if (senderId == null && other.senderId != null) {
-            return false;
-        } else if (!senderId.equals(other.senderId)) {
-            return false;
-        }
-        if (factors == null && other.factors != null) {
-            return false;
-        } else if (!factors.equals(other.factors)) {
-            return false;
-        }
-        if (score != other.score) {
-            return false;
-        }
-        return true;
+    public int hashCode() {
+        return Objects.hash(senderId, factors, score);
     }
-
     @Override
     public String toString() {
         return "[" + senderId + "] " + score + " " + factors;

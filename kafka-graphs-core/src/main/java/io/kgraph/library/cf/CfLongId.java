@@ -15,6 +15,8 @@
  */
 package io.kgraph.library.cf;
 
+import java.util.Objects;
+
 /**
  * This class represents the ID of a node in a CF scenario that has an 
  * identifier of type long. 
@@ -56,21 +58,30 @@ public class CfLongId implements CfId<Long>, Comparable<CfId<Long>> {
         return id;
     }
 
-    /**
-     * To objects of this class are the same only if both the type and the id
-     * are the same.
-     */
     @Override
-    public int compareTo(CfId<Long> other) {
-        if (type<other.getType()) {
+    public int compareTo(CfId<Long> that) {
+        if (this.type < that.getType()) {
             return -1;
-        } else if (type>other.getType()){
+        } else if (this.type > that.getType()) {
             return 1;
-        } else if (id==null && other.getId()!=null) {
-            return 1;
-        } else {
-            return id.compareTo(other.getId());
         }
+
+        if (this.id.compareTo(that.getId()) < 0) {
+            return -1;
+        } else if (this.id.compareTo(that.getId()) > 0) {
+            return 1;
+        }
+        return 0;
+    }
+
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        CfLongId cfLongId = (CfLongId) o;
+        return type == cfLongId.type &&
+            Objects.equals(id, cfLongId.id);
     }
 
     @Override
@@ -80,31 +91,6 @@ public class CfLongId implements CfId<Long>, Comparable<CfId<Long>> {
         result = prime * result + ((id == null) ? 0 : id.hashCode());
         result = prime * result + type;
         return result;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (obj == null) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        CfLongId other = (CfLongId) obj;
-        if (id == null) {
-            if (other.id != null) {
-                return false;
-            }
-        } else if (!id.equals(other.id)) {
-            return false;
-        }
-        if (type != other.type) {
-            return false;
-        }
-        return true;
     }
 
     /**

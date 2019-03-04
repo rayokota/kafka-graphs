@@ -40,15 +40,41 @@ import io.kgraph.pregel.aggregators.Aggregator;
  */
 public interface ComputeFunction<K, VV, EV, Message> {
 
+    /**
+     * Initialize the ComputeFunction, this is the place to register aggregators.
+     *
+     * @param configs configuration parameters
+     * @param cb a callback for registering aggregators
+     */
     default void init(Map<String, ?> configs, InitCallback cb) {
     }
 
+    /**
+     * A function for performing sequential computations between supersteps.
+     *
+     * @param superstep the superstep
+     * @param cb a callback for writing to aggregators or halting the computation
+     */
     default void masterCompute(int superstep, MasterCallback cb) {
     }
 
+    /**
+     * Prepare for computation.  This method is executed exactly once prior to compute() being called
+     * for any of the vertices in the partition.
+     *
+     * @param superstep the superstep
+     * @param aggregators the aggregators
+     */
     default void preSuperstep(int superstep, Aggregators aggregators) {
     }
 
+    /**
+     * Finish computation.  This method is executed exactly once after computation
+     * for all vertices in the partition is complete.
+     *
+     * @param superstep the superstep
+     * @param aggregators the aggregators
+     */
     default void postSuperstep(int superstep, Aggregators aggregators) {
     }
 
@@ -66,6 +92,7 @@ public interface ComputeFunction<K, VV, EV, Message> {
                  Iterable<Message> messages,
                  Iterable<EdgeWithValue<K, EV>> edges,
                  Callback<K, VV, EV, Message> cb);
+
 
     final class InitCallback {
 

@@ -32,11 +32,11 @@ public interface CfId<T> {
      * Returns the type of the node.
      * @return
      */
-    public byte getType();
+    byte getType();
 
     /**
      * Returns the identifier of the node.
      * @return
      */
-    public T getId();
+    T getId();
 }

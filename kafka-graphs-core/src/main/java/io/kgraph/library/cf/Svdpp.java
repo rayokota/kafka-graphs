@@ -16,10 +16,9 @@
 package io.kgraph.library.cf;
 
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Random;
-import java.util.Set;
 
 import org.jblas.FloatMatrix;
 
@@ -250,6 +249,21 @@ public class Svdpp implements ComputeFunction<CfLongId,
             this.baseline = baseline;
             this.factors = factors;
             this.weight = weight;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            SvdppValue that = (SvdppValue) o;
+            return Float.compare(that.baseline, baseline) == 0 &&
+                Objects.equals(factors, that.factors) &&
+                Objects.equals(weight, that.weight);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(baseline, factors, weight);
         }
 
         @Override
@@ -576,7 +590,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
         }
     }
 
-    public class EdgeCount implements ComputeFunction<CfLongId,
+    public static class EdgeCount implements ComputeFunction<CfLongId,
           SvdppValue, Float, FloatMatrixMessage> {
 
         @Override
@@ -622,9 +636,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
     @Override
     public final void masterCompute(int superstep, ComputeFunction.MasterCallback cb) {
         long numRatings = getTotalNumEdges(cb);
-        double rmse = 0;
-
-        rmse = Math.sqrt(((Double) cb.getAggregatedValue(RMSE_AGGREGATOR)) / numRatings);
+        double rmse = Math.sqrt(((Double) cb.getAggregatedValue(RMSE_AGGREGATOR)) / numRatings);
 
         if (rmseTarget > 0f && rmse < rmseTarget) {
             cb.haltComputation();
