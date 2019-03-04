@@ -69,16 +69,6 @@ public interface ComputeFunction<K, VV, EV, Message> {
     }
 
     /**
-     * Finish computation.  This method is executed exactly once after computation
-     * for all vertices in the partition is complete.
-     *
-     * @param superstep the superstep
-     * @param aggregators the aggregators
-     */
-    default void postSuperstep(int superstep, Aggregators aggregators) {
-    }
-
-    /**
      * The function for computing a new vertex value or sending messages to the next superstep.
      *
      * @param superstep the count of the current superstep
@@ -92,6 +82,16 @@ public interface ComputeFunction<K, VV, EV, Message> {
                  Iterable<Message> messages,
                  Iterable<EdgeWithValue<K, EV>> edges,
                  Callback<K, VV, EV, Message> cb);
+
+    /**
+     * Finish computation.  This method is executed exactly once after computation
+     * for all vertices in the partition is complete.
+     *
+     * @param superstep the superstep
+     * @param aggregators the aggregators
+     */
+    default void postSuperstep(int superstep, Aggregators aggregators) {
+    }
 
 
     final class InitCallback {
