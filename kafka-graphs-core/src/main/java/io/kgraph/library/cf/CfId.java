@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2014 Grafos.ml
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -30,13 +30,13 @@ package io.kgraph.library.cf;
 public interface CfId<T> {
     /**
      * Returns the type of the node.
-     * @return
+     * @return the type
      */
     byte getType();
 
     /**
      * Returns the identifier of the node.
-     * @return
+     * @return the identifier
      */
     T getId();
 }

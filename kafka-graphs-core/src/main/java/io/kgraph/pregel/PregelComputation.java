@@ -18,7 +18,6 @@
 
 package io.kgraph.pregel;
 
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -623,7 +622,7 @@ public class PregelComputation<K, VV, EV, Message> {
             if (sharedValue != null) {
                 try {
                     sharedValue.close();
-                } catch (IOException e) {
+                } catch (Exception e) {
                     // ignore
                 }
             }
@@ -637,7 +636,7 @@ public class PregelComputation<K, VV, EV, Message> {
                 }
                 try {
                     leaderLatch.close();
-                } catch (IOException e) {
+                } catch (Exception e) {
                     // ignore
                 }
             }

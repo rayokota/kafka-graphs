@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2014 Grafos.ml
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,12 +27,9 @@ import org.jblas.FloatMatrix;
  *
  */
 public class FloatMatrixMessage {
-    CfLongId senderId;
-    FloatMatrix factors;
-    float score;
-
-    public FloatMatrixMessage() {
-    }
+    private final CfLongId senderId;
+    private final FloatMatrix factors;
+    private final float score;
 
     public FloatMatrixMessage(FloatMatrixMessage msg) {
         this.senderId = msg.senderId;
@@ -40,10 +37,7 @@ public class FloatMatrixMessage {
         this.score = msg.score;
     }
 
-    public FloatMatrixMessage(
-        CfLongId senderId, FloatMatrix factors,
-        float score
-    ) {
+    public FloatMatrixMessage(CfLongId senderId, FloatMatrix factors, float score) {
         this.senderId = senderId;
         this.factors = factors;
         this.score = score;

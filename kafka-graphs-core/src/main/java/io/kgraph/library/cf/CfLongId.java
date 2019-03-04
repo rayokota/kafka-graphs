@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2014 Grafos.ml
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,12 +26,8 @@ import java.util.Objects;
  */
 public class CfLongId implements CfId<Long>, Comparable<CfId<Long>> {
 
-    private byte type;
-    private Long id;
-
-    public CfLongId() {
-        id = 0L;
-    }
+    private final byte type;
+    private final Long id;
 
     public CfLongId(byte type, long id) {
         this.type = type;

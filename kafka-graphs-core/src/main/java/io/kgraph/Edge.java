@@ -22,11 +22,8 @@ import java.util.Objects;
 
 public class Edge<K> {
 
-    private K source;
-    private K target;
-
-    public Edge() {
-    }
+    private final K source;
+    private final K target;
 
     public Edge(K source, K target) {
         this.source = source;

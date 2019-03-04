@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright 2014 Grafos.ml
  * <p>
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -223,11 +223,14 @@ public class Svdpp implements ComputeFunction<CfLongId,
      * @author dl
      */
     public static class SvdppValue {
-        private float baseline;
-        private FloatMatrix factors;
-        private FloatMatrix weight;
+        private final float baseline;
+        private final FloatMatrix factors;
+        private final FloatMatrix weight;
 
-        public SvdppValue() {
+        public SvdppValue(float baseline, FloatMatrix factors, FloatMatrix weight) {
+            this.baseline = baseline;
+            this.factors = factors;
+            this.weight = weight;
         }
 
         public float getBaseline() {
@@ -240,15 +243,6 @@ public class Svdpp implements ComputeFunction<CfLongId,
 
         public FloatMatrix getWeight() {
             return weight;
-        }
-
-        public SvdppValue(
-            float baseline, FloatMatrix factors,
-            FloatMatrix weight
-        ) {
-            this.baseline = baseline;
-            this.factors = factors;
-            this.weight = weight;
         }
 
         @Override

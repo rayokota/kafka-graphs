@@ -22,11 +22,8 @@ import java.util.Objects;
 
 public class VertexWithValue<K, V> {
 
-    private K id;
-    private V value;
-
-    public VertexWithValue() {
-    }
+    private final K id;
+    private final V value;
 
     public VertexWithValue(K id, V value) {
         this.id = id;

@@ -22,12 +22,9 @@ import java.util.Objects;
 
 public class EdgeWithValue<K, V> {
 
-    private K source;
-    private K target;
-    private V value;
-
-    public EdgeWithValue() {
-    }
+    private final K source;
+    private final K target;
+    private final V value;
 
     public EdgeWithValue(Edge<K> edge, V value) {
         this(edge.source(), edge.target(), value);
