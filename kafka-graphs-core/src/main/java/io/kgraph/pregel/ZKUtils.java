@@ -181,7 +181,17 @@ public class ZKUtils {
         String path = ZKPaths.makePath(rootPath, child);
         try {
             log.debug("removing child {}", path);
-            curator.delete().forPath(path);
+            curator.delete().guaranteed().forPath(path);
+        } catch (KeeperException.NoNodeException e) {
+            // ignore
+        }
+    }
+
+    public static void removeRoot(CuratorFramework curator, String id) throws Exception {
+        String path = PREGEL_PATH + id;
+        try {
+            log.debug("removing root {}", path);
+            curator.delete().guaranteed().deletingChildrenIfNeeded().forPath(path);
         } catch (KeeperException.NoNodeException e) {
             // ignore
         }

@@ -629,6 +629,13 @@ public class PregelComputation<K, VV, EV, Message> {
             }
             if (leaderLatch != null) {
                 try {
+                    if (leaderLatch.hasLeadership()) {
+                        ZKUtils.removeRoot(curator, applicationId);
+                    }
+                } catch (Exception e) {
+                    // ignore
+                }
+                try {
                     leaderLatch.close();
                 } catch (IOException e) {
                     // ignore
