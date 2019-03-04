@@ -122,7 +122,7 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         assertEquals(expectedResult, map);
     }
 
-    //@Test
+    @Test
     public void testGridConnectedComponents() throws Exception {
         String suffix = "grid";
         StreamsBuilder builder = new StreamsBuilder();
