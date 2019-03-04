@@ -292,7 +292,9 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
 
     @After
     public void tearDown() throws Exception {
-        algorithm.close();
+        if (algorithm != null) {
+            algorithm.close();
+        }
     }
 
     private static final class InitVertices implements ValueMapper<Long, Long> {

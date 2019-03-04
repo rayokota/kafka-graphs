@@ -78,9 +78,7 @@ public class ZKUtils {
                 return pregelState.state(GraphAlgorithmState.State.COMPLETED);
             } else {
                 // only advance superstep if there is more work to do
-                String path = ZKPaths.makePath(nextBarrierPath, READY);
-                log.debug("adding ready {}", path);
-                curator.create().creatingParentContainersIfNeeded().forPath(path);
+                addReady(curator, id, pregelState);
                 return pregelState.next();
             }
         }
@@ -100,13 +98,21 @@ public class ZKUtils {
         int childrenSize = children.size();
         if (children.containsKey(READY)) childrenSize--;
         if (childrenSize == 0) {
-            String nextBarrierPath = barrierPath(id, pregelState.next());
-            String path = ZKPaths.makePath(nextBarrierPath, READY);
-            log.debug("adding ready {}", path);
-            curator.create().creatingParentContainersIfNeeded().forPath(path);
+            addReady(curator, id, pregelState);
             return pregelState.next();
         }
         return pregelState;
+    }
+
+    private static void addReady(CuratorFramework curator, String id, PregelState pregelState) throws Exception {
+        String nextBarrierPath = barrierPath(id, pregelState.next());
+        String path = ZKPaths.makePath(nextBarrierPath, READY);
+        try {
+            log.debug("adding ready {}", path);
+            curator.create().creatingParentContainersIfNeeded().forPath(path);
+        } catch (KeeperException.NodeExistsException e) {
+            // ignore
+        }
     }
 
     public static boolean isReady(CuratorFramework curator, String id, PregelState pregelState) throws Exception {
@@ -121,8 +127,8 @@ public class ZKUtils {
         return hasChild(curator, id, pregelState, base64EncodedString(child, serializer));
     }
 
-    public static <K> boolean hasChild(CuratorFramework curator, String id, PregelState pregelState,
-                                       String child) throws Exception {
+    public static boolean hasChild(CuratorFramework curator, String id, PregelState pregelState,
+                                   String child) throws Exception {
         String barrierPath = barrierPath(id, pregelState);
         String path = ZKPaths.makePath(barrierPath, child);
         boolean exists = curator.checkExists().forPath(path) != null;
@@ -134,23 +140,23 @@ public class ZKUtils {
         addChild(curator, id, pregelState, base64EncodedString(child, serializer));
     }
 
-    public static <K> void addChild(CuratorFramework curator, String id, PregelState pregelState,
-                                    String child) throws Exception {
+    public static void addChild(CuratorFramework curator, String id, PregelState pregelState,
+                                String child) throws Exception {
         addChild(curator, id, pregelState, child, CreateMode.PERSISTENT);
     }
 
-    public static <K> void addChild(CuratorFramework curator, String id, PregelState pregelState,
-                                    String child, CreateMode createMode) throws Exception {
+    public static void addChild(CuratorFramework curator, String id, PregelState pregelState,
+                                String child, CreateMode createMode) throws Exception {
         addChild(curator, barrierPath(id, pregelState), child, createMode);
     }
 
-    public static <K> void addChild(CuratorFramework curator, String rootPath,
-                                    String child, CreateMode createMode) throws Exception {
+    public static void addChild(CuratorFramework curator, String rootPath,
+                                String child, CreateMode createMode) throws Exception {
         addChild(curator, rootPath, child, createMode, new byte[0]);
     }
 
-    public static <K> void addChild(CuratorFramework curator, String rootPath,
-                                    String child, CreateMode createMode, byte[] data) throws Exception {
+    public static void addChild(CuratorFramework curator, String rootPath,
+                                String child, CreateMode createMode, byte[] data) throws Exception {
         String path = ZKPaths.makePath(rootPath, child);
         try {
             log.debug("adding child {}", path);
@@ -165,13 +171,13 @@ public class ZKUtils {
         removeChild(curator, id, pregelState, base64EncodedString(child, serializer));
     }
 
-    public static <K> void removeChild(CuratorFramework curator, String id, PregelState pregelState,
-                                       String child) throws Exception {
+    public static void removeChild(CuratorFramework curator, String id, PregelState pregelState,
+                                   String child) throws Exception {
         removeChild(curator, barrierPath(id, pregelState), child);
     }
 
-    public static <K> void removeChild(CuratorFramework curator, String rootPath,
-                                       String child) throws Exception {
+    public static void removeChild(CuratorFramework curator, String rootPath,
+                                   String child) throws Exception {
         String path = ZKPaths.makePath(rootPath, child);
         try {
             log.debug("removing child {}", path);
