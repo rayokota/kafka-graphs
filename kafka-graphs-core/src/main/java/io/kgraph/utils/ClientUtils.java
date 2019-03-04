@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Properties;
+import java.util.Random;
 
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.NewTopic;
@@ -178,5 +179,18 @@ public class ClientUtils {
         AdminClient adminClient = AdminClient.create(props);
         adminClient.createTopics(Collections.singletonList(newTopic));
         adminClient.close();
+    }
+
+    public static String generateRandomString(int len) {
+        int leftLimit = 97; // letter 'a'
+        int rightLimit = 122; // letter 'z'
+        Random random = new Random();
+        StringBuilder buffer = new StringBuilder(len);
+        for (int i = 0; i < len; i++) {
+            int randomLimitedInt = leftLimit + (int)
+                (random.nextFloat() * (rightLimit - leftLimit + 1));
+            buffer.append((char) randomLimitedInt);
+        }
+        return buffer.toString();
     }
 }

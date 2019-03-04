@@ -163,9 +163,10 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
 
     //@Test
     public void testGridConnectedComponentsMultipleClients() throws Exception {
+        // Run against a locally running Kafka broker
         String bootstrapServers = "localhost:9092";
         String zookeeperConnect = "localhost:2181";
-        String suffix = "grid";
+        String suffix = "grid-" + ClientUtils.generateRandomString(8);
         StreamsBuilder builder = new StreamsBuilder();
 
         Properties producerConfig = ClientUtils.producerConfig(bootstrapServers, LongSerializer.class,
@@ -222,9 +223,10 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
 
     //@Test
     public void testConnectedComponentsMultipleClientsFromFile() throws Exception {
+        // Run against a locally running Kafka broker
         String bootstrapServers = "localhost:9092";
         String zookeeperConnect = "localhost:2181";
-        String suffix = "file";
+        String suffix = "file-" + ClientUtils.generateRandomString(8);
         StreamsBuilder builder = new StreamsBuilder();
 
         Properties producerConfig = ClientUtils.producerConfig(bootstrapServers, LongSerializer.class,

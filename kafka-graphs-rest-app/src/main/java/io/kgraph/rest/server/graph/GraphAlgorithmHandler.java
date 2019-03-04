@@ -154,7 +154,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
     }
 
     public Mono<ServerResponse> prepareGraph(ServerRequest request) {
-        String appId = generateRandomString(8);
+        String appId = ClientUtils.generateRandomString(8);
         return request.bodyToMono(GroupEdgesBySourceRequest.class)
             .doOnNext(input -> {
                 try {
@@ -187,7 +187,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
 
     public Mono<ServerResponse> configure(ServerRequest request) {
         List<String> appIdHeaders = request.headers().header(X_KGRAPH_APPID);
-        String appId = appIdHeaders.isEmpty() ? generateRandomString(8) : appIdHeaders.iterator().next();
+        String appId = appIdHeaders.isEmpty() ? ClientUtils.generateRandomString(8) : appIdHeaders.iterator().next();
         return request.bodyToMono(GraphAlgorithmCreateRequest.class)
             .doOnNext(input -> {
                 PregelGraphAlgorithm<Long, ?, ?, ?> algorithm = getAlgorithm(appId, input);
@@ -442,19 +442,5 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
 
     public int getPort() {
         return port;
-    }
-
-    public String generateRandomString(int len) {
-
-        int leftLimit = 97; // letter 'a'
-        int rightLimit = 122; // letter 'z'
-        Random random = new Random();
-        StringBuilder buffer = new StringBuilder(len);
-        for (int i = 0; i < len; i++) {
-            int randomLimitedInt = leftLimit + (int)
-                (random.nextFloat() * (rightLimit - leftLimit + 1));
-            buffer.append((char) randomLimitedInt);
-        }
-        return buffer.toString();
     }
 }
