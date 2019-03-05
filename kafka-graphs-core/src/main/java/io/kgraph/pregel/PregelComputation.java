@@ -19,7 +19,6 @@
 package io.kgraph.pregel;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.ArrayList;

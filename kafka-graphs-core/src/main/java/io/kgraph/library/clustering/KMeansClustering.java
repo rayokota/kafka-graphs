@@ -241,7 +241,6 @@ public class KMeansClustering<EV, Message> implements ComputeFunction<Long, KMea
         }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public void compute(
         int superstep,

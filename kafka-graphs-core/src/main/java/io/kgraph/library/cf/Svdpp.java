@@ -28,7 +28,6 @@ import io.kgraph.library.basic.EdgeCount;
 import io.kgraph.pregel.ComputeFunction;
 import io.kgraph.pregel.aggregators.DoubleSumAggregator;
 import io.kgraph.pregel.aggregators.LongSumAggregator;
-import sun.net.sdp.SdpProvider;
 
 public class Svdpp implements ComputeFunction<CfLongId,
     Svdpp.SvdppValue, Float, FloatMatrixMessage> {

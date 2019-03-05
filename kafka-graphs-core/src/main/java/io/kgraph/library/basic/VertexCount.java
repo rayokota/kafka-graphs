@@ -20,9 +20,6 @@ package io.kgraph.library.basic;
 
 import java.util.Map;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.ComputeFunction;

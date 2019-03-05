@@ -24,9 +24,7 @@ public class DoubleListAggregator implements Aggregator<List<Double>> {
         List<Double> aggrValue = getAggregate();
         if ( aggrValue.size() == 0 ) {
             // first-time creation
-            for ( int i = 0; i < other.size(); i ++ ) {
-                aggrValue.add(other.get(i));
-            }
+            aggrValue.addAll(other);
             setAggregate(aggrValue);
         }
         else if ( aggrValue.size() < other.size() ) {
@@ -35,7 +33,7 @@ public class DoubleListAggregator implements Aggregator<List<Double>> {
         }
         else {
             for ( int i = 0; i < other.size(); i ++ ) {
-                Double element = new Double(aggrValue.get(i) + other.get(i));
+                Double element = aggrValue.get(i) + other.get(i);
                 aggrValue.set(i, element);
             }
             setAggregate(aggrValue);
