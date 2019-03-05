@@ -24,9 +24,11 @@ import org.jblas.FloatMatrix;
 
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
+import io.kgraph.library.basic.EdgeCount;
 import io.kgraph.pregel.ComputeFunction;
 import io.kgraph.pregel.aggregators.DoubleSumAggregator;
 import io.kgraph.pregel.aggregators.LongSumAggregator;
+import sun.net.sdp.SdpProvider;
 
 public class Svdpp implements ComputeFunction<CfLongId,
     Svdpp.SvdppValue, Float, FloatMatrixMessage> {
@@ -113,11 +115,6 @@ public class Svdpp implements ComputeFunction<CfLongId,
      * Aggregator for the computation of RMSE
      */
     public static final String RMSE_AGGREGATOR = "svd.rmse.aggregator";
-
-    /**
-     * Aggregator for the number of edges
-     */
-    public static final String EDGE_COUNT_AGGREGATOR = "edge.count.aggregator";
 
     private Map<String, Object> configs;
 
@@ -584,27 +581,6 @@ public class Svdpp implements ComputeFunction<CfLongId,
         }
     }
 
-    public static class EdgeCount implements ComputeFunction<CfLongId,
-          SvdppValue, Float, FloatMatrixMessage> {
-
-        @Override
-        public void compute(
-            int superstep,
-            VertexWithValue<CfLongId, SvdppValue> vertex,
-            Iterable<FloatMatrixMessage> messages,
-            Iterable<EdgeWithValue<CfLongId, Float>> edges,
-            Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
-        ) {
-            if (superstep == 0) {
-                long count = 0L;
-                for (EdgeWithValue<CfLongId, Float> edge : edges) {
-                    count++;
-                }
-                cb.aggregate(EDGE_COUNT_AGGREGATOR, count);
-            }
-        }
-    }
-
     private int maxIterations;
     private float rmseTarget;
 
@@ -613,7 +589,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
     public final void init(Map<String, ?> configs, ComputeFunction.InitCallback cb) {
         this.configs = (Map<String, Object>) configs;
 
-        cb.registerAggregator(EDGE_COUNT_AGGREGATOR, LongSumAggregator.class, true);
+        cb.registerAggregator(EdgeCount.EDGE_COUNT_AGGREGATOR, LongSumAggregator.class, true);
         cb.registerAggregator(RMSE_AGGREGATOR, DoubleSumAggregator.class);
         cb.registerAggregator(OVERALL_RATING_AGGREGATOR, DoubleSumAggregator.class, true);
 
@@ -663,7 +639,8 @@ public class Svdpp implements ComputeFunction<CfLongId,
         Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
     ) {
         if (superstep == 0) {
-            new EdgeCount().compute(superstep, vertex, messages, edges, cb);
+            new EdgeCount<CfLongId, SvdppValue, Float, FloatMatrixMessage>()
+                .compute(superstep, vertex, messages, edges, cb);
         } else if (superstep == 1) {
             new InitUsersComputation().compute(superstep, vertex, messages, edges, cb);
         } else if (superstep == 2) {
@@ -677,6 +654,6 @@ public class Svdpp implements ComputeFunction<CfLongId,
 
     // Returns the total number of edges before adding reverse edges
     protected long getTotalNumEdges(ReadAggregators aggregators) {
-        return aggregators.getAggregatedValue(EDGE_COUNT_AGGREGATOR);
+        return aggregators.getAggregatedValue(EdgeCount.EDGE_COUNT_AGGREGATOR);
     }
 }

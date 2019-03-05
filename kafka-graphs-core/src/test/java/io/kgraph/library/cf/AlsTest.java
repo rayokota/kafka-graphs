@@ -16,23 +16,26 @@
  * limitations under the License.
  */
 
-package io.kgraph.pregel.aggregators;
+package io.kgraph.library.cf;
 
 import static org.junit.Assert.assertEquals;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.kafka.common.serialization.LongSerializer;
+import org.apache.kafka.common.serialization.FloatSerializer;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
+import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.ValueMapper;
+import org.jblas.FloatMatrix;
 import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -44,75 +47,60 @@ import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
-import io.kgraph.TestGraphUtils;
 import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphUtils;
 import io.kgraph.utils.KryoSerde;
+import io.kgraph.utils.KryoSerializer;
 import io.kgraph.utils.StreamUtils;
 
-public class VertexCountTest extends AbstractIntegrationTest {
-    private static final Logger log = LoggerFactory.getLogger(VertexCountTest.class);
+public class AlsTest extends AbstractIntegrationTest {
+    private static final Logger log = LoggerFactory.getLogger(AlsTest.class);
 
-    GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm;
+    GraphAlgorithm<CfLongId, FloatMatrix, Float, KTable<CfLongId, FloatMatrix>> algorithm;
 
     @Test
-    public void testVertexCount() throws Exception {
+    public void testAls() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
 
-        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
-            LongSerializer.class, new Properties()
+        List<KeyValue<Edge<CfLongId>, Float>> list = new ArrayList<>();
+        list.add(new KeyValue<>(new Edge<>(new CfLongId((byte) 0, 1), new CfLongId((byte) 1, 1)), 1.0f));
+        list.add(new KeyValue<>(new Edge<>(new CfLongId((byte) 0, 1), new CfLongId((byte) 1, 2)), 2.0f));
+        list.add(new KeyValue<>(new Edge<>(new CfLongId((byte) 0, 2), new CfLongId((byte) 1, 1)), 3.0f));
+        list.add(new KeyValue<>(new Edge<>(new CfLongId((byte) 0, 2), new CfLongId((byte) 1, 2)), 4.0f));
+        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), KryoSerializer.class,
+            FloatSerializer.class, new Properties()
         );
-        KTable<Edge<Long>, Long> edges =
-            StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Long(),
-                TestGraphUtils.getTwoChains());
-        KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges, new InitVertices(),
-            GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
+        KTable<Edge<CfLongId>, Float> edges =
+            StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Float(), list);
+        KGraph<CfLongId, FloatMatrix, Float> graph = KGraph.fromEdges(edges, new InitVertices(),
+            GraphSerialized.with(new KryoSerde<>(), new KryoSerde<>(), Serdes.Float()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(Als.LAMBDA, 0.01f);
+        configs.put(Als.VECTOR_SIZE, 2);
+        configs.put(Als.ITERATIONS, 5);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
-                Collections.emptyMap(), Optional.empty(), new VertexCount<>());
+                configs, Optional.empty(), new Als());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
-        GraphAlgorithmState<KTable<Long, Long>> paths = algorithm.run();
+        GraphAlgorithmState<KTable<CfLongId, FloatMatrix>> paths = algorithm.run();
         paths.result().get();
 
-        Map<Long, Long> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
+        Map<CfLongId, FloatMatrix> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);
 
-        Map<Long, Long> expectedResult = new HashMap<>();
-        expectedResult.put(0L, 21L);
-        expectedResult.put(1L, 21L);
-        expectedResult.put(2L, 21L);
-        expectedResult.put(3L, 21L);
-        expectedResult.put(4L, 21L);
-        expectedResult.put(5L, 21L);
-        expectedResult.put(6L, 21L);
-        expectedResult.put(7L, 21L);
-        expectedResult.put(8L, 21L);
-        expectedResult.put(9L, 21L);
-        expectedResult.put(10L, 21L);
-        expectedResult.put(11L, 21L);
-        expectedResult.put(12L, 21L);
-        expectedResult.put(13L, 21L);
-        expectedResult.put(14L, 21L);
-        expectedResult.put(15L, 21L);
-        expectedResult.put(16L, 21L);
-        expectedResult.put(17L, 21L);
-        expectedResult.put(18L, 21L);
-        expectedResult.put(19L, 21L);
-        expectedResult.put(20L, 21L);
-
-        assertEquals(expectedResult, map);
+        assertEquals("{1 0=[1.100964; 1.252018], 2 0=[2.488711; 2.831024], 1 1=[0.499041; 0.567667], 2 1=[0.706991; 0.804180]}", map.toString());
     }
 
     @After
@@ -120,10 +108,10 @@ public class VertexCountTest extends AbstractIntegrationTest {
         algorithm.close();
     }
 
-    private static final class InitVertices implements ValueMapper<Long, Long> {
+    private static final class InitVertices implements ValueMapper<CfLongId, FloatMatrix> {
         @Override
-        public Long apply(Long id) {
-            return 0L;
+        public FloatMatrix apply(CfLongId id) {
+            return new FloatMatrix();
         }
     }
 }

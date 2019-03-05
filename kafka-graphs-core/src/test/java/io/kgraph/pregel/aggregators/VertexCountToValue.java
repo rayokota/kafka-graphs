@@ -25,16 +25,14 @@ import org.slf4j.LoggerFactory;
 
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
+import io.kgraph.library.basic.VertexCount;
 import io.kgraph.pregel.ComputeFunction;
 
-public class VertexPersistentWeightedCount<K, EV> implements ComputeFunction<K, Long, EV, Long> {
-    private static final Logger log = LoggerFactory.getLogger(VertexPersistentWeightedCount.class);
-
-    private static final String VERTEX_COUNT_AGGREGATOR = "VertexCountAggregator";
+public class VertexCountToValue<K, EV> implements ComputeFunction<K, Long, EV, Long> {
 
     @Override
     public void init(Map<String, ?> configs, InitCallback cb) {
-        cb.registerAggregator(VERTEX_COUNT_AGGREGATOR, LongSumAggregator.class, true);
+        cb.registerAggregator(VertexCount.VERTEX_COUNT_AGGREGATOR, LongSumAggregator.class, true);
     }
 
     @Override
@@ -46,10 +44,10 @@ public class VertexPersistentWeightedCount<K, EV> implements ComputeFunction<K, 
         Callback<K, Long, EV, Long> cb
     ) {
 
-        if (superstep < 3) {
-            cb.aggregate(VERTEX_COUNT_AGGREGATOR, superstep + 1L);
+        if (superstep == 0) {
+            new VertexCount<K, Long, EV, Long>().compute(superstep, vertex, messages, edges, cb);
         } else {
-            Long count = cb.getAggregatedValue(VERTEX_COUNT_AGGREGATOR);
+            Long count = cb.getAggregatedValue(VertexCount.VERTEX_COUNT_AGGREGATOR);
             cb.setNewVertexValue(count);
             cb.voteToHalt();
         }

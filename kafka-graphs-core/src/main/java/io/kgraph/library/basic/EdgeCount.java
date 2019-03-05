@@ -16,42 +16,38 @@
  * limitations under the License.
  */
 
-package io.kgraph.pregel.aggregators;
+package io.kgraph.library.basic;
 
 import java.util.Map;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.ComputeFunction;
+import io.kgraph.pregel.aggregators.LongSumAggregator;
 
-public class VertexCount<K, EV> implements ComputeFunction<K, Long, EV, Long> {
-    private static final Logger log = LoggerFactory.getLogger(VertexCount.class);
+public class EdgeCount<K, VV, EV, Message> implements ComputeFunction<K, VV, EV, Message> {
 
-    private static final String VERTEX_COUNT_AGGREGATOR = "VertexCountAggregator";
+    public static final String EDGE_COUNT_AGGREGATOR = "edge.count.aggregator";
 
     @Override
-    public void init(Map<String, ?> configs, InitCallback cb) {
-        cb.registerAggregator(VERTEX_COUNT_AGGREGATOR, LongSumAggregator.class);
+    public final void init(Map<String, ?> configs, InitCallback cb) {
+        cb.registerAggregator(EDGE_COUNT_AGGREGATOR, LongSumAggregator.class, true);
     }
 
     @Override
     public void compute(
         int superstep,
-        VertexWithValue<K, Long> vertex,
-        Iterable<Long> messages,
+        VertexWithValue<K, VV> vertex,
+        Iterable<Message> messages,
         Iterable<EdgeWithValue<K, EV>> edges,
-        Callback<K, Long, EV, Long> cb
+        Callback<K, VV, EV, Message> cb
     ) {
-
         if (superstep == 0) {
-            cb.aggregate(VERTEX_COUNT_AGGREGATOR, 1L);
-        } else {
-            Long count = cb.getAggregatedValue(VERTEX_COUNT_AGGREGATOR);
-            cb.setNewVertexValue(count);
-            cb.voteToHalt();
+            long count = 0L;
+            for (EdgeWithValue<K, EV> edge : edges) {
+                count++;
+            }
+            cb.aggregate(EDGE_COUNT_AGGREGATOR, count);
         }
     }
 }

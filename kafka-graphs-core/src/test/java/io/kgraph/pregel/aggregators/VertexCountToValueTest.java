@@ -51,13 +51,13 @@ import io.kgraph.utils.GraphUtils;
 import io.kgraph.utils.KryoSerde;
 import io.kgraph.utils.StreamUtils;
 
-public class VertexPersistentWeightedCountTest extends AbstractIntegrationTest {
-    private static final Logger log = LoggerFactory.getLogger(VertexPersistentWeightedCountTest.class);
+public class VertexCountToValueTest extends AbstractIntegrationTest {
+    private static final Logger log = LoggerFactory.getLogger(VertexCountToValueTest.class);
 
     GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm;
 
     @Test
-    public void testVertexPersistentWeightedCount() throws Exception {
+    public void testVertexCountToValue() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -79,7 +79,7 @@ public class VertexPersistentWeightedCountTest extends AbstractIntegrationTest {
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
-                Collections.emptyMap(), Optional.empty(), new VertexPersistentWeightedCount<>());
+                Collections.emptyMap(), Optional.empty(), new VertexCountToValue<>());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
@@ -90,27 +90,27 @@ public class VertexPersistentWeightedCountTest extends AbstractIntegrationTest {
         log.debug("result: {}", map);
 
         Map<Long, Long> expectedResult = new HashMap<>();
-        expectedResult.put(0L, 126L);
-        expectedResult.put(1L, 126L);
-        expectedResult.put(2L, 126L);
-        expectedResult.put(3L, 126L);
-        expectedResult.put(4L, 126L);
-        expectedResult.put(5L, 126L);
-        expectedResult.put(6L, 126L);
-        expectedResult.put(7L, 126L);
-        expectedResult.put(8L, 126L);
-        expectedResult.put(9L, 126L);
-        expectedResult.put(10L, 126L);
-        expectedResult.put(11L, 126L);
-        expectedResult.put(12L, 126L);
-        expectedResult.put(13L, 126L);
-        expectedResult.put(14L, 126L);
-        expectedResult.put(15L, 126L);
-        expectedResult.put(16L, 126L);
-        expectedResult.put(17L, 126L);
-        expectedResult.put(18L, 126L);
-        expectedResult.put(19L, 126L);
-        expectedResult.put(20L, 126L);
+        expectedResult.put(0L, 21L);
+        expectedResult.put(1L, 21L);
+        expectedResult.put(2L, 21L);
+        expectedResult.put(3L, 21L);
+        expectedResult.put(4L, 21L);
+        expectedResult.put(5L, 21L);
+        expectedResult.put(6L, 21L);
+        expectedResult.put(7L, 21L);
+        expectedResult.put(8L, 21L);
+        expectedResult.put(9L, 21L);
+        expectedResult.put(10L, 21L);
+        expectedResult.put(11L, 21L);
+        expectedResult.put(12L, 21L);
+        expectedResult.put(13L, 21L);
+        expectedResult.put(14L, 21L);
+        expectedResult.put(15L, 21L);
+        expectedResult.put(16L, 21L);
+        expectedResult.put(17L, 21L);
+        expectedResult.put(18L, 21L);
+        expectedResult.put(19L, 21L);
+        expectedResult.put(20L, 21L);
 
         assertEquals(expectedResult, map);
     }
