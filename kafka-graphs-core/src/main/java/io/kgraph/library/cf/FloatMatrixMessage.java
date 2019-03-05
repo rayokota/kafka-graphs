@@ -69,6 +69,7 @@ public class FloatMatrixMessage {
     public int hashCode() {
         return Objects.hash(senderId, factors, score);
     }
+
     @Override
     public String toString() {
         return "[" + senderId + "] " + score + " " + factors;

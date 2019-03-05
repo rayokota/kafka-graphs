@@ -90,7 +90,7 @@ public class ClientUtils {
         return file;
     }
 
-    public static <T> Serde<T> getSerde(Class<Serde<T>> cls, Map<String, Object> configs) {
+    public static <T> Serde<T> getSerde(Class<Serde<T>> cls, Map<String, ?> configs) {
         try {
             final Serde<T> serde = getConfiguredInstance(cls, configs);
             serde.configure(configs, true);
@@ -101,12 +101,14 @@ public class ClientUtils {
         }
     }
 
-    public static <T> T getConfiguredInstance(Class<T> cls, Map<String, Object> configs) {
-        if (cls == null)
+    public static <T> T getConfiguredInstance(Class<T> cls, Map<String, ?> configs) {
+        if (cls == null) {
             return null;
+        }
         Object o = Utils.newInstance(cls);
-        if (o instanceof Configurable)
+        if (o instanceof Configurable) {
             ((Configurable) o).configure(configs);
+        }
         return cls.cast(o);
     }
 

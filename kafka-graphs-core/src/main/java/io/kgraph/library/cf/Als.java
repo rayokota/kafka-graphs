@@ -258,7 +258,7 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     }
 
     @Override
-    public final void masterCompute(int superstep, ComputeFunction.MasterCallback cb) {
+    public final void masterCompute(int superstep, MasterCallback cb) {
         long numRatings = getTotalNumEdges(cb);
         double rmse = Math.sqrt(((Double) cb.getAggregatedValue(RMSE_AGGREGATOR)) / numRatings);
 

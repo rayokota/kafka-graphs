@@ -115,6 +115,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
     private final GraphSerialized<K, VV, EV> serialized;
 
+    private final Map<String, ?> configs;
     private final Optional<Message> initialMessage;
     private final ComputeFunction<K, VV, EV, Message> computeFunction;
     private final Map<String, AggregatorWrapper<?>> registeredAggregators;
@@ -162,6 +163,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         this.workSetTopic = workSetTopic;
         this.numPartitions = numPartitions;
         this.serialized = serialized;
+        this.configs = configs;
         this.initialMessage = initialMessage;
         this.computeFunction = cf;
         this.registeredAggregators = new ConcurrentHashMap<>();
@@ -306,9 +308,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         Set<Map.Entry<String, AggregatorWrapper<?>>> entries = registeredAggregators.entrySet();
         return entries.stream()
             .collect(Collectors.toConcurrentMap(Map.Entry::getKey, entry -> {
-                try
-                {
-                    return entry.getValue().getAggregatorClass().newInstance();
+                try {
+                    return ClientUtils.getConfiguredInstance(entry.getValue().getAggregatorClass(), configs);
                 } catch (Exception e) {
                     throw toRuntimeException(e);
                 }

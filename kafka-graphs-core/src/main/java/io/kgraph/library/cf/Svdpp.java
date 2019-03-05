@@ -326,7 +326,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
             VertexWithValue<CfLongId, SvdppValue> vertex,
             Iterable<FloatMatrixMessage> messages,
             Iterable<EdgeWithValue<CfLongId, Float>> edges,
-            ComputeFunction.Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
+            Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
         ) {
 
             // Create the reverse edges
@@ -423,7 +423,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
             VertexWithValue<CfLongId, SvdppValue> vertex,
             Iterable<FloatMatrixMessage> messages,
             Iterable<EdgeWithValue<CfLongId, Float>> edges,
-            ComputeFunction.Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
+            Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
         ) {
 
             double rmsePartialSum = 0d;
@@ -549,7 +549,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
             VertexWithValue<CfLongId, SvdppValue> vertex,
             Iterable<FloatMatrixMessage> messages,
             Iterable<EdgeWithValue<CfLongId, Float>> edges,
-            ComputeFunction.Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
+            Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
         ) {
 
             float itemBaseline = vertex.value().getBaseline();
@@ -586,7 +586,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
 
     @Override
     @SuppressWarnings("unchecked")
-    public final void init(Map<String, ?> configs, ComputeFunction.InitCallback cb) {
+    public final void init(Map<String, ?> configs, InitCallback cb) {
         this.configs = (Map<String, Object>) configs;
 
         cb.registerAggregator(EdgeCount.EDGE_COUNT_AGGREGATOR, LongSumAggregator.class, true);
@@ -604,7 +604,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
     }
 
     @Override
-    public final void masterCompute(int superstep, ComputeFunction.MasterCallback cb) {
+    public final void masterCompute(int superstep, MasterCallback cb) {
         long numRatings = getTotalNumEdges(cb);
         double rmse = Math.sqrt(((Double) cb.getAggregatedValue(RMSE_AGGREGATOR)) / numRatings);
 
