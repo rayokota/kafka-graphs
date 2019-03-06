@@ -145,7 +145,6 @@ public class Svdpp implements ComputeFunction<CfLongId,
         FloatMatrix item, final int numRatings, FloatMatrix sumWeights,
         final float minRating, final float maxRating
     ) {
-
         float predicted = meanRating + userBaseline + itemBaseline +
             item.dot(user.add(sumWeights.mul(1.0f / (float) (Math.sqrt(numRatings)))));
 
@@ -172,7 +171,6 @@ public class Svdpp implements ComputeFunction<CfLongId,
         final float predictedRating, final float observedRating,
         final float gamma, final float lambda
     ) {
-
         return baseline +
             gamma * ((predictedRating - observedRating) - lambda * baseline);
     }
@@ -279,7 +277,6 @@ public class Svdpp implements ComputeFunction<CfLongId,
             Iterable<EdgeWithValue<CfLongId, Float>> edges,
             Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
         ) {
-
             // Aggregate ratings. Necessary to compute the mean rating.
             double sum = 0;
             for (EdgeWithValue<CfLongId, Float> edge : edges) {
@@ -334,7 +331,6 @@ public class Svdpp implements ComputeFunction<CfLongId,
             }
 
             // Initialize baseline estimate and the factor and weight vectors
-
             int vectorSize = (Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT);
 
             FloatMatrix factors = new FloatMatrix(1, vectorSize);
@@ -378,40 +374,18 @@ public class Svdpp implements ComputeFunction<CfLongId,
             FloatMatrix user, FloatMatrix item,
             final float error, final float gamma, final float lambda
         ) {
-
             user.addi(user.mul(-lambda * gamma).addi(item.mul(error * gamma)));
         }
 
         @Override
         public void preSuperstep(int superstep, Aggregators aggregators) {
-            factorLambda = (Float) configs.getOrDefault(
-                FACTOR_LAMBDA,
-                FACTOR_LAMBDA_DEFAULT
-            );
-            factorGamma = (Float) configs.getOrDefault(
-                FACTOR_GAMMA,
-                FACTOR_GAMMA_DEFAULT
-            );
-            biasLambda = (Float) configs.getOrDefault(
-                BIAS_LAMBDA,
-                BIAS_LAMBDA_DEFAULT
-            );
-            biasGamma = (Float) configs.getOrDefault(
-                BIAS_GAMMA,
-                BIAS_GAMMA_DEFAULT
-            );
-            minRating = (Float) configs.getOrDefault(
-                MIN_RATING,
-                MIN_RATING_DEFAULT
-            );
-            maxRating = (Float) configs.getOrDefault(
-                MAX_RATING,
-                MAX_RATING_DEFAULT
-            );
-            vectorSize = (Integer) configs.getOrDefault(
-                VECTOR_SIZE,
-                VECTOR_SIZE_DEFAULT
-            );
+            factorLambda = (Float) configs.getOrDefault(FACTOR_LAMBDA, FACTOR_LAMBDA_DEFAULT);
+            factorGamma = (Float) configs.getOrDefault(FACTOR_GAMMA, FACTOR_GAMMA_DEFAULT);
+            biasLambda = (Float) configs.getOrDefault(BIAS_LAMBDA, BIAS_LAMBDA_DEFAULT);
+            biasGamma = (Float) configs.getOrDefault(BIAS_GAMMA, BIAS_GAMMA_DEFAULT);
+            minRating = (Float) configs.getOrDefault(MIN_RATING, MIN_RATING_DEFAULT);
+            maxRating = (Float) configs.getOrDefault(MAX_RATING, MAX_RATING_DEFAULT);
+            vectorSize = (Integer) configs.getOrDefault(VECTOR_SIZE,VECTOR_SIZE_DEFAULT);
             meanRating = (float) ((Double) aggregators.getAggregatedValue(
                 OVERALL_RATING_AGGREGATOR) / (getTotalNumEdges(aggregators) * 2));
         }
@@ -424,7 +398,6 @@ public class Svdpp implements ComputeFunction<CfLongId,
             Iterable<EdgeWithValue<CfLongId, Float>> edges,
             Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
         ) {
-
             double rmsePartialSum = 0d;
 
             float userBaseline = vertex.value().getBaseline();
@@ -520,26 +493,11 @@ public class Svdpp implements ComputeFunction<CfLongId,
 
         @Override
         public void preSuperstep(int superstep, Aggregators aggregators) {
-            biasLambda = (Float) configs.getOrDefault(
-                BIAS_LAMBDA,
-                BIAS_LAMBDA_DEFAULT
-            );
-            biasGamma = (Float) configs.getOrDefault(
-                BIAS_GAMMA,
-                BIAS_GAMMA_DEFAULT
-            );
-            factorLambda = (Float) configs.getOrDefault(
-                FACTOR_LAMBDA,
-                FACTOR_LAMBDA_DEFAULT
-            );
-            factorGamma = (Float) configs.getOrDefault(
-                FACTOR_GAMMA,
-                FACTOR_GAMMA_DEFAULT
-            );
-            vectorSize = (Integer) configs.getOrDefault(
-                VECTOR_SIZE,
-                VECTOR_SIZE_DEFAULT
-            );
+            biasLambda = (Float) configs.getOrDefault(BIAS_LAMBDA, BIAS_LAMBDA_DEFAULT);
+            biasGamma = (Float) configs.getOrDefault(BIAS_GAMMA, BIAS_GAMMA_DEFAULT);
+            factorLambda = (Float) configs.getOrDefault(FACTOR_LAMBDA, FACTOR_LAMBDA_DEFAULT);
+            factorGamma = (Float) configs.getOrDefault(FACTOR_GAMMA, FACTOR_GAMMA_DEFAULT);
+            vectorSize = (Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT);
         }
 
         @Override
@@ -550,7 +508,6 @@ public class Svdpp implements ComputeFunction<CfLongId,
             Iterable<EdgeWithValue<CfLongId, Float>> edges,
             Callback<CfLongId, SvdppValue, Float, FloatMatrixMessage> cb
         ) {
-
             float itemBaseline = vertex.value().getBaseline();
             FloatMatrix itemFactors = vertex.value().getFactors();
             FloatMatrix itemWeights = vertex.value().getWeight();
@@ -592,14 +549,8 @@ public class Svdpp implements ComputeFunction<CfLongId,
         cb.registerAggregator(RMSE_AGGREGATOR, DoubleSumAggregator.class);
         cb.registerAggregator(OVERALL_RATING_AGGREGATOR, DoubleSumAggregator.class, true);
 
-        maxIterations = (Integer) this.configs.getOrDefault(
-            ITERATIONS,
-            ITERATIONS_DEFAULT
-        );
-        rmseTarget = (Float) this.configs.getOrDefault(
-            RMSE_TARGET,
-            RMSE_TARGET_DEFAULT
-        );
+        maxIterations = (Integer) this.configs.getOrDefault(ITERATIONS, ITERATIONS_DEFAULT);
+        rmseTarget = (Float) this.configs.getOrDefault(RMSE_TARGET, RMSE_TARGET_DEFAULT);
     }
 
     @Override

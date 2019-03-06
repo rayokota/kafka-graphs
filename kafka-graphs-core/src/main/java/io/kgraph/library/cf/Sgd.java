@@ -20,8 +20,6 @@ import java.util.Map;
 import java.util.Random;
 
 import org.jblas.FloatMatrix;
-import org.jblas.JavaBlas;
-import org.jblas.Solve;
 
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
@@ -31,18 +29,26 @@ import io.kgraph.pregel.aggregators.DoubleSumAggregator;
 import io.kgraph.pregel.aggregators.LongSumAggregator;
 
 /**
- * Alternating Least Squares (ALS) implementation.
+ * Stochastic Gradient Descent (SGD) implementation.
  */
-public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatMatrixMessage> {
+public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatMatrixMessage> {
 
     /**
-     * RMSE target to reach.
+     * Keyword for RMSE aggregator tolerance.
      */
     public static final String RMSE_TARGET = "rmse";
     /**
-     * Default value of RMSE target.
+     * Default value for parameter enabling the RMSE aggregator.
      */
     public static final float RMSE_TARGET_DEFAULT = -1f;
+    /**
+     * Keyword for parameter setting the convergence tolerance
+     */
+    public static final String TOLERANCE = "tolerance";
+    /**
+     * Default value for TOLERANCE.
+     */
+    public static final float TOLERANCE_DEFAULT = -1f;
     /**
      * Keyword for parameter setting the number of iterations.
      */
@@ -60,44 +66,63 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
      */
     public static final float LAMBDA_DEFAULT = 0.01f;
     /**
+     * Keyword for parameter setting the learning rate GAMMA.
+     */
+    public static final String GAMMA = "gamma";
+    /**
+     * Default value for GAMMA.
+     */
+    public static final float GAMMA_DEFAULT = 0.005f;
+    /**
      * Keyword for parameter setting the Latent Vector Size.
      */
     public static final String VECTOR_SIZE = "dim";
     /**
-     * Default value for vector size.
+     * Default value for GAMMA.
      */
     public static final int VECTOR_SIZE_DEFAULT = 50;
+    /**
+     * Max rating.
+     */
+    public static final String MAX_RATING = "max.rating";
+    /**
+     * Default maximum rating
+     */
+    public static final float MAX_RATING_DEFAULT = 5.0f;
+    /**
+     * Min rating.
+     */
+    public static final String MIN_RATING = "min.rating";
+    /**
+     * Default minimum rating
+     */
+    public static final float MIN_RATING_DEFAULT = 0.0f;
 
     /**
      * Aggregator used to compute the RMSE
      */
-    public static final String RMSE_AGGREGATOR = "als.rmse.aggregator";
+    public static final String RMSE_AGGREGATOR = "sgd.rmse.aggregator";
 
+    private float tolerance;
     private float lambda;
-    private int vectorSize;
+    private float gamma;
+    protected float minRating;
+    protected float maxRating;
+    private FloatMatrix oldValue;
 
     private Map<String, Object> configs;
 
     @Override
     public void preSuperstep(int superstep, Aggregators aggregators) {
         lambda = (Float) configs.getOrDefault(LAMBDA, LAMBDA_DEFAULT);
-        vectorSize = (Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT);
+        gamma = (Float) configs.getOrDefault(GAMMA, GAMMA_DEFAULT);
+        tolerance = (Float) configs.getOrDefault(TOLERANCE, TOLERANCE_DEFAULT);
+        minRating = (Float) configs.getOrDefault(MIN_RATING, MIN_RATING_DEFAULT);
+        maxRating = (Float) configs.getOrDefault(MAX_RATING, MAX_RATING_DEFAULT);
     }
 
     /**
-     * Main ALS compute method.
-     * <p>
-     * It updates the current latent vector based on ALS:<br>
-     * A = M * M^T + LAMBDA * N * E<br>
-     * V = M * R<br>
-     * A * U = V, then solve for U<br>
-     * <br>
-     * where<br>
-     * R: column vector with ratings by this user<br>
-     * M: item features for items rated by this user with dimensions |F|x|R|<br>
-     * M^T: transpose of M with dimensions |R|x|F|<br>
-     * N: number of ratings of this user<br>
-     * E: identity matrix with dimensions |F|x|F|<br>
+     * Main SGD compute method.
      *
      * @param messages Messages received
      */
@@ -108,57 +133,93 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
         Iterable<EdgeWithValue<CfLongId, Float>> edges,
         Callback<CfLongId, FloatMatrix, Float, FloatMatrixMessage> cb
     ) {
-        int numEdges = 0;
+        double rmsePartialSum = 0d;
+        float l2norm = 0f;
+
+        if (tolerance > 0) {
+            // Create new object because we're going to operate on the old one.
+            oldValue = new FloatMatrix(vertex.value().getRows(),
+                vertex.value().getColumns(), vertex.value().data
+            );
+        }
+
         Map<CfLongId, Float> edgeValues = new HashMap<>();
         for (EdgeWithValue<CfLongId, Float> edge : edges) {
-            numEdges++;
             edgeValues.put(edge.target(), edge.value());
         }
-        FloatMatrix mat_M = new FloatMatrix(vectorSize, numEdges);
-        FloatMatrix mat_R = new FloatMatrix(numEdges, 1);
-
-        // Build the matrices of the linear system
-        int i = 0;
         for (FloatMatrixMessage msg : messages) {
-            mat_M.putColumn(i, msg.getFactors());
-            mat_R.put(i, 0, edgeValues.get(msg.getSenderId()));
-            i++;
+            // Get rating for the item that this message came from
+            float rating = edgeValues.get(msg.getSenderId());
+
+            // Update the factors
+            updateValue(vertex.value(), msg.getFactors(), rating,
+                minRating, maxRating, lambda, gamma
+            );
         }
 
-        updateValue(vertex.value(), mat_M, mat_R, lambda);
-
-        // Calculate errors and add squares to the RMSE aggregator
-        double rmsePartialSum = 0d;
-        for (int j = 0; j < mat_M.columns; j++) {
-            float prediction = vertex.value().dot(mat_M.getColumn(j));
-            double error = prediction - mat_R.get(j, 0);
-            rmsePartialSum += (error * error);
+        // Calculate new error for RMSE calculation
+        for (FloatMatrixMessage msg : messages) {
+            float predicted = vertex.value().dot(msg.getFactors());
+            float rating = edgeValues.get(msg.getSenderId());
+            predicted = Math.min(predicted, maxRating);
+            predicted = Math.max(predicted, minRating);
+            float err = predicted - rating;
+            rmsePartialSum += (err * err);
         }
 
         cb.aggregate(RMSE_AGGREGATOR, rmsePartialSum);
 
-        // Propagate new value
-        for (EdgeWithValue<CfLongId, Float> edge : edges) {
-            cb.sendMessageTo(edge.target(), new FloatMatrixMessage(vertex.id(), vertex.value(), 0.0f));
+        // Calculate difference with previous value
+        if (tolerance > 0) {
+            l2norm = vertex.value().distance2(oldValue);
+        }
+
+        // Broadcast the new vector
+        if (tolerance < 0 || (tolerance > 0 && l2norm > tolerance)) {
+            for (EdgeWithValue<CfLongId, Float> edge : edges) {
+                cb.sendMessageTo(
+                    edge.target(),
+                    new FloatMatrixMessage(vertex.id(), vertex.value(), 0.0f)
+                );
+            }
         }
 
         cb.setNewVertexValue(vertex.value());
         cb.voteToHalt();
     }
 
-    protected void updateValue(
-        FloatMatrix value, FloatMatrix mat_M,
-        FloatMatrix mat_R, final float lambda
+    /**
+     * Applies the SGD update logic in the provided vector. It does the update
+     * in-place.
+     * <p>
+     * The update is performed according to the following formula:
+     * <p>
+     * v = v - gamma*(lambda*v + error*u)
+     *
+     * @param value     The vector to update
+     * @param update    The vector used to update
+     * @param rating
+     * @param minRating
+     * @param maxRating
+     * @param lambda
+     * @param gamma
+     */
+    protected final void updateValue(
+        FloatMatrix value, FloatMatrix update, final float rating, final float minRating,
+        final float maxRating, final float lambda, final float gamma
     ) {
+        float predicted = value.dot(update);
 
-        FloatMatrix mat_V = mat_M.mmul(mat_R);
-        FloatMatrix mat_A = mat_M.mmul(mat_M.transpose());
-        mat_A.addi(FloatMatrix.eye(mat_M.rows).muli(lambda * mat_R.rows));
+        // Correct the predicted rating
+        predicted = Math.min(predicted, maxRating);
+        predicted = Math.max(predicted, minRating);
 
-        FloatMatrix mat_U = Solve.solve(mat_A, mat_V);
-        value.rows = mat_U.rows;
-        value.columns = mat_U.columns;
-        JavaBlas.rcopy(mat_U.length, mat_U.data, 0, 1, value.data, 0, 1);
+        float err = predicted - rating;
+
+        FloatMatrix part1 = value.mul(lambda);
+        FloatMatrix part2 = update.mul(err);
+        FloatMatrix part3 = (part1.add(part2)).mul(-gamma);
+        value.addi(part3);
     }
 
     /**
@@ -167,8 +228,8 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
      *
      * @author dl
      */
-    public class InitUsersComputation implements ComputeFunction<CfLongId,
-        FloatMatrix, Float, FloatMatrixMessage> {
+    public class InitUsersComputation implements
+        ComputeFunction<CfLongId, FloatMatrix, Float, FloatMatrixMessage> {
 
         @Override
         public void compute(
@@ -178,8 +239,7 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
             Iterable<EdgeWithValue<CfLongId, Float>> edges,
             Callback<CfLongId, FloatMatrix, Float, FloatMatrixMessage> cb
         ) {
-            FloatMatrix vector =
-                new FloatMatrix((Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT));
+            FloatMatrix vector = new FloatMatrix((Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT));
             Random randGen = new Random(0);
             for (int i = 0; i < vector.length; i++) {
                 vector.put(i, 0.01f * randGen.nextFloat());
@@ -187,10 +247,10 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
             cb.setNewVertexValue(vector);
 
             for (EdgeWithValue<CfLongId, Float> edge : edges) {
-                FloatMatrixMessage msg = new FloatMatrixMessage(
-                    vertex.id(), vertex.value(), edge.value());
+                FloatMatrixMessage msg = new FloatMatrixMessage(vertex.id(), vector, edge.value());
                 cb.sendMessageTo(edge.target(), msg);
             }
+
             cb.voteToHalt();
         }
     }
@@ -202,8 +262,8 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
      *
      * @author dl
      */
-    public class InitItemsComputation implements ComputeFunction<CfLongId,
-        FloatMatrix, Float, FloatMatrixMessage> {
+    public class InitItemsComputation implements
+        ComputeFunction<CfLongId, FloatMatrix, Float, FloatMatrixMessage> {
 
         @Override
         public void compute(
@@ -213,8 +273,7 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
             Iterable<EdgeWithValue<CfLongId, Float>> edges,
             Callback<CfLongId, FloatMatrix, Float, FloatMatrixMessage> cb
         ) {
-            FloatMatrix vector =
-                new FloatMatrix((Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT));
+            FloatMatrix vector = new FloatMatrix((Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT));
             Random randGen = new Random(0);
             for (int i = 0; i < vector.length; i++) {
                 vector.put(i, 0.01f * randGen.nextFloat());
@@ -227,10 +286,9 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
 
             // The score does not matter at this point.
             for (EdgeWithValue<CfLongId, Float> edge : edges) {
-                FloatMatrixMessage msg = new FloatMatrixMessage(
-                    vertex.id(), vertex.value(), 0.0f);
-                cb.sendMessageTo(edge.target(), msg);
+                cb.sendMessageTo(edge.target(), new FloatMatrixMessage(vertex.id(), vector, 0.0f));
             }
+
             cb.voteToHalt();
         }
     }
@@ -238,16 +296,16 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     private int maxIterations;
     private float rmseTarget;
 
-    @Override
     @SuppressWarnings("unchecked")
+    @Override
     public final void init(Map<String, ?> configs, InitCallback cb) {
 
         this.configs = (Map<String, Object>) configs;
-        this.maxIterations = (Integer) this.configs.getOrDefault(ITERATIONS, ITERATIONS_DEFAULT);
-        this.rmseTarget = (Float) this.configs.getOrDefault(RMSE_TARGET, RMSE_TARGET_DEFAULT);
+        maxIterations = (Integer) this.configs.getOrDefault(ITERATIONS, ITERATIONS_DEFAULT);
+        rmseTarget = (Float) this.configs.getOrDefault(RMSE_TARGET, RMSE_TARGET_DEFAULT);
 
-        cb.registerAggregator(EdgeCount.EDGE_COUNT_AGGREGATOR, LongSumAggregator.class, true);
         cb.registerAggregator(RMSE_AGGREGATOR, DoubleSumAggregator.class);
+        cb.registerAggregator(EdgeCount.EDGE_COUNT_AGGREGATOR, LongSumAggregator.class, true);
     }
 
     @Override
