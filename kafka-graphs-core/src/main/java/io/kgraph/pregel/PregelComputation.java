@@ -594,7 +594,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         public KeyValue<K, Tuple2<Integer, Map<K, List<Message>>>> transform(
             final K readOnlyKey, final Tuple3<Integer, K, List<Message>> value
         ) {
-
             Map<K, Map<K, List<Message>>> messages = localworkSetStore.get(value._1);
             if (messages == null) {
                 messages = new HashMap<>();
@@ -661,7 +660,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         public Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, List<Message>>> transform(
             final K readOnlyKey, final Tuple2<Integer, Map<K, List<Message>>> value
         ) {
-
             int superstep = value._1;
             Tuple4<Integer, VV, Integer, VV> vertex = localSolutionSetStore.get(readOnlyKey);
             if (vertex == null) {
@@ -744,7 +742,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
         @Override
         public void process(final K readOnlyKey, final Tuple2<Integer, Map<K, List<Message>>> value) {
-
             try {
                 for (Map.Entry<K, List<Message>> entry : value._2.entrySet()) {
                     // List of messages may be empty in case of sending to self
