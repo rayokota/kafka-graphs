@@ -29,24 +29,6 @@ import io.kgraph.pregel.ComputeFunction;
  * This class computes the Adamic-Adar similarity or distance
  * for each pair of neighbors in an undirected unweighted graph.  
  *
- * To get the exact Adamic-Adar similarity, run the command:
- *
- * <pre>
- * hadoop jar $OKAPI_JAR org.apache.giraph.GiraphRunner \
- *   ml.grafos.okapi.graphs.AdamicAdar\$ComputeLogOfInverseDegree  \
- *   -mc  ml.grafos.okapi.graphs.AdamicAdar\$MasterCompute  \
- *   -eif ml.grafos.okapi.io.formats.LongDoubleTextEdgeInputFormat  \
- *   -eip $INPUT_EDGES \
- *   -eof org.apache.giraph.io.formats.SrcIdDstIdEdgeValueTextOutputFormat \
- *   -op $OUTPUT \
- *   -w $WORKERS \
- *   -ca giraph.oneToAllMsgSending=true \
- *   -ca giraph.outEdgesClass=org.apache.giraph.edge.HashMapEdges \
- *   -ca adamicadar.approximation.enabled=false
- * </pre>
- *
- * Use -ca distance.conversion.enabled=true to get the Adamic-Adar distance instead.
- *
  */
 public class AdamicAdar implements ComputeFunction<Long, Double, Double, AdamicAdar.LongIdDoubleValueFriendsList> {
 

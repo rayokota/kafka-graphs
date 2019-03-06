@@ -30,29 +30,6 @@ import io.kgraph.pregel.ComputeFunction;
  * This class computes the Jaccard similarity or distance
  * for each pair of neighbors in an undirected unweighted graph.  
  *
- * To get the exact Jaccard similarity, run the command:
- *
- * <pre>
- * hadoop jar $OKAPI_JAR org.apache.giraph.GiraphRunner \
- *   ml.grafos.okapi.graphs.Jaccard\$SendFriendsList  \
- *   -mc  ml.grafos.okapi.graphs.Jaccard\$MasterCompute  \
- *   -eif ml.grafos.okapi.io.formats.LongDoubleZerosTextEdgeInputFormat  \
- *   -eip $INPUT_EDGES \
- *   -eof org.apache.giraph.io.formats.SrcIdDstIdEdgeValueTextOutputFormat \
- *   -op $OUTPUT \
- *   -w $WORKERS \
- *   -ca giraph.oneToAllMsgSending=true \
- *   -ca giraph.outEdgesClass=org.apache.giraph.edge.HashMapEdges \
- *   -ca jaccard.approximation.enabled=false
- *
- *   Use -ca distance.conversion.enabled=true to get the Jaccard distance instead.
- *
- *
- * To get the approximate Jaccard similarity, replace the SendFriendsList class
- * in the command with the SendFriendsBloomFilter class and set the 
- * jaccard.approximation.enabled parameter to true.
- *
- *
  * @author dl
  *
  */
