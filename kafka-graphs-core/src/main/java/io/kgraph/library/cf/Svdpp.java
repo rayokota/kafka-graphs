@@ -544,13 +544,12 @@ public class Svdpp implements ComputeFunction<CfLongId,
     @SuppressWarnings("unchecked")
     public final void init(Map<String, ?> configs, InitCallback cb) {
         this.configs = (Map<String, Object>) configs;
+        maxIterations = (Integer) this.configs.getOrDefault(ITERATIONS, ITERATIONS_DEFAULT);
+        rmseTarget = (Float) this.configs.getOrDefault(RMSE_TARGET, RMSE_TARGET_DEFAULT);
 
         cb.registerAggregator(EdgeCount.EDGE_COUNT_AGGREGATOR, LongSumAggregator.class, true);
         cb.registerAggregator(RMSE_AGGREGATOR, DoubleSumAggregator.class);
         cb.registerAggregator(OVERALL_RATING_AGGREGATOR, DoubleSumAggregator.class, true);
-
-        maxIterations = (Integer) this.configs.getOrDefault(ITERATIONS, ITERATIONS_DEFAULT);
-        rmseTarget = (Float) this.configs.getOrDefault(RMSE_TARGET, RMSE_TARGET_DEFAULT);
     }
 
     @Override
@@ -570,9 +569,8 @@ public class Svdpp implements ComputeFunction<CfLongId,
 
     @Override
     public void preSuperstep(int superstep, Aggregators aggregators) {
-        if (superstep == 0) {
-        } else if (superstep == 1) {
-        } else if (superstep == 2) {
+        if (superstep <= 2) {
+            // noop
         } else if (superstep % 2 != 0) {
             userComputation.preSuperstep(superstep, aggregators);
         } else {

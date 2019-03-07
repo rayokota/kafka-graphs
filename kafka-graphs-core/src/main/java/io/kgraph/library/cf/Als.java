@@ -241,7 +241,6 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     @Override
     @SuppressWarnings("unchecked")
     public final void init(Map<String, ?> configs, InitCallback cb) {
-
         this.configs = (Map<String, Object>) configs;
         this.maxIterations = (Integer) this.configs.getOrDefault(ITERATIONS, ITERATIONS_DEFAULT);
         this.rmseTarget = (Float) this.configs.getOrDefault(RMSE_TARGET, RMSE_TARGET_DEFAULT);

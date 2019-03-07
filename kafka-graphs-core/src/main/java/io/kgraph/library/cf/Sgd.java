@@ -299,7 +299,6 @@ public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     @SuppressWarnings("unchecked")
     @Override
     public final void init(Map<String, ?> configs, InitCallback cb) {
-
         this.configs = (Map<String, Object>) configs;
         maxIterations = (Integer) this.configs.getOrDefault(ITERATIONS, ITERATIONS_DEFAULT);
         rmseTarget = (Float) this.configs.getOrDefault(RMSE_TARGET, RMSE_TARGET_DEFAULT);
