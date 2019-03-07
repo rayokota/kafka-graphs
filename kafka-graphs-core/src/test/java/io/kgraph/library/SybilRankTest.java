@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package io.kgraph.library.clustering;
+package io.kgraph.library;
 
 import static org.junit.Assert.assertEquals;
 
@@ -48,7 +48,9 @@ import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
+import io.kgraph.library.clustering.SemiClustering;
 import io.kgraph.library.clustering.SemiClustering.SemiCluster;
+import io.kgraph.library.SybilRank.VertexValue;
 import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphUtils;
@@ -56,35 +58,43 @@ import io.kgraph.utils.KryoSerde;
 import io.kgraph.utils.KryoSerializer;
 import io.kgraph.utils.StreamUtils;
 
-public class SemiClusteringTest extends AbstractIntegrationTest {
-    private static final Logger log = LoggerFactory.getLogger(SemiClusteringTest.class);
+public class SybilRankTest extends AbstractIntegrationTest {
+    private static final Logger log = LoggerFactory.getLogger(SybilRankTest.class);
 
-    GraphAlgorithm<Long, Set<SemiCluster>, Double, KTable<Long, Set<SemiCluster>>> algorithm;
+    GraphAlgorithm<Long, VertexValue, Double, KTable<Long, VertexValue>> algorithm;
 
     @Test
-    public void testSemiClustering() throws Exception {
+    public void testSybilRank() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
 
         List<KeyValue<Edge<Long>, Double>> list = new ArrayList<>();
-        list.add(new KeyValue<>(new Edge<>(1L, 2L), 1.0));
-        list.add(new KeyValue<>(new Edge<>(2L, 1L), 1.0));
-        list.add(new KeyValue<>(new Edge<>(1L, 3L), 1.0));
-        list.add(new KeyValue<>(new Edge<>(3L, 1L), 1.0));
-        list.add(new KeyValue<>(new Edge<>(2L, 3L), 2.0));
-        list.add(new KeyValue<>(new Edge<>(3L, 2L), 2.0));
-        list.add(new KeyValue<>(new Edge<>(3L, 4L), 2.0));
-        list.add(new KeyValue<>(new Edge<>(4L, 3L), 2.0));
-        list.add(new KeyValue<>(new Edge<>(3L, 5L), 1.0));
-        list.add(new KeyValue<>(new Edge<>(5L, 3L), 1.0));
-        list.add(new KeyValue<>(new Edge<>(4L, 5L), 1.0));
-        list.add(new KeyValue<>(new Edge<>(5L, 4L), 1.0));
+        list.add(new KeyValue<>(new Edge<>(1L, 2L), 5.0));
+        list.add(new KeyValue<>(new Edge<>(2L, 1L), 5.0));
+        list.add(new KeyValue<>(new Edge<>(2L, 4L), 4.0));
+        list.add(new KeyValue<>(new Edge<>(4L, 2L), 4.0));
+        list.add(new KeyValue<>(new Edge<>(4L, 5L), 3.0));
+        list.add(new KeyValue<>(new Edge<>(5L, 4L), 3.0));
+        list.add(new KeyValue<>(new Edge<>(3L, 5L), 3.0));
+        list.add(new KeyValue<>(new Edge<>(5L, 3L), 3.0));
+        list.add(new KeyValue<>(new Edge<>(1L, 3L), 2.0));
+        list.add(new KeyValue<>(new Edge<>(3L, 1L), 2.0));
+        list.add(new KeyValue<>(new Edge<>(3L, 7L), 1.0));
+        list.add(new KeyValue<>(new Edge<>(7L, 3L), 1.0));
+        list.add(new KeyValue<>(new Edge<>(6L, 7L), 3.0));
+        list.add(new KeyValue<>(new Edge<>(7L, 6L), 3.0));
+        list.add(new KeyValue<>(new Edge<>(6L, 9L), 3.0));
+        list.add(new KeyValue<>(new Edge<>(9L, 6L), 3.0));
+        list.add(new KeyValue<>(new Edge<>(8L, 9L), 2.0));
+        list.add(new KeyValue<>(new Edge<>(9L, 8L), 2.0));
+        list.add(new KeyValue<>(new Edge<>(7L, 8L), 3.0));
+        list.add(new KeyValue<>(new Edge<>(8L, 7L), 3.0));
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), KryoSerializer.class,
             DoubleSerializer.class, new Properties()
         );
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(), list);
-        KGraph<Long, Set<SemiCluster>, Double> graph = KGraph.fromEdges(edges, new InitVertices(),
+        KGraph<Long, VertexValue, Double> graph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
@@ -93,24 +103,21 @@ public class SemiClusteringTest extends AbstractIntegrationTest {
         state.get();
 
         Map<String, Object> configs = new HashMap<>();
-        configs.put(SemiClustering.ITERATIONS, 10);
-        configs.put(SemiClustering.MAX_CLUSTERS, 2);
-        configs.put(SemiClustering.CLUSTER_CAPACITY, 2);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
-                configs, Optional.empty(), new SemiClustering());
+                configs, Optional.empty(), new SybilRank());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
-        GraphAlgorithmState<KTable<Long, Set<SemiCluster>>> paths = algorithm.run();
+        GraphAlgorithmState<KTable<Long, VertexValue>> paths = algorithm.run();
         paths.result().get();
 
         Map<Long, Map<Long, Long>> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);
 
-        assertEquals("{1=[[ 1 4  | -2.5, 0.0, 5.0 ], [ 1 3  | -2.0, 1.0, 6.0 ]], 2=[[ 2 4  | -3.0, 0.0, 6.0 ], [ 2 3  | -0.5, 2.0, 5.0 ]], 3=[[ 3 4  | -0.5, 2.0, 5.0 ], [ 3  | 0.0, 0.0, 6.0 ]], 4=[[ 3 4  | -0.5, 2.0, 5.0 ], [ 4  | 0.0, 0.0, 3.0 ]], 5=[[ 3 5  | -2.0, 1.0, 6.0 ], [ 4 5  | -0.5, 1.0, 3.0 ]]}", map.toString());
+        assertEquals("{1=0.2380952380952381, 2=0.23809523809523808, 3=0.39285714285714285, 4=0.4047619047619047, 5=0.0, 6=0.0, 7=0.0, 8=0.0, 9=0.0}", map.toString());
     }
 
     @After
@@ -118,10 +125,17 @@ public class SemiClusteringTest extends AbstractIntegrationTest {
         algorithm.close();
     }
 
-    private static final class InitVertices implements ValueMapper<Long, Set<SemiCluster>> {
+    private static final class InitVertices implements ValueMapper<Long, VertexValue> {
         @Override
-        public Set<SemiCluster> apply(Long id) {
-            return new TreeSet<>();
+        public VertexValue apply(Long id) {
+            switch (id.intValue()) {
+                case 1:
+                case 2:
+                case 5:
+                    return new VertexValue(0.0, true);
+                default:
+                    return new VertexValue(0.0, false);
+            }
         }
     }
 }

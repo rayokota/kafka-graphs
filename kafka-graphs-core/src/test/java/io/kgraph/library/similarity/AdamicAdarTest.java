@@ -84,7 +84,7 @@ public class AdamicAdarTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(), list);
         KGraph<Long, Double, Double> graph = KGraph.fromEdges(edges, new InitVertices(),
-            GraphSerialized.with(new KryoSerde<>(), Serdes.Double(), Serdes.Double()));
+            GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
@@ -141,7 +141,7 @@ public class AdamicAdarTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(), list);
         KGraph<Long, Double, Double> graph = KGraph.fromEdges(edges, new InitVertices(),
-            GraphSerialized.with(new KryoSerde<>(), Serdes.Double(), Serdes.Double()));
+            GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
