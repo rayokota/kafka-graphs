@@ -299,7 +299,7 @@ public class SemiClustering implements ComputeFunction<Long, Set<SemiClustering.
                         }
                     }
                     score = (innerScore - scoreFactor * boundaryScore)
-                        / (double) (size() * (size() - 1) / 2);
+                        / (size() * (size() - 1) / 2.0);
                 }
             }
         }
