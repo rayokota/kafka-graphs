@@ -184,7 +184,7 @@ public class MaxBMatching implements ComputeFunction<Long, Integer, MBMEdgeValue
     private void checkSolution(Iterable<EdgeWithValue<Long, MBMEdgeValue>> collection) {
         for (EdgeWithValue<Long, MBMEdgeValue> e : collection) {
             if (e.value().getState() != State.INCLUDED) {
-                throw new AssertionError(String.format("All the edges in the matching should be %d, %d was %d", State.INCLUDED, e, e.value().getState()));
+                throw new AssertionError(String.format("All the edges in the matching should be %s, %s was %s", State.INCLUDED, e, e.value().getState()));
             }
         }
     }

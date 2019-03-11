@@ -15,6 +15,7 @@
  */
 package io.kgraph.library.clustering;
 
+import java.io.Serializable;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -189,7 +190,10 @@ public class SemiClustering implements ComputeFunction<Long, Set<SemiClustering.
     /**
      * Comparator that sorts semi-clusters according to their score.
      */
-    private static class ClusterScoreComparator implements Comparator<SemiCluster> {
+    private static class ClusterScoreComparator implements Comparator<SemiCluster>, Serializable {
+
+        private static final long serialVersionUID = 9205668712825966861L;
+
         /**
          * Compare two semi-clusters for order.
          *
@@ -201,10 +205,9 @@ public class SemiClustering implements ComputeFunction<Long, Set<SemiClustering.
          */
         @Override
         public int compare(final SemiCluster o1, final SemiCluster o2) {
-            if (o1.score < o2.score) {
-                return -1;
-            } else if (o1.score > o2.score) {
-                return 1;
+            int cmp = Double.compare(o1.score, o2.score);
+            if (cmp != 0) {
+                return cmp;
             } else {
                 // We add this for consistency with the equals() method.
                 if (!o1.equals(o2)) {
@@ -295,7 +298,8 @@ public class SemiClustering implements ComputeFunction<Long, Set<SemiClustering.
                             boundaryScore += edge.value();
                         }
                     }
-                    score = (innerScore - scoreFactor * boundaryScore) / (size() * (size() - 1) / 2);
+                    score = (innerScore - scoreFactor * boundaryScore)
+                        / (double) (size() * (size() - 1) / 2);
                 }
             }
         }
