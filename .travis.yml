@@ -4,3 +4,7 @@ sudo: false
 
 jdk:
   - oraclejdk8
+
+# For jblas, see https://github.com/mikiobraun/jblas/wiki/Missing-Libraries
+before_install:
+  - sudo apt-get install -y libgfortran3
