@@ -8,7 +8,7 @@
         </encoder>
     </appender>
 
-    <logger name="io.kgraph" level="DEBUG" />
+    <logger name="io.kgraph" level="INFO" />
 
     <root level="WARN">
         <appender-ref ref="STDOUT" />
