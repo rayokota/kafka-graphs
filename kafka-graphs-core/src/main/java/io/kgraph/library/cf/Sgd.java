@@ -124,7 +124,11 @@ public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     /**
      * Main SGD compute method.
      *
-     * @param messages Messages received
+     * @param superstep the count of the current superstep
+     * @param vertex the current vertex with its value
+     * @param messages a Map of the source vertex and the message sent from the previous superstep
+     * @param edges the adjacent edges with their values
+     * @param cb a callback for setting a new vertex value or sending messages to the next superstep
      */
     public void superstepCompute(
         int superstep,
@@ -196,13 +200,13 @@ public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
      * <p>
      * v = v - gamma*(lambda*v + error*u)
      *
-     * @param value     The vector to update
-     * @param update    The vector used to update
-     * @param rating
-     * @param minRating
-     * @param maxRating
-     * @param lambda
-     * @param gamma
+     * @param value the vector to update
+     * @param update the vector used to update
+     * @param rating the rating
+     * @param minRating the min rating
+     * @param maxRating the max rating
+     * @param lambda the lambda parameter
+     * @param gamma the gamma parameter
      */
     protected final void updateValue(
         FloatMatrix value, FloatMatrix update, final float rating, final float minRating,

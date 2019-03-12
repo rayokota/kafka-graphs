@@ -25,7 +25,7 @@ package io.kgraph.library.cf;
  *
  * @author dl
  *
- * @param <T>
+ * @param <T> the type of the id
  */
 public interface CfId<T> {
     /**

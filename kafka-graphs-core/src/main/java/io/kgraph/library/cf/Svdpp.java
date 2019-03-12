@@ -129,15 +129,15 @@ public class Svdpp implements ComputeFunction<CfLongId,
      * N: number of ratings of the user
      * y_i: the weight vector
      *
-     * @param meanRating
-     * @param userBaseline
-     * @param itemBaseline
-     * @param user
-     * @param item
-     * @param numRatings
-     * @param sumWeights
-     * @param maxRating
-     * @param minRating
+     * @param meanRating the mean rating
+     * @param userBaseline the user baseline
+     * @param itemBaseline the item baseline
+     * @param user the user
+     * @param item the item
+     * @param numRatings the number of ratings
+     * @param sumWeights the sum of weights
+     * @param maxRating the max rating
+     * @param minRating the min rating
      */
     protected static float computePredictedRating(
         final float meanRating,
@@ -160,11 +160,11 @@ public class Svdpp implements ComputeFunction<CfLongId,
      * <p>
      * b := b + gamma * (error - lambda * b)
      *
-     * @param baseline
-     * @param predictedRating
-     * @param observedRating
-     * @param gamma
-     * @param lambda
+     * @param baseline the baseline
+     * @param predictedRating the predicted rating
+     * @param observedRating the observed rating
+     * @param gamma the gamma parameter
+     * @param lambda the lambda parameter
      */
     protected static float computeUpdatedBaseLine(
         final float baseline,
@@ -180,11 +180,11 @@ public class Svdpp implements ComputeFunction<CfLongId,
      * <p>
      * v:= v + step - gamma*lambda*v;
      *
-     * @param baseline
-     * @param step
-     * @param gamma
-     * @param lambda
-     * @return
+     * @param baseline the baseline
+     * @param step the step parameter
+     * @param gamma the gamma parameter
+     * @param lambda the lambda parameter
+     * @return the increment
      */
     protected static float incrementValue(
         final float baseline,
@@ -198,10 +198,10 @@ public class Svdpp implements ComputeFunction<CfLongId,
      * <p>
      * v:= v + step - gamma*lambda*v
      *
-     * @param value
-     * @param step
-     * @param gamma
-     * @param lambda
+     * @param value the value
+     * @param step the step parameter
+     * @param gamma the gamma parameter
+     * @param lambda the lambda parameter
      */
     protected static void incrementValue(
         FloatMatrix value, FloatMatrix step,

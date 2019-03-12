@@ -116,6 +116,15 @@ public class KMeansClustering<EV, Message> implements ComputeFunction<Long, KMea
         }
     }
 
+    /**
+     * Main K-means clustering compute method.
+     *
+     * @param superstep the count of the current superstep
+     * @param vertex the current vertex with its value
+     * @param messages a Map of the source vertex and the message sent from the previous superstep
+     * @param edges the adjacent edges with their values
+     * @param cb a callback for setting a new vertex value or sending messages to the next superstep
+     */
     public void superstepCompute(
         int superstep,
         VertexWithValue<Long, KMeansVertexValue> vertex,
@@ -150,8 +159,8 @@ public class KMeansClustering<EV, Message> implements ComputeFunction<Long, KMea
      * finds the closest center to the given point
      * by minimizing the Euclidean distance
      *
-     * @param clusterCenters
-     * @param value
+     * @param clusterCenters the cluster centers
+     * @param value the value
      * @return the index of the cluster center in the clusterCenters vector
      */
     private int findClosestCenter(List<Double>[] clusterCenters, List<Double> value) {
@@ -173,10 +182,10 @@ public class KMeansClustering<EV, Message> implements ComputeFunction<Long, KMea
     /**
      * Calculates the Euclidean distance between two vectors of doubles
      *
-     * @param v1
-     * @param v2
-     * @param dim
-     * @return
+     * @param v1 the first vector
+     * @param v2 the second vector
+     * @param dim the dimension of the vectors
+     * @return the distance
      */
     private double euclideanDistance(List<Double> v1, List<Double> v2, int dim) {
         double distance = 0.0;

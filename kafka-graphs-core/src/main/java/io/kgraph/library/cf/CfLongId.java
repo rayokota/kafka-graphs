@@ -89,10 +89,6 @@ public class CfLongId implements CfId<Long>, Comparable<CfId<Long>> {
         return result;
     }
 
-    /**
-     * Returns a string of the format:
-     * <id><\space><type>
-     */
     @Override
     public String toString() {
         return id + " " + type;

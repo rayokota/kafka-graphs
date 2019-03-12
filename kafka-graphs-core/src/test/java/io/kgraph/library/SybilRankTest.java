@@ -26,8 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
-import java.util.Set;
-import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.kafka.common.serialization.DoubleSerializer;
@@ -48,8 +46,6 @@ import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
-import io.kgraph.library.clustering.SemiClustering;
-import io.kgraph.library.clustering.SemiClustering.SemiCluster;
 import io.kgraph.library.SybilRank.VertexValue;
 import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.utils.ClientUtils;

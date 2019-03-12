@@ -143,6 +143,11 @@ public class AdamicAdar implements ComputeFunction<Long, Double, Double, AdamicA
      * This computes similarity only between vertices that are connected with
      * edges, not any pair of vertices in the graph.
      *
+     * @param superstep the count of the current superstep
+     * @param vertex the current vertex with its value
+     * @param messages a Map of the source vertex and the message sent from the previous superstep
+     * @param edges the adjacent edges with their values
+     * @param cb a callback for setting a new vertex value or sending messages to the next superstep
      */
     public void superstepCompute(
         int superstep,

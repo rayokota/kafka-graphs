@@ -56,8 +56,8 @@ public class SybilRank implements ComputeFunction<Long, SybilRank.VertexValue, D
     /**
      * This method computes the degree of a vertex as the sum of its edge weights.
      *
-     * @param edges
-     * @return
+     * @param edges the edges
+     * @return the degree
      */
     public static double computeDegree(Iterable<EdgeWithValue<Long, Double>> edges
     ) {
