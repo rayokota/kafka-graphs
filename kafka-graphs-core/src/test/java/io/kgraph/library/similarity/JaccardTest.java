@@ -58,7 +58,7 @@ public class JaccardTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Double, Double, KTable<Long, Double>> algorithm;
 
-    //@Test
+    @Test
     public void testExactSimilarity() throws Exception {
         String suffix = "similarity";
         StreamsBuilder builder = new StreamsBuilder();
@@ -112,7 +112,7 @@ public class JaccardTest extends AbstractIntegrationTest {
         assertEquals("{1={2=0.2, 3=0.25, 4=0.4}, 2={1=0.2, 4=0.4, 5=0.2}, 3={1=0.25, 4=0.2}, 4={1=0.4, 2=0.4, 3=0.2, 5=0.16666666666666666}, 5={2=0.2, 4=0.16666666666666666, 6=0.0}, 6={5=0.0}}", edgesMap.toString());
     }
 
-    //@Test
+    @Test
     public void testExactDistance() throws Exception {
         String suffix = "distance";
         StreamsBuilder builder = new StreamsBuilder();

@@ -59,7 +59,7 @@ public class SybilRankTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, VertexValue, Double, KTable<Long, VertexValue>> algorithm;
 
-    //@Test
+    @Test
     public void testSybilRank() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();

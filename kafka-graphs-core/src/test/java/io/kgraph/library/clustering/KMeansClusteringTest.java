@@ -58,7 +58,7 @@ public class KMeansClusteringTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, KMeansVertexValue, Long, KTable<Long, KMeansVertexValue>> algorithm;
 
-    //@Test
+    @Test
     public void test1() throws Exception {
         String suffix = "1";
         StreamsBuilder builder = new StreamsBuilder();
@@ -113,7 +113,7 @@ public class KMeansClusteringTest extends AbstractIntegrationTest {
         assertEquals("{1=0, 2=0, 3=1, 4=1, 5=1, 6=1, 7=1}", map.toString());
     }
 
-    //@Test
+    @Test
     public void test2() throws Exception {
         String suffix = "2";
         StreamsBuilder builder = new StreamsBuilder();
@@ -171,7 +171,7 @@ public class KMeansClusteringTest extends AbstractIntegrationTest {
         assertEquals("{1=0, 2=1, 3=2, 4=0, 5=2, 6=2, 7=1, 8=0}", map.toString());
     }
 
-    //@Test
+    @Test
     public void test3() throws Exception {
         String suffix = "3";
         StreamsBuilder builder = new StreamsBuilder();
@@ -230,7 +230,7 @@ public class KMeansClusteringTest extends AbstractIntegrationTest {
         assertEquals("{1=0, 2=0, 3=1, 4=1, 5=0, 6=1, 7=0, 8=0, 9=1, 10=0}", map.toString());
     }
 
-    //@Test
+    @Test
     public void test4() throws Exception {
         String suffix = "4";
         StreamsBuilder builder = new StreamsBuilder();
@@ -341,7 +341,7 @@ public class KMeansClusteringTest extends AbstractIntegrationTest {
         assertEquals("{1=0, 2=1, 3=2, 4=0, 5=1, 6=2, 7=0, 8=1, 9=2, 10=0, 11=1, 12=2, 13=0, 14=1, 15=2, 16=0, 17=1, 18=2, 19=0, 20=1, 21=2, 22=0, 23=1, 24=2, 25=0, 26=1, 27=2, 28=0, 29=1, 30=2, 31=0, 32=1, 33=2, 34=0, 35=1, 36=2, 37=0, 38=1, 39=2, 40=0, 41=1, 42=2, 43=0, 44=1, 45=2, 46=0, 47=1, 48=2, 49=0, 50=1, 51=2, 52=0, 53=1, 54=2, 55=0, 56=1, 57=2, 58=0, 59=1, 60=2}", map.toString());
     }
 
-    //@Test
+    @Test
     public void test5() throws Exception {
         String suffix = "5";
         StreamsBuilder builder = new StreamsBuilder();

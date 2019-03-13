@@ -60,7 +60,7 @@ public class MultipleSourceShortestPathsTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Map<Long, Double>, Double, KTable<Long, Map<Long, Double>>> algorithm;
 
-    //@Test
+    @Test
     public void testMultipleSourceShortestPaths() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();

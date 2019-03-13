@@ -59,7 +59,7 @@ public class AlsTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<CfLongId, FloatMatrix, Float, KTable<CfLongId, FloatMatrix>> algorithm;
 
-    //@Test
+    @Test
     public void testAls() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();

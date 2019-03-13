@@ -191,7 +191,7 @@ public class GraphUtils {
                 scheduledFuture = executor.schedule(() -> {
                     this.context.commit();
                     return future.complete(true);
-                }, 10000, TimeUnit.MILLISECONDS);
+                }, 5000, TimeUnit.MILLISECONDS);
             });
         }
 
