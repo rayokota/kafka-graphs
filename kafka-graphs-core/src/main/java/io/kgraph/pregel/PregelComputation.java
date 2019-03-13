@@ -46,6 +46,7 @@ import org.apache.curator.utils.ZKPaths;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Serdes;
@@ -737,6 +738,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 bootstrapServers, serialized.keySerde().serializer().getClass(), KryoSerializer.class,
                 streamsConfig != null ? streamsConfig : new Properties()
             );
+            String clientId = "pregel-" + context.taskId();
+            producerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientId + "-producer");
             this.producer = new KafkaProducer<>(producerConfig);
         }
 
