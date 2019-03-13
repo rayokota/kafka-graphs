@@ -82,6 +82,8 @@ public class AlsTest extends AbstractIntegrationTest {
         CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
+        Thread.sleep(2000);
+
         Map<String, Object> configs = new HashMap<>();
         configs.put(Als.LAMBDA, 0.01f);
         configs.put(Als.VECTOR_SIZE, 2);
@@ -96,6 +98,8 @@ public class AlsTest extends AbstractIntegrationTest {
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
         GraphAlgorithmState<KTable<CfLongId, FloatMatrix>> paths = algorithm.run();
         paths.result().get();
+
+        Thread.sleep(2000);
 
         Map<CfLongId, FloatMatrix> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);

@@ -147,6 +147,8 @@ public class JaccardTest extends AbstractIntegrationTest {
         CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
+        Thread.sleep(2000);
+
         Map<String, Object> configs = new HashMap<>();
         configs.put("distance.conversion.enabled", true);
         algorithm =
@@ -159,6 +161,8 @@ public class JaccardTest extends AbstractIntegrationTest {
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
         GraphAlgorithmState<KTable<Long, Double>> paths = algorithm.run();
         paths.result().get();
+
+        Thread.sleep(2000);
 
         Map<Long, Map<Long, Double>> edgesMap = StreamUtils.mapFromStore(paths.streams(), "edgesStore-run-" + suffix);
         log.debug("edges : {}", edgesMap);

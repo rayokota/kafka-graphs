@@ -91,6 +91,8 @@ public class AdamicAdarTest extends AbstractIntegrationTest {
         CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
+        Thread.sleep(2000);
+
         Map<String, Object> configs = new HashMap<>();
         configs.put("distance.conversion.enabled", false);
         algorithm =
@@ -103,6 +105,8 @@ public class AdamicAdarTest extends AbstractIntegrationTest {
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
         GraphAlgorithmState<KTable<Long, Double>> paths = algorithm.run();
         paths.result().get();
+
+        Thread.sleep(2000);
 
         Map<Long, Map<Long, Long>> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);

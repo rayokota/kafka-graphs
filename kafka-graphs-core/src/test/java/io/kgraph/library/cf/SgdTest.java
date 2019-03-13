@@ -82,6 +82,8 @@ public class SgdTest extends AbstractIntegrationTest {
         CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
+        Thread.sleep(2000);
+
         Map<String, Object> configs = new HashMap<>();
         configs.put(Sgd.GAMMA, 0.005f);
         configs.put(Sgd.LAMBDA, 0.01f);
@@ -97,6 +99,8 @@ public class SgdTest extends AbstractIntegrationTest {
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
         GraphAlgorithmState<KTable<CfLongId, FloatMatrix>> paths = algorithm.run();
         paths.result().get();
+
+        Thread.sleep(2000);
 
         Map<CfLongId, FloatMatrix> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);

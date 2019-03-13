@@ -82,6 +82,8 @@ public class SvdppTest extends AbstractIntegrationTest {
         CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
+        Thread.sleep(2000);
+
         Map<String, Object> configs = new HashMap<>();
         configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
         configs.put(Svdpp.BIAS_GAMMA, 0.01f);
@@ -104,6 +106,8 @@ public class SvdppTest extends AbstractIntegrationTest {
 
         Map<CfLongId, Svdpp.SvdppValue> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);
+
+        Thread.sleep(2000);
 
         assertEquals("{1 0=[0.007493, 0.008374], 2 0=[0.006905, 0.008183], 1 1=[0.007407, 0.002487], 2 1=[0.006642, 0.001807]}", map.toString());
     }

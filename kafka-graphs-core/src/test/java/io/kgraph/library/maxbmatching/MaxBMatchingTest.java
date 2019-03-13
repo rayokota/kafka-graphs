@@ -88,6 +88,8 @@ public class MaxBMatchingTest extends AbstractIntegrationTest {
         CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
+        Thread.sleep(2000);
+
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
@@ -98,6 +100,8 @@ public class MaxBMatchingTest extends AbstractIntegrationTest {
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
         GraphAlgorithmState<KTable<Long, Integer>> paths = algorithm.run();
         paths.result().get();
+
+        Thread.sleep(2000);
 
         Map<Long, Map<Long, MBMEdgeValue>> map = StreamUtils.mapFromStore(paths.streams(), "edgesStore-run-" + suffix);
         log.debug("result: {}", map);
