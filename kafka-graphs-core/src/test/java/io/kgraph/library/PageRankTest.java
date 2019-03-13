@@ -308,7 +308,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         state.get();
 
-        Thread.sleep(5000);
+        Thread.sleep(2000);
 
         double resetProb = 0.15;
         double tol = 0.0001;
