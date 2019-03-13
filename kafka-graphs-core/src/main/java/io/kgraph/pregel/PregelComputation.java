@@ -436,7 +436,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 } else {
                                     log.debug("Not ready to create snd: state {}", pregelState);
                                 }
-                            } else if (pregelState.stage() == Stage.SEND) {
+                            }
+                            if (pregelState.stage() == Stage.SEND) {
                                 PregelState nextPregelState = ZKUtils.maybeCreateReadyToReceiveNode(curator, applicationId, pregelState, barrierCache);
                                 if (!pregelState.equals(nextPregelState)) {
                                     pregelState = nextPregelState;
