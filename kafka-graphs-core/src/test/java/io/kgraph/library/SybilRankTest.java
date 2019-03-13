@@ -98,6 +98,8 @@ public class SybilRankTest extends AbstractIntegrationTest {
         CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
+        Thread.sleep(2000);
+
         Map<String, Object> configs = new HashMap<>();
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
@@ -109,6 +111,8 @@ public class SybilRankTest extends AbstractIntegrationTest {
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
         GraphAlgorithmState<KTable<Long, VertexValue>> paths = algorithm.run();
         paths.result().get();
+
+        Thread.sleep(2000);
 
         Map<Long, Map<Long, Long>> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);
