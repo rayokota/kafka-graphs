@@ -397,7 +397,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 sharedValue.start();
 
                 // TODO make interval configurable
-                this.context.schedule(Duration.ofMillis(1000), PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
+                this.context.schedule(Duration.ofMillis(500), PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
                     try {
                         pregelState = PregelState.fromBytes(sharedValue.getValue());
                         State state = pregelState.state();
