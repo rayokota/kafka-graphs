@@ -328,7 +328,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         GraphAlgorithmState<KTable<Long, Tuple2<Double, Double>>> ranks = algorithm.run(maxIterations);
         ranks.result().get();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         Map<Long, Tuple2<Double, Double>> map = StreamUtils.mapFromStore(ranks.streams(), "solutionSetStore-" +
             suffix);
