@@ -285,7 +285,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         PregelState pregelState = new PregelState(State.RUNNING, -1, Stage.SEND);
         try (SharedValue sharedValue = new SharedValue(curator, ZKPaths.makePath(ZKUtils.PREGEL_PATH + applicationId, ZKUtils.SUPERSTEP), pregelState.toBytes())) {
             sharedValue.start();
-            sharedValue.setValue(pregelState.toBytes());
+            setPregelState(sharedValue, pregelState);
             return pregelState;
         } catch (Exception e) {
             throw toRuntimeException(e);
@@ -431,7 +431,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 PregelState nextPregelState = ZKUtils.maybeCreateReadyToSendNode(curator, applicationId, pregelState, barrierCache, groupSize);
                                 if (!pregelState.equals(nextPregelState)) {
                                     pregelState = nextPregelState;
-                                    sharedValue.setValue(pregelState.toBytes());
+                                    setPregelState(sharedValue, pregelState);
                                 } else {
                                     log.debug("Not ready to create snd: state {}", pregelState);
                                 }
@@ -440,11 +440,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 PregelState nextPregelState = ZKUtils.maybeCreateReadyToReceiveNode(curator, applicationId, pregelState, barrierCache);
                                 if (!pregelState.equals(nextPregelState)) {
                                     pregelState = nextPregelState;
-                                    sharedValue.setValue(pregelState.toBytes());
+                                    setPregelState(sharedValue, pregelState);
                                     boolean halt = masterCompute(pregelState.superstep());
                                     if (halt) {
                                         pregelState = pregelState.state(State.CANCELLED);
-                                        sharedValue.setValue(pregelState.toBytes());
+                                        setPregelState(sharedValue, pregelState);
                                     }
                                 } else {
                                     log.debug("Not ready to create rcv: state {}", pregelState);
@@ -452,7 +452,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                             }
                             if (pregelState.superstep() > maxIterations) {
                                 pregelState = pregelState.state(State.COMPLETED);
-                                sharedValue.setValue(pregelState.toBytes());
+                                setPregelState(sharedValue, pregelState);
                                 return;
                             }
                         }
@@ -839,6 +839,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         byte[] keyBytes = serializer.serialize(null, vertex);
         int partition = Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions;
         return partition;
+    }
+
+    private static void setPregelState(SharedValue sharedValue, PregelState pregelState) throws Exception {
+        sharedValue.setValue(pregelState.toBytes());
+        log.info("Set new pregel state {}", pregelState);
     }
 
     @SuppressWarnings("unchecked")
