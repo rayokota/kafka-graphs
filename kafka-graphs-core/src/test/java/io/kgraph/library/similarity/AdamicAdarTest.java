@@ -58,7 +58,7 @@ public class AdamicAdarTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Double, Double, KTable<Long, Double>> algorithm;
 
-    @Test
+    //@Test
     public void testExactSimilarity() throws Exception {
         String suffix = "similarity";
         StreamsBuilder builder = new StreamsBuilder();
@@ -115,7 +115,7 @@ public class AdamicAdarTest extends AbstractIntegrationTest {
         assertEquals("{1={2=-1.3862943611198906, 3=-1.3862943611198906, 4=-1.791759469228055}, 2={1=-1.3862943611198906, 4=-1.791759469228055, 5=-1.3862943611198906}, 3={1=-1.3862943611198906, 4=-1.0986122886681098}, 4={1=-1.791759469228055, 2=-1.791759469228055, 3=-1.0986122886681098, 5=-1.0986122886681098}, 5={2=-1.3862943611198906, 4=-1.0986122886681098}}", edgesMap.toString());
     }
 
-    @Test
+    //@Test
     public void testExactDistance() throws Exception {
         String suffix = "distance";
         StreamsBuilder builder = new StreamsBuilder();

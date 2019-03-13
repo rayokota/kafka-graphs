@@ -56,7 +56,7 @@ public class ReverseEdgesTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm;
 
-    @Test
+    //@Test
     public void testReverseEdges() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
