@@ -38,7 +38,7 @@ public class GraphOperationsITCase extends AbstractIntegrationTest {
 
     private String expectedResult;
 
-    //@Test
+    @Test
     public void testOutDegrees() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
@@ -73,7 +73,7 @@ public class GraphOperationsITCase extends AbstractIntegrationTest {
         compareResultAsTuples(result, expectedResult);
     }
 
-    //@Test
+    @Test
     public void testInDegrees() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
@@ -108,7 +108,7 @@ public class GraphOperationsITCase extends AbstractIntegrationTest {
         compareResultAsTuples(result, expectedResult);
     }
 
-    //@Test
+    @Test
     public void testUndirected() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
@@ -145,7 +145,7 @@ public class GraphOperationsITCase extends AbstractIntegrationTest {
         compareResultAsTuples(result, expectedResult);
     }
 
-    //@Test
+    @Test
     public void testSubGraph() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
@@ -177,7 +177,7 @@ public class GraphOperationsITCase extends AbstractIntegrationTest {
         compareResultAsTuples(result, expectedResult);
     }
 
-	//@Test
+	@Test
 	public void testFilterVertices() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
@@ -210,7 +210,7 @@ public class GraphOperationsITCase extends AbstractIntegrationTest {
 		compareResultAsTuples(result, expectedResult);
 	}
 
-	//@Test
+	@Test
 	public void testFilterEdges() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()

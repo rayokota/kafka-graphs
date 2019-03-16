@@ -37,7 +37,7 @@ public class JoinWithVerticesITCase extends AbstractIntegrationTest {
 
     private String expectedResult;
 
-    //@Test
+    @Test
     public void testJoinWithVertexSet() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
