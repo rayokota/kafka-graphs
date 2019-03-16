@@ -183,7 +183,7 @@ public class GraphUtils {
             this.context = context;
 
             // TODO make interval configurable
-            this.context.schedule(Duration.ofMillis(1000), PunctuationType.STREAM_TIME, (timestamp) -> {
+            this.context.schedule(Duration.ofMillis(500), PunctuationType.STREAM_TIME, (timestamp) -> {
                 if (scheduledFuture != null) {
                     scheduledFuture.cancel(false);
                 }
