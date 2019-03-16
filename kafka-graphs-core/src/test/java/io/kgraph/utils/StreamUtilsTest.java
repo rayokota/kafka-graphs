@@ -99,7 +99,7 @@ public class StreamUtilsTest extends AbstractIntegrationTest {
         return maxMessages < 0 || messagesConsumed < maxMessages;
     }
 
-    @Test
+    //@Test
     public void testCollectionToStream() throws Exception {
         Collection<KeyValue<Integer, Integer>> input = new ArrayList<>();
         for (Integer i : LEFT_INPUT) {

@@ -57,7 +57,7 @@ public class MaxBMatchingTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Integer, MBMEdgeValue, KTable<Long, Integer>> algorithm;
 
-    @Test
+    //@Test
     public void testMaxBMatching() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();

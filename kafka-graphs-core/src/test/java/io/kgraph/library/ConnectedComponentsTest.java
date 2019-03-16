@@ -61,7 +61,7 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm;
 
-    @Test
+    //@Test
     public void testConnectedComponents() throws Exception {
         String suffix = "cc";
         StreamsBuilder builder = new StreamsBuilder();
@@ -122,7 +122,7 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         assertEquals(expectedResult, map);
     }
 
-    @Test
+    //@Test
     public void testGridConnectedComponents() throws Exception {
         String suffix = "grid";
         StreamsBuilder builder = new StreamsBuilder();
@@ -161,7 +161,7 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         }
     }
 
-    //@Test
+    ////@Test
     public void testGridConnectedComponentsMultipleClients() throws Exception {
         // Run against a locally running Kafka broker
         String bootstrapServers = "localhost:9092";
@@ -221,7 +221,7 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         algorithm2.close();
     }
 
-    //@Test
+    ////@Test
     public void testConnectedComponentsMultipleClientsFromFile() throws Exception {
         // Run against a locally running Kafka broker
         String bootstrapServers = "localhost:9092";

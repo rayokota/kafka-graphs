@@ -61,7 +61,7 @@ public class SemiClusteringTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Set<SemiCluster>, Double, KTable<Long, Set<SemiCluster>>> algorithm;
 
-    @Test
+    //@Test
     public void testSemiClustering() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
