@@ -59,7 +59,7 @@ public class SgdTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<CfLongId, FloatMatrix, Float, KTable<CfLongId, FloatMatrix>> algorithm;
 
-    //@Test
+    @Test
     public void testSgd() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();

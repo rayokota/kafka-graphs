@@ -63,7 +63,7 @@ public class PageRankTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Tuple2<Double, Double>, Double, KTable<Long, Tuple2<Double, Double>>> algorithm;
 
-    //@Test
+    @Test
     public void testChainPageRank() throws Exception {
         String suffix = "chain";
         StreamsBuilder builder = new StreamsBuilder();
@@ -134,7 +134,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         assertEquals(expectedResult, list);
     }
 
-    //@Test
+    @Test
     public void testChainLongerPageRank() throws Exception {
         String suffix = "longer";
         StreamsBuilder builder = new StreamsBuilder();
@@ -205,7 +205,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         assertEquals(expectedResult, list);
     }
 
-    //@Test
+    @Test
     public void testChainPersonalPageRank() throws Exception {
         String suffix = "chain-personal";
         StreamsBuilder builder = new StreamsBuilder();
@@ -342,7 +342,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         }
     }
 
-    //@Test
+    @Test
     public void testGridPageRank() throws Exception {
         String suffix = "grid";
         StreamsBuilder builder = new StreamsBuilder();
@@ -450,7 +450,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         assertEquals(result, map.toString());
     }
 
-    //@Test
+    @Test
     public void testStarPageRank() throws Exception {
         String suffix = "star";
         StreamsBuilder builder = new StreamsBuilder();

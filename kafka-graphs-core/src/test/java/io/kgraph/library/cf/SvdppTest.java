@@ -59,7 +59,7 @@ public class SvdppTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<CfLongId, Svdpp.SvdppValue, Float, KTable<CfLongId, Svdpp.SvdppValue>> algorithm;
 
-    //@Test
+    @Test
     public void testSvdpp() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();
