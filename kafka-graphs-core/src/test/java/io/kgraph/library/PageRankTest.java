@@ -302,6 +302,8 @@ public class PageRankTest extends AbstractIntegrationTest {
             new KGraph<>(vertices, joinedGraph.edges(), GraphSerialized.with(joinedGraph.keySerde(), new KryoSerde<>
                 (), Serdes.Double()));
 
+        Thread.sleep(5000);
+
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
                 .bootstrapServers(),
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
