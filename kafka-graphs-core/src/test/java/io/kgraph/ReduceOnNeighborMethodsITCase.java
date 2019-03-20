@@ -39,7 +39,7 @@ public class ReduceOnNeighborMethodsITCase extends AbstractIntegrationTest {
 
     private String expectedResult;
 
-    @Test
+    //@Test
     public void testSumOfOutNeighbors() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
@@ -75,7 +75,7 @@ public class ReduceOnNeighborMethodsITCase extends AbstractIntegrationTest {
         compareResultAsTuples(result, expectedResult);
     }
 
-    @Test
+    //@Test
     public void testSumOfOutNeighborsNoValue() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()

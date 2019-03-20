@@ -57,7 +57,7 @@ public class LocalClusteringCoefficientTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Double, Double, KTable<Long, Double>> algorithm;
 
-    @Test
+    //@Test
     public void testLCC() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();

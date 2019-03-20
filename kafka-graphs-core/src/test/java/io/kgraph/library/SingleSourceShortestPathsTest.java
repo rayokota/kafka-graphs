@@ -56,7 +56,7 @@ public class SingleSourceShortestPathsTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Double, Double, KTable<Long, Double>> algorithm;
 
-    @Test
+    //@Test
     public void testSingleSourceShortestPaths() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();

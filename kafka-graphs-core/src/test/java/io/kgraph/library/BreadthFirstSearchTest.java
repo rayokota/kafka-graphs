@@ -56,7 +56,7 @@ public class BreadthFirstSearchTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm;
 
-    @Test
+    //@Test
     public void testBFS() throws Exception {
         String suffix = "";
         StreamsBuilder builder = new StreamsBuilder();

@@ -38,7 +38,7 @@ public class ReduceOnEdgesMethodsITCase extends AbstractIntegrationTest {
 
     private String expectedResult;
 
-    @Test
+    //@Test
     public void testLowestWeightOutNeighbor() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
@@ -74,7 +74,7 @@ public class ReduceOnEdgesMethodsITCase extends AbstractIntegrationTest {
         TestUtils.compareResultAsTuples(result, expectedResult);
     }
 
-    @Test
+    //@Test
     public void testLowestWeightOutNeighborNoValue() throws Exception {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), LongSerializer.class,
             LongSerializer.class, new Properties()
