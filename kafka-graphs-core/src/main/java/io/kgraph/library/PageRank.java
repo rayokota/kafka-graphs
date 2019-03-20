@@ -26,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
 import io.kgraph.pregel.ComputeFunction;
+import io.kgraph.pregel.aggregators.DoubleSumAggregator;
 import io.vavr.Tuple2;
 
 public class PageRank<K> implements ComputeFunction<K, Tuple2<Double, Double>, Double, Double> {
@@ -34,6 +35,7 @@ public class PageRank<K> implements ComputeFunction<K, Tuple2<Double, Double>, D
     public static final String TOLERANCE = "tolerance";
     public static final String RESET_PROBABILITY = "resetProbability";
     public static final String SRC_VERTEX_ID = "srcVertexId";
+    public static final String RUNNING_SUM = "runningSum";
 
     private double tolerance;
     private double resetProbability;
@@ -45,6 +47,14 @@ public class PageRank<K> implements ComputeFunction<K, Tuple2<Double, Double>, D
         tolerance = (Double) configs.get(TOLERANCE);
         resetProbability = (Double) configs.get(RESET_PROBABILITY);
         srcVertexId = (K) configs.get(SRC_VERTEX_ID);
+
+        cb.registerAggregator(RUNNING_SUM, DoubleSumAggregator.class, true);
+    }
+
+    @Override
+    public void masterCompute(int superstep, MasterCallback cb) {
+        double sum = cb.getAggregatedValue(RUNNING_SUM);
+        log.info("Running sum: " + sum);
     }
 
     @Override
@@ -74,6 +84,8 @@ public class PageRank<K> implements ComputeFunction<K, Tuple2<Double, Double>, D
         log.debug("msgs {}", messages);
 
         cb.setNewVertexValue(new Tuple2<>(newPageRank, newDelta));
+
+        cb.aggregate(RUNNING_SUM, newPageRank);
 
         for (EdgeWithValue<K, Double> edge : edges) {
             if (newDelta > tolerance) {
