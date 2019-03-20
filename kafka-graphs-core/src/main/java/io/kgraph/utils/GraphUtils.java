@@ -81,6 +81,7 @@ public class GraphUtils {
                 ProducerRecord<Long, T> producerRecord = new ProducerRecord<>(topic, id, value);
                 producer.send(producerRecord);
             }
+            producer.flush();
         }
     }
 
@@ -107,6 +108,7 @@ public class GraphUtils {
                 ProducerRecord<Edge<Long>, T> producerRecord = new ProducerRecord<>(topic, new Edge<>(sourceId, targetId), value);
                 producer.send(producerRecord);
             }
+            producer.flush();
         }
     }
 
