@@ -907,9 +907,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
         // Consumer end offsets may be stale; use last written offset if available
         if (lastWrittenOffsets != null) {
-            for (Map.Entry<Integer, Long> lastWrittenOffset : lastWrittenOffsets.entrySet()) {
-                TopicPartition tp = new TopicPartition(topic, lastWrittenOffset.getKey());
-                endOffsets.computeIfPresent(tp, (k, v) -> Math.max(v, lastWrittenOffset.getValue() + 1));
+            for (Map.Entry<TopicPartition, Long> endOffset : endOffsets.entrySet()) {
+                Long lastWrittenOffset = lastWrittenOffsets.get(endOffset.getKey().partition());
+                if (lastWrittenOffset != null && lastWrittenOffset >= endOffset.getValue()) {
+                    endOffset.setValue(lastWrittenOffset + 1);
+                }
             }
         }
 
