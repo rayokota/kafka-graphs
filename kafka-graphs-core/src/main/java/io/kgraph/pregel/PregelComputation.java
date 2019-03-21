@@ -93,6 +93,8 @@ import io.vavr.Tuple4;
 public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private static final Logger log = LoggerFactory.getLogger(PregelComputation.class);
 
+    private static final String LAST_WRITTEN_OFFSETS = "last.written.offsets";
+
     private final String hostAndPort;
     private final String applicationId;
     private final String bootstrapServers;
@@ -132,6 +134,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
     private final Map<Integer, Map<Integer, Set<K>>> activeVertices = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Boolean>> didPreSuperstep = new ConcurrentHashMap<>();
+    private final Map<Integer, Map<Integer, Long>> lastWrittenOffsets = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Map<String, Aggregator<?>>>> aggregators = new ConcurrentHashMap<>();
     private final Map<Integer, Map<String, ?>> previousAggregates = new ConcurrentHashMap<>();
 
@@ -173,7 +176,9 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         this.localworkSetStoreName = "localworkSetStore-" + applicationId;
         this.localSolutionSetStoreName = "localSolutionSetStore-" + applicationId;
 
+        ComputeFunction.InitCallback cb = new ComputeFunction.InitCallback(registeredAggregators);
         cf.init(configs, new ComputeFunction.InitCallback(registeredAggregators));
+        cb.registerAggregator(LAST_WRITTEN_OFFSETS, MapOfLongMaxAggregator.class);
     }
 
     public KTable<K, VV> vertices() {
@@ -745,9 +750,10 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         @Override
         public void process(final K readOnlyKey, final Tuple2<Integer, Map<K, List<Message>>> value) {
             try {
+                int nextSuperstep = value._1;
                 for (Map.Entry<K, List<Message>> entry : value._2.entrySet()) {
                     // List of messages may be empty in case of sending to self
-                    Tuple3<Integer, K, List<Message>> message = new Tuple3<>(value._1, readOnlyKey, entry.getValue());
+                    Tuple3<Integer, K, List<Message>> message = new Tuple3<>(nextSuperstep, readOnlyKey, entry.getValue());
                     ProducerRecord<K, Tuple3<Integer, K, List<Message>>> producerRecord =
                         new ProducerRecord<>(workSetTopic, entry.getKey(), message);
                     producer.send(producerRecord, (metadata, error) -> {
@@ -756,7 +762,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 // Activate partition for next step
                                 int p = vertexToPartition(entry.getKey(), serialized.keySerde().serializer(), numPartitions);
                                 log.debug("adding partition {} for vertex {}", p, entry.getKey());
-                                ZKUtils.addChild(curator, applicationId, new PregelState(State.RUNNING, value._1, Stage.SEND), "partition-" + p);
+                                ZKUtils.addChild(curator, applicationId, new PregelState(State.RUNNING, nextSuperstep, Stage.SEND), "partition-" + p);
+
+                                Map<Integer, Long> endOffsets =
+                                    lastWrittenOffsets.computeIfAbsent(nextSuperstep - 1, k -> new ConcurrentHashMap<>());
+                                endOffsets.put(metadata.partition(), metadata.offset());
                             } catch (Exception e) {
                                 throw toRuntimeException(e);
                             }
@@ -765,7 +775,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 }
                 producer.flush();
                 // Deactivate this vertex
-                deactivateVertex(value._1 - 1, readOnlyKey);
+                deactivateVertex(nextSuperstep - 1, readOnlyKey);
             } catch (Exception e) {
                 throw toRuntimeException(e);
             }
@@ -784,6 +794,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), aggregators(partition, superstep));
                 computeFunction.postSuperstep(superstep, aggregators);
+                aggregators.aggregate(LAST_WRITTEN_OFFSETS, lastWrittenOffsets.get(superstep));
                 writeAggregate(superstep, partition);
             }
         }
@@ -836,6 +847,35 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         }
     }
 
+    public static class MapOfLongMaxAggregator implements Aggregator<Map<Integer, Long>> {
+
+        private Map<Integer, Long> value = new HashMap<>();
+
+        @Override
+        public Map<Integer, Long> getAggregate() {
+            return value;
+        }
+
+        @Override
+        public void setAggregate(Map<Integer, Long> value) {
+            this.value = value;
+        }
+
+        @Override
+        public void aggregate(Map<Integer, Long> value) {
+            if (value != null) {
+                for (Map.Entry<Integer, Long> entry : value.entrySet()) {
+                    this.value.merge(entry.getKey(), entry.getValue(), Math::max);
+                }
+            }
+        }
+
+        @Override
+        public void reset() {
+            value = new HashMap<>();
+        }
+    }
+
     private static <K> int vertexToPartition(K vertex, Serializer<K> serializer, int numPartitions) {
         // TODO make configurable, currently this is tied to DefaultStreamPartitioner
         byte[] keyBytes = serializer.serialize(null, vertex);
@@ -860,10 +900,18 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         return (Consumer<byte[], byte[]>) consumerField.get(streamTask);
     }
 
-    private static boolean isTopicSynced(Consumer<byte[], byte[]> consumer, String topic, int superstep) {
+    @SuppressWarnings("unchecked")
+    private boolean isTopicSynced(Consumer<byte[], byte[]> consumer, String topic, int superstep) {
         Set<TopicPartition> partitions = localPartitions(consumer, topic);
         Map<TopicPartition, Long> positions = positions(consumer, partitions);
         Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
+
+        Map<Integer, Long> lastWrittenOffsets =
+            (Map<Integer, Long>) previousAggregates(superstep).get(LAST_WRITTEN_OFFSETS);
+        for (Map.Entry<Integer, Long> lastWrittenOffset : lastWrittenOffsets.entrySet()) {
+            TopicPartition tp = new TopicPartition(topic, lastWrittenOffset.getKey());
+            endOffsets.computeIfPresent(tp, (k, v) -> Math.max(v, lastWrittenOffset.getValue() + 1));
+        }
         boolean synced = endOffsets.equals(positions);
         if (synced) {
             log.debug("Synced topic {}, step {}, offsets {}", topic, superstep, positions);
