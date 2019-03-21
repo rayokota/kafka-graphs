@@ -35,7 +35,7 @@ public class PageRank<K> implements ComputeFunction<K, Tuple2<Double, Double>, D
     public static final String TOLERANCE = "tolerance";
     public static final String RESET_PROBABILITY = "resetProbability";
     public static final String SRC_VERTEX_ID = "srcVertexId";
-    public static final String RUNNING_SUM = "runningSum";
+    public static final String RUNNING_SUM = "running.sum";
 
     private double tolerance;
     private double resetProbability;

@@ -189,11 +189,11 @@ public class GraphUtils {
                 if (scheduledFuture != null) {
                     scheduledFuture.cancel(false);
                 }
-                // Assume stream is done if no activity after 10 seconds
+                // Assume stream is done if no activity after 5 seconds
                 scheduledFuture = executor.schedule(() -> {
                     this.context.commit();
                     return future.complete(true);
-                }, 10000, TimeUnit.MILLISECONDS);
+                }, 5000, TimeUnit.MILLISECONDS);
             });
         }
 

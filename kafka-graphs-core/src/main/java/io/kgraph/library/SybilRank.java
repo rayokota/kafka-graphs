@@ -51,7 +51,7 @@ public class SybilRank implements ComputeFunction<Long, SybilRank.VertexValue, D
     /**
      * Name of aggregator used to calculate the total number of trusted nodes.
      */
-    public static final String AGGREGATOR_NUM_TRUSTED = "AGG_NUM_TRUSTED";
+    public static final String AGGREGATOR_NUM_TRUSTED = "agg.num.trusted";
 
     /**
      * This method computes the degree of a vertex as the sum of its edge weights.
