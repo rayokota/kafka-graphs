@@ -498,7 +498,9 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 if (hasVerticesToForward(messages)) {
                                     // This check is to ensure we have all messages produced in the last stage;
                                     // we may get new messages as well but that is fine
-                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep())) {
+                                    Map<Integer, Long> lastWrittenOffsets =
+                                        (Map<Integer, Long>) previousAggregates(pregelState.superstep()).get(LAST_WRITTEN_OFFSETS);
+                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep(), lastWrittenOffsets)) {
                                         forwardVertices(messages);
                                     }
                                 }
