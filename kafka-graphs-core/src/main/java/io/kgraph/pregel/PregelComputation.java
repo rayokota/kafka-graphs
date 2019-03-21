@@ -441,8 +441,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 } else {
                                     log.debug("Not ready to create snd: state {}", pregelState);
                                 }
-                            }
-                            if (pregelState.stage() == Stage.SEND) {
+                            } else if (pregelState.stage() == Stage.SEND) {
                                 PregelState nextPregelState = ZKUtils.maybeCreateReadyToReceiveNode(curator, applicationId, pregelState, barrierCache);
                                 if (!pregelState.equals(nextPregelState)) {
                                     pregelState = nextPregelState;
@@ -493,12 +492,15 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                     }
                                 }
                             }
-                        }
-                        if (pregelState.stage() == Stage.SEND) {
+                        } else if (pregelState.stage() == Stage.SEND) {
                             if (ZKUtils.isReady(curator, applicationId, pregelState)) {
                                 Map<K, Map<K, List<Message>>> messages = localworkSetStore.get(pregelState.superstep());
                                 if (hasVerticesToForward(messages)) {
-                                    forwardVertices(messages);
+                                    // This check is to ensure we have all messages produced in the last stage;
+                                    // we may get new messages as well but that is fine
+                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep())) {
+                                        forwardVertices(messages);
+                                    }
                                 }
 
                                 // clean up previous step
