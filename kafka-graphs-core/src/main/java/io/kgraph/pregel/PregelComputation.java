@@ -487,13 +487,15 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 if (!ZKUtils.hasChild(curator, applicationId, pregelState, workerName)) {
                                     // Try to ensure we have all messages; however the consumer may not yet
                                     // be in sync so we do another check in the next stage
-                                    Map<TopicPartition, Long> lastWrittenOffsets =
-                                        ((Map<Integer, Long>) previousAggregates(pregelState.superstep()).get(LAST_WRITTEN_OFFSETS))
+                                    Map<Integer, Long> lastWrittenOffsets = (Map<Integer, Long>) previousAggregates(pregelState.superstep()).get(LAST_WRITTEN_OFFSETS);
+                                    Map<TopicPartition, Long> lastWritten = lastWrittenOffsets != null
+                                        ? lastWrittenOffsets
                                             .entrySet()
                                             .stream()
                                             .collect(Collectors.toMap(
-                                                e -> new TopicPartition(workSetTopic, e.getKey()), Map.Entry::getValue));
-                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep(), lastWrittenOffsets)) {
+                                                e -> new TopicPartition(workSetTopic, e.getKey()), Map.Entry::getValue))
+                                        : null;
+                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep(), lastWritten)) {
                                         ZKUtils.addChild(curator, applicationId, pregelState, workerName, CreateMode.EPHEMERAL);
                                     }
                                 }

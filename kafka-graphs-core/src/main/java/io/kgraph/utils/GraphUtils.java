@@ -28,10 +28,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -51,7 +47,6 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Printed;
-import org.apache.kafka.streams.kstream.ValueTransformer;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.PunctuationType;
@@ -160,24 +155,23 @@ public class GraphUtils {
         CompletableFuture<Map<TopicPartition, Long>> verticesFuture = new CompletableFuture<>();
         CompletableFuture<Map<TopicPartition, Long>> edgesFuture = new CompletableFuture<>();
 
-        AtomicLong lastWrite = new AtomicLong(0);
+        AtomicLong lastWriteMs = new AtomicLong(0);
 
         graph.vertices()
             .toStream()
-            .process(() -> new SendMessages<K, VV>(verticesFuture, verticesTopic, graph.keySerde(), graph.vertexValueSerde(), streamsConfig, lastWrite));
+            .process(() -> new SendMessages<K, VV>(verticesFuture, verticesTopic, graph.keySerde(), graph.vertexValueSerde(), streamsConfig, lastWriteMs));
         graph.edgesGroupedBySource()
             .toStream()
             .mapValues(v -> StreamSupport.stream(v.spliterator(), false)
                 .collect(Collectors.toMap(EdgeWithValue::target, EdgeWithValue::value)))
-            .process(() -> new SendMessages<K, Map<K, EV>>(edgesFuture, edgesGroupedBySourceTopic, graph.keySerde(), new KryoSerde<>(), streamsConfig, lastWrite));
+            .process(() -> new SendMessages<K, Map<K, EV>>(edgesFuture, edgesGroupedBySourceTopic, graph.keySerde(), new KryoSerde<>(), streamsConfig, lastWriteMs));
 
         KafkaStreams streams = new KafkaStreams(builder.build(), streamsConfig);
         streams.start();
 
         return verticesFuture.thenCombineAsync(edgesFuture, (v ,e) -> {
             try {
-                Map<TopicPartition, Long> all = new HashMap<>();
-                all.putAll(v);
+                Map<TopicPartition, Long> all = new HashMap<>(v);
                 all.putAll(e);
                 return all;
             } finally {
@@ -193,20 +187,21 @@ public class GraphUtils {
         private final Serde<K> keySerde;
         private final Serde<V> valueSerde;
         private final Properties streamsConfig;
-        private final AtomicLong lastWrite;
+        private final AtomicLong lastWriteMs;
         private final Map<TopicPartition, Long> lastWrittenOffsets = new HashMap<>();
         private Producer<K, V> producer;
 
         public SendMessages(CompletableFuture<Map<TopicPartition, Long>> future,
                             String topic, Serde<K> keySerde,
                             Serde<V> valueSerde, Properties streamsConfig,
-                            AtomicLong lastWrite) {
+                            AtomicLong lastWriteMs
+        ) {
             this.future = future;
             this.topic = topic;
             this.keySerde = keySerde;
             this.valueSerde = valueSerde;
             this.streamsConfig = streamsConfig;
-            this.lastWrite = lastWrite;
+            this.lastWriteMs = lastWriteMs;
         }
 
         @Override
@@ -222,10 +217,10 @@ public class GraphUtils {
 
             // TODO make interval configurable
             context.schedule(Duration.ofMillis(500), PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
-                long lastWriteMs = lastWrite.get();
+                long lastWriteMs = this.lastWriteMs.get();
                 if (lastWriteMs == 0) {
                     //System.out.println("Init   " + topic + " " + lastWrite + " " + System.currentTimeMillis());
-                    lastWrite.set(System.currentTimeMillis());
+                    this.lastWriteMs.set(System.currentTimeMillis());
                 } else if (System.currentTimeMillis() - lastWriteMs > 5000) {
                     //System.out.println("Complt " + topic + " " + lastWrite + " " + System.currentTimeMillis());
                     producer.flush();
@@ -253,7 +248,7 @@ public class GraphUtils {
                         }
                     }
                 });
-                lastWrite.set(System.currentTimeMillis());
+                lastWriteMs.set(System.currentTimeMillis());
             } catch (Exception e) {
                 throw toRuntimeException(e);
             }
