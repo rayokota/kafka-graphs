@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -152,28 +153,30 @@ public class GraphUtils {
         ClientUtils.createTopic(verticesTopic, numPartitions, replicationFactor, streamsConfig);
         ClientUtils.createTopic(edgesGroupedBySourceTopic, numPartitions, replicationFactor, streamsConfig);
 
-        CompletableFuture<Map<TopicPartition, Long>> verticesFuture = new CompletableFuture<>();
-        CompletableFuture<Map<TopicPartition, Long>> edgesFuture = new CompletableFuture<>();
+        CompletableFuture<Boolean> verticesFuture = new CompletableFuture<>();
+        CompletableFuture<Boolean> edgesFuture = new CompletableFuture<>();
 
+        Map<TopicPartition, Long> lastWrittenOffsets = new ConcurrentHashMap<>();
         AtomicLong lastWriteMs = new AtomicLong(0);
 
         graph.vertices()
             .toStream()
-            .process(() -> new SendMessages<K, VV>(verticesFuture, verticesTopic, graph.keySerde(), graph.vertexValueSerde(), streamsConfig, lastWriteMs));
+            .process(() -> new SendMessages<K, VV>(verticesFuture, verticesTopic, graph.keySerde(),
+                graph.vertexValueSerde(), streamsConfig, lastWrittenOffsets, lastWriteMs));
         graph.edgesGroupedBySource()
             .toStream()
             .mapValues(v -> StreamSupport.stream(v.spliterator(), false)
                 .collect(Collectors.toMap(EdgeWithValue::target, EdgeWithValue::value)))
-            .process(() -> new SendMessages<K, Map<K, EV>>(edgesFuture, edgesGroupedBySourceTopic, graph.keySerde(), new KryoSerde<>(), streamsConfig, lastWriteMs));
+            .process(() -> new SendMessages<K, Map<K, EV>>(edgesFuture, edgesGroupedBySourceTopic,
+                graph.keySerde(), new KryoSerde<>(), streamsConfig, lastWrittenOffsets, lastWriteMs));
 
         KafkaStreams streams = new KafkaStreams(builder.build(), streamsConfig);
         streams.start();
 
         return verticesFuture.thenCombineAsync(edgesFuture, (v ,e) -> {
+            log.debug("Finished loading graph");
             try {
-                Map<TopicPartition, Long> all = new HashMap<>(v);
-                all.putAll(e);
-                return all;
+                return lastWrittenOffsets;
             } finally {
                 streams.close();
             }
@@ -182,18 +185,19 @@ public class GraphUtils {
 
     private static final class SendMessages<K, V> implements Processor<K, V> {
 
-        private final CompletableFuture<Map<TopicPartition, Long>> future;
+        private final CompletableFuture<Boolean> future;
         private final String topic;
         private final Serde<K> keySerde;
         private final Serde<V> valueSerde;
         private final Properties streamsConfig;
+        private final Map<TopicPartition, Long> lastWrittenOffsets;
         private final AtomicLong lastWriteMs;
-        private final Map<TopicPartition, Long> lastWrittenOffsets = new HashMap<>();
         private Producer<K, V> producer;
 
-        public SendMessages(CompletableFuture<Map<TopicPartition, Long>> future,
+        public SendMessages(CompletableFuture<Boolean> future,
                             String topic, Serde<K> keySerde,
                             Serde<V> valueSerde, Properties streamsConfig,
+                            Map<TopicPartition, Long> lastWrittenOffsets,
                             AtomicLong lastWriteMs
         ) {
             this.future = future;
@@ -201,6 +205,7 @@ public class GraphUtils {
             this.keySerde = keySerde;
             this.valueSerde = valueSerde;
             this.streamsConfig = streamsConfig;
+            this.lastWrittenOffsets = lastWrittenOffsets;
             this.lastWriteMs = lastWriteMs;
         }
 
@@ -224,7 +229,7 @@ public class GraphUtils {
                 } else if (System.currentTimeMillis() - lastWriteMs > 10000) {
                     //System.out.println("Complt " + topic + " " + lastWrite + " " + System.currentTimeMillis());
                     producer.flush();
-                    future.complete(lastWrittenOffsets);
+                    future.complete(true);
                 } else {
                     //System.out.println("Cancel " + topic + " " + lastWrite + " " + System.currentTimeMillis());
                 }
