@@ -160,7 +160,7 @@ public class GraphUtils {
         CompletableFuture<Map<TopicPartition, Long>> verticesFuture = new CompletableFuture<>();
         CompletableFuture<Map<TopicPartition, Long>> edgesFuture = new CompletableFuture<>();
 
-        AtomicLong lastWrite = new AtomicLong(System.currentTimeMillis());
+        AtomicLong lastWrite = new AtomicLong(0);
 
         graph.vertices()
             .toStream()
@@ -214,7 +214,7 @@ public class GraphUtils {
             Properties producerConfig = ClientUtils.producerConfig(
                 streamsConfig.getProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG),
                 keySerde.serializer().getClass(), valueSerde.serializer().getClass(),
-                streamsConfig != null ? streamsConfig : new Properties()
+                streamsConfig
             );
             String clientId = "pregel-" + context.taskId();
             producerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientId + "-producer");
@@ -222,9 +222,16 @@ public class GraphUtils {
 
             // TODO make interval configurable
             context.schedule(Duration.ofMillis(500), PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
-                if (System.currentTimeMillis() - lastWrite.get() > 5000) {
-                    context.commit();
+                long lastWriteMs = lastWrite.get();
+                if (lastWriteMs == 0) {
+                    //System.out.println("Init   " + topic + " " + lastWrite + " " + System.currentTimeMillis());
+                    lastWrite.set(System.currentTimeMillis());
+                } else if (System.currentTimeMillis() - lastWriteMs > 5000) {
+                    //System.out.println("Complt " + topic + " " + lastWrite + " " + System.currentTimeMillis());
+                    producer.flush();
                     future.complete(lastWrittenOffsets);
+                } else {
+                    //System.out.println("Cancel " + topic + " " + lastWrite + " " + System.currentTimeMillis());
                 }
             });
         }
@@ -241,12 +248,12 @@ public class GraphUtils {
                                 new TopicPartition(metadata.topic(), metadata.partition()),
                                 metadata.offset()
                             );
-                            lastWrite.set(System.currentTimeMillis());
                         } catch (Exception e) {
                             throw toRuntimeException(e);
                         }
                     }
-                }).get();
+                });
+                lastWrite.set(System.currentTimeMillis());
             } catch (Exception e) {
                 throw toRuntimeException(e);
             }
