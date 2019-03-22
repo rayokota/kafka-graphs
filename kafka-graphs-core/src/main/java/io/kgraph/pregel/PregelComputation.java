@@ -179,7 +179,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         this.localSolutionSetStoreName = "localSolutionSetStore-" + applicationId;
 
         ComputeFunction.InitCallback cb = new ComputeFunction.InitCallback(registeredAggregators);
-        cf.init(configs, new ComputeFunction.InitCallback(registeredAggregators));
+        cf.init(configs, cb);
         cb.registerAggregator(LAST_WRITTEN_OFFSETS, MapOfLongMaxAggregator.class);
     }
 

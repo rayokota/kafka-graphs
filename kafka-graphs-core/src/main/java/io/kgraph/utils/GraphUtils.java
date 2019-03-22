@@ -29,6 +29,10 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -48,6 +52,7 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Printed;
+import org.apache.kafka.streams.kstream.ValueTransformer;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.PunctuationType;
@@ -148,44 +153,47 @@ public class GraphUtils {
         int numPartitions,
         short replicationFactor
     ) {
-        log.debug("Started loading graph");
+        log.info("Started loading graph");
 
         ClientUtils.createTopic(verticesTopic, numPartitions, replicationFactor, streamsConfig);
         ClientUtils.createTopic(edgesGroupedBySourceTopic, numPartitions, replicationFactor, streamsConfig);
-
-        CompletableFuture<Boolean> verticesFuture = new CompletableFuture<>();
-        CompletableFuture<Boolean> edgesFuture = new CompletableFuture<>();
 
         Map<TopicPartition, Long> lastWrittenOffsets = new ConcurrentHashMap<>();
         AtomicLong lastWriteMs = new AtomicLong(0);
 
         graph.vertices()
             .toStream()
-            .process(() -> new SendMessages<K, VV>(verticesFuture, verticesTopic, graph.keySerde(),
+            .process(() -> new SendMessages<K, VV>(verticesTopic, graph.keySerde(),
                 graph.vertexValueSerde(), streamsConfig, lastWrittenOffsets, lastWriteMs));
         graph.edgesGroupedBySource()
             .toStream()
             .mapValues(v -> StreamSupport.stream(v.spliterator(), false)
                 .collect(Collectors.toMap(EdgeWithValue::target, EdgeWithValue::value)))
-            .process(() -> new SendMessages<K, Map<K, EV>>(edgesFuture, edgesGroupedBySourceTopic,
+            .process(() -> new SendMessages<K, Map<K, EV>>(edgesGroupedBySourceTopic,
                 graph.keySerde(), new KryoSerde<>(), streamsConfig, lastWrittenOffsets, lastWriteMs));
 
         KafkaStreams streams = new KafkaStreams(builder.build(), streamsConfig);
         streams.start();
 
-        return verticesFuture.thenCombineAsync(edgesFuture, (v ,e) -> {
-            log.debug("Finished loading graph");
-            try {
-                return lastWrittenOffsets;
-            } finally {
-                streams.close();
+        CompletableFuture<Map<TopicPartition, Long>> future = new CompletableFuture<>();
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
+            long lastWrite = lastWriteMs.get();
+            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 10000) {
+                //System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
+                streams.close();  // will flush/close all producers
+                future.complete(lastWrittenOffsets);
+                log.info("Finished loading graph");
+            } else {
+                //System.out.println("Cancel " + lastWrite + " " + System.currentTimeMillis());
             }
-        });
+        }, 0, 500, TimeUnit.MILLISECONDS);
+
+        return future.whenCompleteAsync((v, t) -> scheduledFuture.cancel(true));
     }
 
     private static final class SendMessages<K, V> implements Processor<K, V> {
 
-        private final CompletableFuture<Boolean> future;
         private final String topic;
         private final Serde<K> keySerde;
         private final Serde<V> valueSerde;
@@ -194,13 +202,11 @@ public class GraphUtils {
         private final AtomicLong lastWriteMs;
         private Producer<K, V> producer;
 
-        public SendMessages(CompletableFuture<Boolean> future,
-                            String topic, Serde<K> keySerde,
+        public SendMessages(String topic, Serde<K> keySerde,
                             Serde<V> valueSerde, Properties streamsConfig,
                             Map<TopicPartition, Long> lastWrittenOffsets,
                             AtomicLong lastWriteMs
         ) {
-            this.future = future;
             this.topic = topic;
             this.keySerde = keySerde;
             this.valueSerde = valueSerde;
@@ -219,21 +225,6 @@ public class GraphUtils {
             String clientId = "pregel-" + context.taskId();
             producerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientId + "-producer");
             this.producer = new KafkaProducer<>(producerConfig);
-
-            // TODO make interval configurable
-            context.schedule(Duration.ofMillis(500), PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
-                long lastWriteMs = this.lastWriteMs.get();
-                if (lastWriteMs == 0) {
-                    //System.out.println("Init   " + topic + " " + lastWrite + " " + System.currentTimeMillis());
-                    this.lastWriteMs.set(System.currentTimeMillis());
-                } else if (System.currentTimeMillis() - lastWriteMs > 10000) {
-                    //System.out.println("Complt " + topic + " " + lastWrite + " " + System.currentTimeMillis());
-                    producer.flush();
-                    future.complete(true);
-                } else {
-                    //System.out.println("Cancel " + topic + " " + lastWrite + " " + System.currentTimeMillis());
-                }
-            });
         }
 
         @Override
