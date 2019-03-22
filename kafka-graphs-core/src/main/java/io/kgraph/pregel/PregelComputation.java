@@ -925,7 +925,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         if (synced) {
             log.debug("Synced topic {}, step {}, offsets {}", topic, superstep, positions);
             if (superstep == 0) {
-                log.info("Topic {} has endoffsets {}", topic, endOffsets);
+                //log.info("Topic {} has endoffsets {}", topic, endOffsets);
             }
         }
         return synced;
