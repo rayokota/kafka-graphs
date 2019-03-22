@@ -24,6 +24,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -53,6 +54,7 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Printed;
+import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.ValueTransformer;
 import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
@@ -145,7 +147,7 @@ public class GraphUtils {
         return groupEdgesBySourceAndRepartition(builder, streamsConfig, graph, verticesTopic, edgesGroupedBySourceTopic, numPartitions, replicationFactor);
     }
 
-    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(
+    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartitionXXX(
         StreamsBuilder builder,
         Properties streamsConfig,
         KGraph<K, VV, EV> graph,
@@ -273,5 +275,81 @@ public class GraphUtils {
 
     private static RuntimeException toRuntimeException(Exception e) {
         return e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
+    }
+
+
+    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(StreamsBuilder builder,
+                                                                                       Properties streamsConfig,
+                                                                                       KGraph<K, VV, EV> graph,
+                                                                                       String verticesTopic,
+                                                                                       String edgesGroupedBySourceTopic,
+                                                                                       int numPartitions,
+                                                                                       short replicationFactor) {
+        log.debug("Started loading graph");
+
+        ClientUtils.createTopic(verticesTopic, numPartitions, replicationFactor, streamsConfig);
+        ClientUtils.createTopic(edgesGroupedBySourceTopic, numPartitions, replicationFactor, streamsConfig);
+
+        CompletableFuture<Boolean> verticesFuture = new CompletableFuture<>();
+        CompletableFuture<Boolean> edgesFuture = new CompletableFuture<>();
+
+        graph.vertices()
+            .toStream()
+            .transformValues(() -> new EndOfBatchCheck<>(verticesFuture))
+            .to(verticesTopic, Produced.with(graph.keySerde(), graph.vertexValueSerde()));
+        graph.edgesGroupedBySource()
+            .toStream()
+            .mapValues(v -> StreamSupport.stream(v.spliterator(), false)
+                .collect(Collectors.toMap(EdgeWithValue::target, EdgeWithValue::value)))
+            .transformValues(() -> new EndOfBatchCheck<>(edgesFuture))
+            .to(edgesGroupedBySourceTopic, Produced.with(graph.keySerde(), new KryoSerde<>()));
+
+        KafkaStreams streams = new KafkaStreams(builder.build(), streamsConfig);
+        streams.start();
+
+        return CompletableFuture.allOf(verticesFuture, edgesFuture).thenApply((Void) -> {
+            log.debug("Finished loading graph");
+            streams.close();
+            return Collections.emptyMap();
+        });
+    }
+
+    private static final class EndOfBatchCheck<V> implements ValueTransformer<V, V> {
+
+        private final CompletableFuture<Boolean> future;
+        private ProcessorContext context;
+        private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        private ScheduledFuture<Boolean> scheduledFuture = null;
+
+        public EndOfBatchCheck(CompletableFuture<Boolean> future) {
+            this.future = future;
+        }
+
+        @Override
+        public void init(final ProcessorContext context) {
+            this.context = context;
+
+            // TODO make interval configurable
+            this.context.schedule(Duration.ofMillis(500), PunctuationType.STREAM_TIME, (timestamp) -> {
+                if (scheduledFuture != null) {
+                    scheduledFuture.cancel(false);
+                }
+                // Assume stream is done if no activity after 10 seconds
+                scheduledFuture = executor.schedule(() -> {
+                    this.context.commit();
+                    return future.complete(true);
+                }, 10000, TimeUnit.MILLISECONDS);
+            });
+        }
+
+        @Override
+        public V transform(final V value) {
+            return value;
+        }
+
+
+        @Override
+        public void close() {
+        }
     }
 }
