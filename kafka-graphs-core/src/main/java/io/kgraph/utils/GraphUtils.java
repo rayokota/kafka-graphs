@@ -24,28 +24,35 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.LongSerializer;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Printed;
-import org.apache.kafka.streams.kstream.Produced;
 import org.apache.kafka.streams.kstream.ValueTransformer;
+import org.apache.kafka.streams.processor.Processor;
 import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.processor.PunctuationType;
 import org.slf4j.Logger;
@@ -118,15 +125,17 @@ public class GraphUtils {
         vertices.toStream().print(Printed.<Long, T>toFile(fileName).withKeyValueMapper((k, v) -> String.format("%d %f", k , v)));
     }
 
-    public static <K, VV, EV> CompletableFuture<Void> groupEdgesBySourceAndRepartition(StreamsBuilder builder,
-                                                                                       Properties streamsConfig,
-                                                                                       String initialVerticesTopic,
-                                                                                       String initialEdgesTopic,
-                                                                                       GraphSerialized<K, VV, EV> serialized,
-                                                                                       String verticesTopic,
-                                                                                       String edgesGroupedBySourceTopic,
-                                                                                       int numPartitions,
-                                                                                       short replicationFactor) {
+    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(
+        StreamsBuilder builder,
+        Properties streamsConfig,
+        String initialVerticesTopic,
+        String initialEdgesTopic,
+        GraphSerialized<K, VV, EV> serialized,
+        String verticesTopic,
+        String edgesGroupedBySourceTopic,
+        int numPartitions,
+        short replicationFactor
+    ) {
         KGraph<K, VV, EV> graph = new KGraph<>(
             builder.table(initialVerticesTopic, Consumed.with(serialized.keySerde(), serialized.vertexValueSerde())),
             builder.table(initialEdgesTopic, Consumed.with(new KryoSerde<>(), serialized.edgeValueSerde())),
@@ -134,77 +143,122 @@ public class GraphUtils {
         return groupEdgesBySourceAndRepartition(builder, streamsConfig, graph, verticesTopic, edgesGroupedBySourceTopic, numPartitions, replicationFactor);
     }
 
-    public static <K, VV, EV> CompletableFuture<Void> groupEdgesBySourceAndRepartition(StreamsBuilder builder,
-                                                                                       Properties streamsConfig,
-                                                                                       KGraph<K, VV, EV> graph,
-                                                                                       String verticesTopic,
-                                                                                       String edgesGroupedBySourceTopic,
-                                                                                       int numPartitions,
-                                                                                       short replicationFactor) {
+    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(
+        StreamsBuilder builder,
+        Properties streamsConfig,
+        KGraph<K, VV, EV> graph,
+        String verticesTopic,
+        String edgesGroupedBySourceTopic,
+        int numPartitions,
+        short replicationFactor
+    ) {
         log.debug("Started loading graph");
 
         ClientUtils.createTopic(verticesTopic, numPartitions, replicationFactor, streamsConfig);
         ClientUtils.createTopic(edgesGroupedBySourceTopic, numPartitions, replicationFactor, streamsConfig);
 
-        CompletableFuture<Boolean> verticesFuture = new CompletableFuture<>();
-        CompletableFuture<Boolean> edgesFuture = new CompletableFuture<>();
+        CompletableFuture<Map<TopicPartition, Long>> verticesFuture = new CompletableFuture<>();
+        CompletableFuture<Map<TopicPartition, Long>> edgesFuture = new CompletableFuture<>();
+
+        AtomicLong lastWrite = new AtomicLong(System.currentTimeMillis());
 
         graph.vertices()
             .toStream()
-            .transformValues(() -> new EndOfBatchCheck<>(verticesFuture))
-            .to(verticesTopic, Produced.with(graph.keySerde(), graph.vertexValueSerde()));
+            .process(() -> new SendMessages<K, VV>(verticesFuture, verticesTopic, graph.keySerde(), graph.vertexValueSerde(), streamsConfig, lastWrite));
         graph.edgesGroupedBySource()
             .toStream()
             .mapValues(v -> StreamSupport.stream(v.spliterator(), false)
                 .collect(Collectors.toMap(EdgeWithValue::target, EdgeWithValue::value)))
-            .transformValues(() -> new EndOfBatchCheck<>(edgesFuture))
-            .to(edgesGroupedBySourceTopic, Produced.with(graph.keySerde(), new KryoSerde<>()));
+            .process(() -> new SendMessages<K, Map<K, EV>>(edgesFuture, edgesGroupedBySourceTopic, graph.keySerde(), new KryoSerde<>(), streamsConfig, lastWrite));
 
         KafkaStreams streams = new KafkaStreams(builder.build(), streamsConfig);
         streams.start();
 
-        return CompletableFuture.allOf(verticesFuture, edgesFuture).thenRun(() -> {
-            log.debug("Finished loading graph");
-            streams.close();
+        return verticesFuture.thenCombineAsync(edgesFuture, (v ,e) -> {
+            try {
+                Map<TopicPartition, Long> all = new HashMap<>();
+                all.putAll(v);
+                all.putAll(e);
+                return all;
+            } finally {
+                streams.close();
+            }
         });
     }
 
-    private static final class EndOfBatchCheck<V> implements ValueTransformer<V, V> {
+    private static final class SendMessages<K, V> implements Processor<K, V> {
 
-        private final CompletableFuture<Boolean> future;
-        private ProcessorContext context;
-        private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-        private ScheduledFuture<Boolean> scheduledFuture = null;
+        private final CompletableFuture<Map<TopicPartition, Long>> future;
+        private final String topic;
+        private final Serde<K> keySerde;
+        private final Serde<V> valueSerde;
+        private final Properties streamsConfig;
+        private final AtomicLong lastWrite;
+        private final Map<TopicPartition, Long> lastWrittenOffsets = new HashMap<>();
+        private Producer<K, V> producer;
 
-        public EndOfBatchCheck(CompletableFuture<Boolean> future) {
+        public SendMessages(CompletableFuture<Map<TopicPartition, Long>> future,
+                            String topic, Serde<K> keySerde,
+                            Serde<V> valueSerde, Properties streamsConfig,
+                            AtomicLong lastWrite) {
             this.future = future;
+            this.topic = topic;
+            this.keySerde = keySerde;
+            this.valueSerde = valueSerde;
+            this.streamsConfig = streamsConfig;
+            this.lastWrite = lastWrite;
         }
 
         @Override
         public void init(final ProcessorContext context) {
-            this.context = context;
+            Properties producerConfig = ClientUtils.producerConfig(
+                streamsConfig.getProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG),
+                keySerde.serializer().getClass(), valueSerde.serializer().getClass(),
+                streamsConfig != null ? streamsConfig : new Properties()
+            );
+            String clientId = "pregel-" + context.taskId();
+            producerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientId + "-producer");
+            this.producer = new KafkaProducer<>(producerConfig);
 
             // TODO make interval configurable
-            this.context.schedule(Duration.ofMillis(500), PunctuationType.STREAM_TIME, (timestamp) -> {
-                if (scheduledFuture != null) {
-                    scheduledFuture.cancel(false);
+            context.schedule(Duration.ofMillis(500), PunctuationType.WALL_CLOCK_TIME, (timestamp) -> {
+                if (System.currentTimeMillis() - lastWrite.get() > 5000) {
+                    context.commit();
+                    future.complete(lastWrittenOffsets);
                 }
-                // Assume stream is done if no activity after 10 seconds
-                scheduledFuture = executor.schedule(() -> {
-                    this.context.commit();
-                    return future.complete(true);
-                }, 10000, TimeUnit.MILLISECONDS);
             });
         }
 
         @Override
-        public V transform(final V value) {
-            return value;
+        public void process(final K readOnlyKey, final V value) {
+            try {
+                ProducerRecord<K, V> producerRecord =
+                    new ProducerRecord<>(topic, readOnlyKey, value);
+                producer.send(producerRecord, (metadata, error) -> {
+                    if (error == null) {
+                        try {
+                            lastWrittenOffsets.put(
+                                new TopicPartition(metadata.topic(), metadata.partition()),
+                                metadata.offset()
+                            );
+                            lastWrite.set(System.currentTimeMillis());
+                        } catch (Exception e) {
+                            throw toRuntimeException(e);
+                        }
+                    }
+                }).get();
+            } catch (Exception e) {
+                throw toRuntimeException(e);
+            }
         }
-
 
         @Override
         public void close() {
+            producer.close();
         }
+    }
+
+    private static RuntimeException toRuntimeException(Exception e) {
+        return e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
     }
 }

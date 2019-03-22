@@ -102,9 +102,9 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
     private final String verticesTopic;
     private KTable<K, VV> vertices;
-
     private final String edgesGroupedBySourceTopic;
     private KTable<K, Map<K, EV>> edgesGroupedBySource;
+    private Map<TopicPartition, Long> graphOffsets;
 
     private final String solutionSetTopic;
     private final String solutionSetStore;
@@ -145,6 +145,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         CuratorFramework curator,
         String verticesTopic,
         String edgesGroupedBySourceTopic,
+        Map<TopicPartition, Long> graphOffsets,
         GraphSerialized<K, VV, EV> serialized,
         String solutionSetTopic,
         String solutionSetStore,
@@ -161,6 +162,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         this.curator = curator;
         this.verticesTopic = verticesTopic;
         this.edgesGroupedBySourceTopic = edgesGroupedBySourceTopic;
+        this.graphOffsets = graphOffsets;
         this.solutionSetStore = solutionSetStore;
         this.solutionSetTopic = solutionSetTopic;
         this.workSetTopic = workSetTopic;
@@ -467,8 +469,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 if (!ZKUtils.hasChild(curator, applicationId, pregelState, workerName)) {
                                     Set<TopicPartition> workSetTps = localPartitions(internalConsumer, workSetTopic);
                                     Set<TopicPartition> solutionSetTps = localPartitions(internalConsumer, solutionSetTopic);
-                                    if (isTopicSynced(internalConsumer, verticesTopic, 0, null)
-                                        && isTopicSynced(internalConsumer, edgesGroupedBySourceTopic, 0, null)) {
+                                    if (isTopicSynced(internalConsumer, verticesTopic, 0, graphOffsets)
+                                        && isTopicSynced(internalConsumer, edgesGroupedBySourceTopic, 0, graphOffsets)) {
                                         ZKUtils.addChild(curator, applicationId, pregelState, workerName, CreateMode.EPHEMERAL);
                                         // Ensure vertices and edges are read into tables first
                                         internalConsumer.seekToBeginning(workSetTps);
@@ -485,8 +487,12 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 if (!ZKUtils.hasChild(curator, applicationId, pregelState, workerName)) {
                                     // Try to ensure we have all messages; however the consumer may not yet
                                     // be in sync so we do another check in the next stage
-                                    Map<Integer, Long> lastWrittenOffsets =
-                                        (Map<Integer, Long>) previousAggregates(pregelState.superstep()).get(LAST_WRITTEN_OFFSETS);
+                                    Map<TopicPartition, Long> lastWrittenOffsets =
+                                        ((Map<Integer, Long>) previousAggregates(pregelState.superstep()).get(LAST_WRITTEN_OFFSETS))
+                                            .entrySet()
+                                            .stream()
+                                            .collect(Collectors.toMap(
+                                                e -> new TopicPartition(workSetTopic, e.getKey()), Map.Entry::getValue));
                                     if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep(), lastWrittenOffsets)) {
                                         ZKUtils.addChild(curator, applicationId, pregelState, workerName, CreateMode.EPHEMERAL);
                                     }
@@ -898,7 +904,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     }
 
     private static boolean isTopicSynced(Consumer<byte[], byte[]> consumer, String topic,
-                                         int superstep, Map<Integer, Long> lastWrittenOffsets) {
+                                         int superstep, Map<TopicPartition, Long> lastWrittenOffsets) {
         Set<TopicPartition> partitions = localPartitions(consumer, topic);
         Map<TopicPartition, Long> positions = positions(consumer, partitions);
         Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
@@ -906,7 +912,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         // Consumer end offsets may be stale; use last written offset if available
         if (lastWrittenOffsets != null) {
             for (Map.Entry<TopicPartition, Long> endOffset : endOffsets.entrySet()) {
-                Long lastWrittenOffset = lastWrittenOffsets.get(endOffset.getKey().partition());
+                Long lastWrittenOffset = lastWrittenOffsets.get(endOffset.getKey());
                 if (lastWrittenOffset != null && lastWrittenOffset >= endOffset.getValue()) {
                     endOffset.setValue(lastWrittenOffset + 1);
                 }
@@ -916,7 +922,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         boolean synced = endOffsets.equals(positions);
         if (synced) {
             log.debug("Synced topic {}, step {}, offsets {}", topic, superstep, positions);
-            if (lastWrittenOffsets == null) {
+            if (superstep == 0) {
                 log.info("Topic {} has endoffsets {}", topic, endOffsets);
             }
         }

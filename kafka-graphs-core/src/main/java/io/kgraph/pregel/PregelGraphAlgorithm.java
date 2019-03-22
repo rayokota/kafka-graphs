@@ -18,12 +18,14 @@
 
 package io.kgraph.pregel;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -50,6 +52,7 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
     protected final CuratorFramework curator;
     protected final String verticesTopic;
     protected final String edgesGroupedBySourceTopic;
+    protected final Map<TopicPartition, Long> graphOffsets;
     protected final GraphSerialized<K, VV, EV> serialized;
     protected final String solutionSetTopic;
     protected final String solutionSetStore;
@@ -60,40 +63,13 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
 
     protected KafkaStreams streams;
 
-    // visible for testing
-    public PregelGraphAlgorithm(String hostAndPort,
-                                String applicationId,
-                                String bootstrapServers,
-                                String zookeeperConnect,
-                                GraphSerialized<K, VV, EV> serialized,
-                                int numPartitions,
-                                short replicationFactor,
-                                Map<String, ?> configs,
-                                Optional<Message> initialMessage,
-                                ComputeFunction<K, VV, EV, Message> cf) {
-        this(hostAndPort,
-            applicationId,
-            bootstrapServers,
-            ZKUtils.createCurator(zookeeperConnect),
-            "vertices-" + applicationId,
-            "edgesGroupedBySource-" + applicationId,
-            serialized,
-            "solutionSet-" + applicationId,
-            "solutionSetStore-" + applicationId,
-            "workSet-" + applicationId,
-            numPartitions,
-            replicationFactor,
-            configs,
-            initialMessage,
-            cf);
-    }
-
     public PregelGraphAlgorithm(String hostAndPort,
                                 String applicationId,
                                 String bootstrapServers,
                                 CuratorFramework curator,
                                 String verticesTopic,
                                 String edgesGroupedBySourceTopic,
+                                Map<TopicPartition, Long> graphOffsets,
                                 GraphSerialized<K, VV, EV> serialized,
                                 int numPartitions,
                                 short replicationFactor,
@@ -106,6 +82,7 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
             curator,
             verticesTopic,
             edgesGroupedBySourceTopic,
+            graphOffsets,
             serialized,
             "solutionSet-" + applicationId,
             "solutionSetStore-" + applicationId,
@@ -139,6 +116,42 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
             ZKUtils.createCurator(zookeeperConnect),
             verticesTopic,
             edgesGroupedBySourceTopic,
+            Collections.emptyMap(),
+            serialized,
+            solutionSetTopic,
+            solutionSetStore,
+            workSetTopic,
+            numPartitions,
+            replicationFactor,
+            configs,
+            initialMessage,
+            cf);
+    }
+
+    // visible for testing
+    public PregelGraphAlgorithm(String hostAndPort,
+                                String applicationId,
+                                String bootstrapServers,
+                                String zookeeperConnect,
+                                String verticesTopic,
+                                String edgesGroupedBySourceTopic,
+                                Map<TopicPartition, Long> graphOffsets,
+                                GraphSerialized<K, VV, EV> serialized,
+                                String solutionSetTopic,
+                                String solutionSetStore,
+                                String workSetTopic,
+                                int numPartitions,
+                                short replicationFactor,
+                                Map<String, ?> configs,
+                                Optional<Message> initialMessage,
+                                ComputeFunction<K, VV, EV, Message> cf) {
+        this(hostAndPort,
+            applicationId,
+            bootstrapServers,
+            ZKUtils.createCurator(zookeeperConnect),
+            verticesTopic,
+            edgesGroupedBySourceTopic,
+            graphOffsets,
             serialized,
             solutionSetTopic,
             solutionSetStore,
@@ -156,6 +169,7 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
                                 CuratorFramework curator,
                                 String verticesTopic,
                                 String edgesGroupedBySourceTopic,
+                                Map<TopicPartition, Long> graphOffsets,
                                 GraphSerialized<K, VV, EV> serialized,
                                 String solutionSetTopic,
                                 String solutionSetStore,
@@ -172,6 +186,7 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
         this.curator = curator;
         this.verticesTopic = verticesTopic;
         this.edgesGroupedBySourceTopic = edgesGroupedBySourceTopic;
+        this.graphOffsets = graphOffsets;
         this.serialized = serialized;
         this.solutionSetTopic = solutionSetTopic;
         this.solutionSetStore = solutionSetStore;
@@ -180,8 +195,8 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
         this.replicationFactor = replicationFactor;
 
         this.computation = new PregelComputation<>(hostAndPort, applicationId,
-            bootstrapServers, curator, verticesTopic, edgesGroupedBySourceTopic, serialized,
-            solutionSetTopic, solutionSetStore, workSetTopic, numPartitions,
+            bootstrapServers, curator, verticesTopic, edgesGroupedBySourceTopic, graphOffsets,
+            serialized, solutionSetTopic, solutionSetStore, workSetTopic, numPartitions,
             configs, initialMessage, cf);
     }
 
