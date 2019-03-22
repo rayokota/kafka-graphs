@@ -221,7 +221,7 @@ public class GraphUtils {
                 if (lastWriteMs == 0) {
                     //System.out.println("Init   " + topic + " " + lastWrite + " " + System.currentTimeMillis());
                     this.lastWriteMs.set(System.currentTimeMillis());
-                } else if (System.currentTimeMillis() - lastWriteMs > 5000) {
+                } else if (System.currentTimeMillis() - lastWriteMs > 10000) {
                     //System.out.println("Complt " + topic + " " + lastWrite + " " + System.currentTimeMillis());
                     producer.flush();
                     future.complete(lastWrittenOffsets);
