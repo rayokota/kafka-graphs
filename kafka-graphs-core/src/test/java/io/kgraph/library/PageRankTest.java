@@ -288,12 +288,12 @@ public class PageRankTest extends AbstractIntegrationTest {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), IntegerSerializer.class,
             IntegerSerializer.class, new Properties()
         );
+        /*
         KGraph<Long, Long, Long> completeGraph = GraphGenerators.completeGraph(builder, producerConfig, 25);
         KTable<Long, Double> initialVertices = completeGraph.vertices().mapValues(v -> 1.0);
         KTable<Edge<Long>, Double> initialEdges = completeGraph.edges().mapValues(v -> 1.0);
-        KGraph<Long, Double, Double> initialGraph =
-            new KGraph<>(initialVertices, initialEdges, GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes
-                .Double()));
+        */
+        KGraph<Long, Double, Double> initialGraph = GraphGenerators.completeDoubleGraph(builder, producerConfig, 25);
         KTable<Long, Long> vertexOutDegrees = initialGraph.outDegrees();
         KGraph<Long, Double, Double> joinedGraph = initialGraph
             .joinWithEdgesOnSource(vertexOutDegrees, new InitWeights());

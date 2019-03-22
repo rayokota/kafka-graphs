@@ -33,6 +33,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -159,16 +160,24 @@ public class GraphUtils {
         ClientUtils.createTopic(edgesGroupedBySourceTopic, numPartitions, replicationFactor, streamsConfig);
 
         Map<TopicPartition, Long> lastWrittenOffsets = new ConcurrentHashMap<>();
+        AtomicInteger vertexCount = new AtomicInteger(0);
+        AtomicInteger edgeCount = new AtomicInteger(0);
         AtomicLong lastWriteMs = new AtomicLong(0);
 
         graph.vertices()
             .toStream()
-            .peek((k, v) -> lastWriteMs.set(System.currentTimeMillis()))
+            .peek((k, v) -> {
+                vertexCount.incrementAndGet();
+                lastWriteMs.set(System.currentTimeMillis());
+            })
             .process(() -> new SendMessages<K, VV>(verticesTopic, graph.keySerde(),
                 graph.vertexValueSerde(), streamsConfig, lastWrittenOffsets));
         graph.edgesGroupedBySource()
             .toStream()
-            .peek((k, v) -> lastWriteMs.set(System.currentTimeMillis()))
+            .peek((k, v) -> {
+                edgeCount.incrementAndGet();
+                lastWriteMs.set(System.currentTimeMillis());
+            })
             .mapValues(v -> StreamSupport.stream(v.spliterator(), false)
                 .collect(Collectors.toMap(EdgeWithValue::target, EdgeWithValue::value)))
             .process(() -> new SendMessages<K, Map<K, EV>>(edgesGroupedBySourceTopic,
@@ -182,14 +191,16 @@ public class GraphUtils {
         // TODO make interval configurable
         ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
             long lastWrite = lastWriteMs.get();
-            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 60000) {
-                //System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
+            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 20000) {
+                System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
                 streams.close();  // will flush/close all producers
                 future.complete(lastWrittenOffsets);
-                log.info("Last written " + lastWrittenOffsets);
+                log.info("Last written {}", lastWrittenOffsets);
+                log.info("Vertex count {}", vertexCount.get());
+                log.info("Edge count {}", edgeCount.get());
                 log.info("Finished loading graph");
             } else {
-                //System.out.println("Cancel " + lastWrite + " " + System.currentTimeMillis());
+                System.out.println("Cancel " + lastWrite + " " + System.currentTimeMillis());
             }
         }, 0, 10, TimeUnit.SECONDS);
 
@@ -239,9 +250,10 @@ public class GraphUtils {
                 producer.send(producerRecord, (metadata, error) -> {
                     if (error == null) {
                         try {
-                            lastWrittenOffsets.put(
+                            lastWrittenOffsets.merge(
                                 new TopicPartition(metadata.topic(), metadata.partition()),
-                                metadata.offset()
+                                metadata.offset(),
+                                Math::max
                             );
                         } catch (Exception e) {
                             throw toRuntimeException(e);

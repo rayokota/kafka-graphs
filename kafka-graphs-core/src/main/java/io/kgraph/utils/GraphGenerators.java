@@ -52,6 +52,21 @@ public class GraphGenerators {
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
     }
 
+    public static KGraph<Long, Double, Double> completeDoubleGraph(
+        StreamsBuilder builder, Properties producerConfig, int numVertices) {
+        List<KeyValue<Edge<Long>, Double>> edgeList = new ArrayList<>();
+        for (long i = 0; i < numVertices; i++) {
+            for (long j = 0; j < numVertices; j++) {
+                if (i != j) edgeList.add(new KeyValue<>(new Edge<>(i, j), 1.0));
+            }
+        }
+        KTable<Edge<Long>, Double> edges = StreamUtils.tableFromCollection(
+            builder, producerConfig, new KryoSerde<>(), Serdes.Double(), edgeList);
+
+        return KGraph.fromEdges(edges, v -> 1.0,
+            GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
+    }
+
     public static KGraph<Long, Tuple2<Long, Long>, Long> gridGraph(
         StreamsBuilder builder, Properties producerConfig, int numRows, int numCols) {
         BiFunction<Long, Long, Long> posToIdx = (row, col) -> row * numCols + col;
