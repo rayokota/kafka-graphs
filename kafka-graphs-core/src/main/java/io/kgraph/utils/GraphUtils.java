@@ -163,14 +163,16 @@ public class GraphUtils {
 
         graph.vertices()
             .toStream()
+            .peek((k, v) -> lastWriteMs.set(System.currentTimeMillis()))
             .process(() -> new SendMessages<K, VV>(verticesTopic, graph.keySerde(),
-                graph.vertexValueSerde(), streamsConfig, lastWrittenOffsets, lastWriteMs));
+                graph.vertexValueSerde(), streamsConfig, lastWrittenOffsets));
         graph.edgesGroupedBySource()
             .toStream()
+            .peek((k, v) -> lastWriteMs.set(System.currentTimeMillis()))
             .mapValues(v -> StreamSupport.stream(v.spliterator(), false)
                 .collect(Collectors.toMap(EdgeWithValue::target, EdgeWithValue::value)))
             .process(() -> new SendMessages<K, Map<K, EV>>(edgesGroupedBySourceTopic,
-                graph.keySerde(), new KryoSerde<>(), streamsConfig, lastWrittenOffsets, lastWriteMs));
+                graph.keySerde(), new KryoSerde<>(), streamsConfig, lastWrittenOffsets));
 
         KafkaStreams streams = new KafkaStreams(builder.build(), streamsConfig);
         streams.start();
@@ -180,16 +182,16 @@ public class GraphUtils {
         // TODO make interval configurable
         ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
             long lastWrite = lastWriteMs.get();
-            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 10000) {
+            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 60000) {
                 //System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
                 streams.close();  // will flush/close all producers
-                log.info("Last written " + lastWrittenOffsets);
                 future.complete(lastWrittenOffsets);
+                log.info("Last written " + lastWrittenOffsets);
                 log.info("Finished loading graph");
             } else {
                 //System.out.println("Cancel " + lastWrite + " " + System.currentTimeMillis());
             }
-        }, 0, 500, TimeUnit.MILLISECONDS);
+        }, 0, 10, TimeUnit.SECONDS);
 
         return future.whenCompleteAsync((v, t) -> {
             scheduledFuture.cancel(true);
@@ -204,20 +206,17 @@ public class GraphUtils {
         private final Serde<V> valueSerde;
         private final Properties streamsConfig;
         private final Map<TopicPartition, Long> lastWrittenOffsets;
-        private final AtomicLong lastWriteMs;
         private Producer<K, V> producer;
 
         public SendMessages(String topic, Serde<K> keySerde,
                             Serde<V> valueSerde, Properties streamsConfig,
-                            Map<TopicPartition, Long> lastWrittenOffsets,
-                            AtomicLong lastWriteMs
+                            Map<TopicPartition, Long> lastWrittenOffsets
         ) {
             this.topic = topic;
             this.keySerde = keySerde;
             this.valueSerde = valueSerde;
             this.streamsConfig = streamsConfig;
             this.lastWrittenOffsets = lastWrittenOffsets;
-            this.lastWriteMs = lastWriteMs;
         }
 
         @Override
@@ -249,7 +248,6 @@ public class GraphUtils {
                         }
                     }
                 }).get();
-                lastWriteMs.set(System.currentTimeMillis());
             } catch (Exception e) {
                 throw toRuntimeException(e);
             }

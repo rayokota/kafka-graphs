@@ -33,6 +33,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -468,8 +469,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 if (!ZKUtils.hasChild(curator, applicationId, pregelState, workerName)) {
                                     Set<TopicPartition> workSetTps = localPartitions(internalConsumer, workSetTopic);
                                     Set<TopicPartition> solutionSetTps = localPartitions(internalConsumer, solutionSetTopic);
-                                    if (isTopicSynced(internalConsumer, verticesTopic, 0, graphOffsets)
-                                        && isTopicSynced(internalConsumer, edgesGroupedBySourceTopic, 0, graphOffsets)) {
+                                    if (isTopicSynced(internalConsumer, verticesTopic, 0, graphOffsets::get)
+                                        && isTopicSynced(internalConsumer, edgesGroupedBySourceTopic, 0, graphOffsets::get)) {
                                         ZKUtils.addChild(curator, applicationId, pregelState, workerName, CreateMode.EPHEMERAL);
                                         // Ensure vertices and edges are read into tables first
                                         internalConsumer.seekToBeginning(workSetTps);
@@ -487,13 +488,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                     // Try to ensure we have all messages; however the consumer may not yet
                                     // be in sync so we do another check in the next stage
                                     Map<Integer, Long> lastWrittenOffsets = (Map<Integer, Long>) previousAggregates(pregelState.superstep()).get(LAST_WRITTEN_OFFSETS);
-                                    Map<TopicPartition, Long> lastWritten = lastWrittenOffsets != null
-                                        ? lastWrittenOffsets
-                                            .entrySet()
-                                            .stream()
-                                            .collect(Collectors.toMap(
-                                                e -> new TopicPartition(workSetTopic, e.getKey()), Map.Entry::getValue))
-                                        : null;
+                                    Function<TopicPartition, Long> lastWritten =
+                                        lastWrittenOffsets != null ? tp -> lastWrittenOffsets.get(tp.partition()) : null;
                                     if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep(), lastWritten)) {
                                         ZKUtils.addChild(curator, applicationId, pregelState, workerName, CreateMode.EPHEMERAL);
                                     }
@@ -905,7 +901,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     }
 
     private static boolean isTopicSynced(Consumer<byte[], byte[]> consumer, String topic,
-                                         int superstep, Map<TopicPartition, Long> lastWrittenOffsets) {
+                                         int superstep, Function<TopicPartition, Long> lastWrittenOffsets) {
         Set<TopicPartition> partitions = localPartitions(consumer, topic);
         Map<TopicPartition, Long> positions = positions(consumer, partitions);
         Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
@@ -913,7 +909,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         // Consumer end offsets may be stale; use last written offset if available
         if (lastWrittenOffsets != null) {
             for (Map.Entry<TopicPartition, Long> endOffset : endOffsets.entrySet()) {
-                Long lastWrittenOffset = lastWrittenOffsets.get(endOffset.getKey());
+                Long lastWrittenOffset = lastWrittenOffsets.apply(endOffset.getKey());
                 if (lastWrittenOffset != null && lastWrittenOffset >= endOffset.getValue()) {
                     endOffset.setValue(lastWrittenOffset + 1);
                 }
