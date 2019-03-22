@@ -177,6 +177,7 @@ public class GraphUtils {
 
         CompletableFuture<Map<TopicPartition, Long>> future = new CompletableFuture<>();
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        // TODO make interval configurable
         ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
             long lastWrite = lastWriteMs.get();
             if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 10000) {
@@ -189,7 +190,10 @@ public class GraphUtils {
             }
         }, 0, 500, TimeUnit.MILLISECONDS);
 
-        return future.whenCompleteAsync((v, t) -> scheduledFuture.cancel(true));
+        return future.whenCompleteAsync((v, t) -> {
+            scheduledFuture.cancel(true);
+            executor.shutdown();
+        });
     }
 
     private static final class SendMessages<K, V> implements Processor<K, V> {
@@ -243,7 +247,7 @@ public class GraphUtils {
                             throw toRuntimeException(e);
                         }
                     }
-                });
+                }).get();
                 lastWriteMs.set(System.currentTimeMillis());
             } catch (Exception e) {
                 throw toRuntimeException(e);

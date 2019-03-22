@@ -246,14 +246,13 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                     int partition = PregelComputation.vertexToPartition(k, serialized.keySerde().serializer(), numPartitions);
                     ZKUtils.addChild(curator, applicationId, new PregelState(State.CREATED, 0, Stage.SEND), "partition-" + partition);
                 } catch (Exception e) {
-                    throw e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
+                    throw toRuntimeException(e);
                 }
 
             })
             .mapValues((k, v) -> new Tuple3<>(0, k, initialMessage.map(Collections::singletonList).orElse(Collections.emptyList())))
             .peek((k, v) -> log.trace("workset 0 before topic: (" + k + ", " + v + ")"))
-            .<K, Tuple3<Integer, K, List<Message>>>to(workSetTopic, Produced.with(serialized.keySerde(), new KryoSerde<>
-                ()));
+            .<K, Tuple3<Integer, K, List<Message>>>to(workSetTopic, Produced.with(serialized.keySerde(), new KryoSerde<>()));
 
         this.workSet = builder
             .stream(workSetTopic, Consumed.with(serialized.keySerde(), new KryoSerde<Tuple3<Integer, K, List<Message>>>()))
