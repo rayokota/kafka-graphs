@@ -51,6 +51,7 @@ import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KTable;
 import org.apache.kafka.streams.kstream.Printed;
@@ -147,7 +148,7 @@ public class GraphUtils {
         return groupEdgesBySourceAndRepartition(builder, streamsConfig, graph, verticesTopic, edgesGroupedBySourceTopic, numPartitions, replicationFactor);
     }
 
-    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartitionXXX(
+    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(
         StreamsBuilder builder,
         Properties streamsConfig,
         KGraph<K, VV, EV> graph,
@@ -185,7 +186,9 @@ public class GraphUtils {
             .process(() -> new SendMessages<K, Map<K, EV>>(edgesGroupedBySourceTopic,
                 graph.keySerde(), new KryoSerde<>(), streamsConfig, lastWrittenOffsets));
 
-        KafkaStreams streams = new KafkaStreams(builder.build(), streamsConfig);
+        Topology topology = builder.build();
+        log.info("Graph description {}", topology.describe());
+        KafkaStreams streams = new KafkaStreams(topology, streamsConfig);
         streams.start();
 
         CompletableFuture<Map<TopicPartition, Long>> future = new CompletableFuture<>();
@@ -278,7 +281,7 @@ public class GraphUtils {
     }
 
 
-    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(StreamsBuilder builder,
+    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartitionXXX(StreamsBuilder builder,
                                                                                        Properties streamsConfig,
                                                                                        KGraph<K, VV, EV> graph,
                                                                                        String verticesTopic,
@@ -304,7 +307,9 @@ public class GraphUtils {
             .transformValues(() -> new EndOfBatchCheck<>(edgesFuture))
             .to(edgesGroupedBySourceTopic, Produced.with(graph.keySerde(), new KryoSerde<>()));
 
-        KafkaStreams streams = new KafkaStreams(builder.build(), streamsConfig);
+        Topology topology = builder.build();
+        log.info("Graph description {}", topology.describe());
+        KafkaStreams streams = new KafkaStreams(topology, streamsConfig);
         streams.start();
 
         return CompletableFuture.allOf(verticesFuture, edgesFuture).thenApply((Void) -> {
