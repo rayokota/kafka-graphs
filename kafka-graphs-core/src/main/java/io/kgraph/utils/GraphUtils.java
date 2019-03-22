@@ -183,6 +183,7 @@ public class GraphUtils {
             if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 10000) {
                 //System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
                 streams.close();  // will flush/close all producers
+                log.info("Last written " + lastWrittenOffsets);
                 future.complete(lastWrittenOffsets);
                 log.info("Finished loading graph");
             } else {
