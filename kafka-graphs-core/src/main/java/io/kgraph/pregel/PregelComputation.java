@@ -777,7 +777,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 ZKUtils.addChild(curator, applicationId, new PregelState(State.RUNNING, superstep + 1, Stage.SEND), "partition-" + p);
 
                                 Map<Integer, Long> endOffsets = lastWrittenOffsets.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
-                                endOffsets.put(metadata.partition(), metadata.offset());
+                                endOffsets.merge(metadata.partition(), metadata.offset(), Math::max);
                             } catch (Exception e) {
                                 throw toRuntimeException(e);
                             }
