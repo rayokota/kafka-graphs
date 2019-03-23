@@ -148,7 +148,7 @@ public class GraphUtils {
         return groupEdgesBySourceAndRepartition(builder, streamsConfig, graph, verticesTopic, edgesGroupedBySourceTopic, numPartitions, replicationFactor);
     }
 
-    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(
+    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartitionXXX(
         StreamsBuilder builder,
         Properties streamsConfig,
         KGraph<K, VV, EV> graph,
@@ -281,7 +281,7 @@ public class GraphUtils {
     }
 
 
-    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartitionXXX(StreamsBuilder builder,
+    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(StreamsBuilder builder,
                                                                                        Properties streamsConfig,
                                                                                        KGraph<K, VV, EV> graph,
                                                                                        String verticesTopic,
