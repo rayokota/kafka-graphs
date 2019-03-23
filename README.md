@@ -10,7 +10,7 @@ Releases of Kafka Graphs are deployed to Maven Central.
 <dependency>
     <groupId>io.kgraph</groupId>
     <artifactId>kafka-graphs-core</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 ## Creating Graphs
@@ -111,7 +111,7 @@ Custom Pregel-based graph algorithms can also be added by implementing the `Comp
 Since Kafka Graphs is built on top of Kafka Streams, it is able to leverage the underlying partitioning scheme of Kafka Streams in order to support distributed graph processing.  To facilitate running graph algorithms in a distributed manner, Kafka Graphs provides a REST application for managing graph algorithm executions.
 
 ```bash
-java -jar kafka-graphs-rest-app-1.0.0.jar \
+java -jar kafka-graphs-rest-app-1.1.0.jar \
   --kafka.graphs.bootstrapServers=localhost:9092 \
   --kafka.graphs.zookeeperConnect=localhost:2181
 ```
