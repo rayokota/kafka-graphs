@@ -45,7 +45,6 @@ import org.slf4j.LoggerFactory;
 
 import io.kgraph.AbstractIntegrationTest;
 import io.kgraph.Edge;
-import io.kgraph.EdgeJoinFunction;
 import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
