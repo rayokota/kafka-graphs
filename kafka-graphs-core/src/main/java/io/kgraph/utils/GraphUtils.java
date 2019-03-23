@@ -43,7 +43,6 @@ import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.LongSerializer;
-import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -183,9 +182,7 @@ public class GraphUtils {
                 vertexCount.incrementAndGet();
                 lastWriteMs.set(System.currentTimeMillis());
             })
-            //.to(verticesTopic, Produced.with(graph.keySerde(), graph.vertexValueSerde()));
-            .process(() -> new SendMessages<K, VV>(verticesTopic, graph.keySerde(),
-                graph.vertexValueSerde(), vertexProducer, lastWrittenOffsets));
+            .process(() -> new SendMessages<>(verticesTopic, vertexProducer, lastWrittenOffsets));
         graph.edgesGroupedBySource()
             .toStream()
             .peek((k, v) -> {
@@ -194,12 +191,10 @@ public class GraphUtils {
             })
             .mapValues(v -> StreamSupport.stream(v.spliterator(), false)
                 .collect(Collectors.toMap(EdgeWithValue::target, EdgeWithValue::value)))
-            //.to(edgesGroupedBySourceTopic, Produced.with(graph.keySerde(), new KryoSerde<>()));
-            .process(() -> new SendMessages<K, Map<K, EV>>(edgesGroupedBySourceTopic,
-                graph.keySerde(), new KryoSerde<>(), edgeProducer, lastWrittenOffsets));
+            .process(() -> new SendMessages<>(edgesGroupedBySourceTopic, edgeProducer, lastWrittenOffsets));
 
         Topology topology = builder.build();
-        log.info("Graph description {}", topology.describe());
+        log.debug("Graph description {}", topology.describe());
         KafkaStreams streams = new KafkaStreams(topology, streamsConfig);
         streams.start();
 
@@ -209,15 +204,11 @@ public class GraphUtils {
         ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
             long lastWrite = lastWriteMs.get();
             if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 10000) {
-                //System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
                 vertexProducer.close();
                 edgeProducer.close();
                 streams.close();
                 future.complete(lastWrittenOffsets);
-                log.info("Last written {}", lastWrittenOffsets);
                 log.info("Finished loading graph: {} vertices, {} edges", vertexCount.get(), edgeCount.get());
-            } else {
-                //System.out.println("Cancel " + lastWrite + " " + System.currentTimeMillis());
             }
         }, 0, 1, TimeUnit.SECONDS);
 
@@ -230,18 +221,14 @@ public class GraphUtils {
     private static final class SendMessages<K, V> implements Processor<K, V> {
 
         private final String topic;
-        private final Serde<K> keySerde;
-        private final Serde<V> valueSerde;
         private final Producer<K, V> producer;
         private final Map<TopicPartition, Long> lastWrittenOffsets;
 
-        public SendMessages(String topic, Serde<K> keySerde,
-                            Serde<V> valueSerde, Producer<K, V> producer,
+        public SendMessages(String topic,
+                            Producer<K, V> producer,
                             Map<TopicPartition, Long> lastWrittenOffsets
         ) {
             this.topic = topic;
-            this.keySerde = keySerde;
-            this.valueSerde = valueSerde;
             this.producer = producer;
             this.lastWrittenOffsets = lastWrittenOffsets;
         }
