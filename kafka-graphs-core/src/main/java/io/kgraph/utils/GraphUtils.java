@@ -196,8 +196,8 @@ public class GraphUtils {
         // TODO make interval configurable
         ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
             long lastWrite = lastWriteMs.get();
-            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 20000) {
-                System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
+            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 10000) {
+                //System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
                 streams.close();  // will flush/close all producers
                 future.complete(lastWrittenOffsets);
                 log.info("Last written {}", lastWrittenOffsets);
@@ -205,9 +205,9 @@ public class GraphUtils {
                 log.info("Edge count {}", edgeCount.get());
                 log.info("Finished loading graph");
             } else {
-                System.out.println("Cancel " + lastWrite + " " + System.currentTimeMillis());
+                //System.out.println("Cancel " + lastWrite + " " + System.currentTimeMillis());
             }
-        }, 0, 10, TimeUnit.SECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
 
         return future.whenCompleteAsync((v, t) -> {
             scheduledFuture.cancel(true);

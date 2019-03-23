@@ -65,35 +65,49 @@ public class PageRank<K> implements ComputeFunction<K, Tuple2<Double, Double>, D
         Iterable<EdgeWithValue<K, Double>> edges,
         Callback<K, Tuple2<Double, Double>, Double, Double> cb) {
 
-        double oldPageRank = vertex.value()._1;
-        double oldDelta = vertex.value()._2;
-
-        double messageSum = 0.0;
-        for (Double message : messages) {
-            messageSum += message;
-        }
-
-        boolean isPersonalized = srcVertexId != null;
-        double newPageRank = isPersonalized && oldDelta == Double.NEGATIVE_INFINITY
-            ? 1.0 : oldPageRank + (1.0 - resetProbability) * messageSum;
-        double newDelta = newPageRank - oldPageRank;
-
-        log.debug("step {} vertex {} sum {}", superstep, vertex.id(), messageSum);
-        log.debug("old ({},{})", oldPageRank, oldDelta);
-        log.debug("new ({},{})", newPageRank, newDelta);
-        log.debug("msgs {}", messages);
-
-        cb.setNewVertexValue(new Tuple2<>(newPageRank, newDelta));
-
-        cb.aggregate(RUNNING_SUM, newPageRank);
-
-        for (EdgeWithValue<K, Double> edge : edges) {
-            if (newDelta > tolerance) {
-                log.debug("sending to target {} edge {} msg {}", edge.target(), edge.value(), newDelta * edge.value());
-                cb.sendMessageTo(edge.target(), newDelta * edge.value());
+        if (superstep == 0) {
+            int count = 0;
+            for (EdgeWithValue<K, Double> edge : edges) {
+                count++;
             }
-        }
+            for (EdgeWithValue<K, Double> edge : edges) {
+                cb.setNewEdgeValue(edge.target(), 1.0 / count);
+            }
+            for (Double message : messages) {
+                // Resend initial message to self
+                cb.sendMessageTo(vertex.id(), message);
+            }
+        } else {
+            double oldPageRank = vertex.value()._1;
+            double oldDelta = vertex.value()._2;
 
-        cb.voteToHalt();
+            double messageSum = 0.0;
+            for (Double message : messages) {
+                messageSum += message;
+            }
+
+            boolean isPersonalized = srcVertexId != null;
+            double newPageRank = isPersonalized && oldDelta == Double.NEGATIVE_INFINITY
+                ? 1.0 : oldPageRank + (1.0 - resetProbability) * messageSum;
+            double newDelta = newPageRank - oldPageRank;
+
+            log.debug("step {} vertex {} sum {}", superstep, vertex.id(), messageSum);
+            log.debug("old ({},{})", oldPageRank, oldDelta);
+            log.debug("new ({},{})", newPageRank, newDelta);
+            log.debug("msgs {}", messages);
+
+            cb.setNewVertexValue(new Tuple2<>(newPageRank, newDelta));
+
+            cb.aggregate(RUNNING_SUM, newPageRank);
+
+            for (EdgeWithValue<K, Double> edge : edges) {
+                if (newDelta > tolerance) {
+                    log.debug("sending to target {} edge {} msg {}", edge.target(), edge.value(), newDelta * edge.value());
+                    cb.sendMessageTo(edge.target(), newDelta * edge.value());
+                }
+            }
+
+            cb.voteToHalt();
+        }
     }
 }

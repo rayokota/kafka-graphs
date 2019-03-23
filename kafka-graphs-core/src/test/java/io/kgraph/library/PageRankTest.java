@@ -75,16 +75,12 @@ public class PageRankTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getChain());
-        // TODO set initial vertices to tuples?
         KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
-        KTable<Long, Long> vertexOutDegrees = initialGraph.outDegrees();
-        KGraph<Long, Double, Double> joinedGraph = initialGraph
-            .joinWithEdgesOnSource(vertexOutDegrees, new InitWeights());
         KTable<Long, Tuple2<Double, Double>> vertices =
-            joinedGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
+            initialGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
         KGraph<Long, Tuple2<Double, Double>, Double> graph =
-            new KGraph<>(vertices, joinedGraph.edges(), GraphSerialized.with(joinedGraph.keySerde(), new KryoSerde<>
+            new KGraph<>(vertices, initialGraph.edges(), GraphSerialized.with(initialGraph.keySerde(), new KryoSerde<>
                 (), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
@@ -109,7 +105,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), KryoSerde.class);
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
-        int maxIterations = 1;  //Integer.MAX_VALUE;
+        int maxIterations = 2;  //Integer.MAX_VALUE;
         GraphAlgorithmState<KTable<Long, Tuple2<Double, Double>>> ranks = algorithm.run(maxIterations);
         ranks.result().get();
 
@@ -146,16 +142,12 @@ public class PageRankTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getChain());
-        // TODO set initial vertices to tuples?
         KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
-        KTable<Long, Long> vertexOutDegrees = initialGraph.outDegrees();
-        KGraph<Long, Double, Double> joinedGraph = initialGraph
-            .joinWithEdgesOnSource(vertexOutDegrees, new InitWeights());
         KTable<Long, Tuple2<Double, Double>> vertices =
-            joinedGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
+            initialGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
         KGraph<Long, Tuple2<Double, Double>, Double> graph =
-            new KGraph<>(vertices, joinedGraph.edges(), GraphSerialized.with(joinedGraph.keySerde(), new KryoSerde<>
+            new KGraph<>(vertices, initialGraph.edges(), GraphSerialized.with(initialGraph.keySerde(), new KryoSerde<>
                 (), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
@@ -180,7 +172,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), KryoSerde.class);
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
-        int maxIterations = 10;
+        int maxIterations = 11;
         GraphAlgorithmState<KTable<Long, Tuple2<Double, Double>>> ranks = algorithm.run(maxIterations);
         ranks.result().get();
 
@@ -217,19 +209,15 @@ public class PageRankTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getChain());
-        // TODO set initial vertices to tuples?
         KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges, new InitVertices(),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
-        KTable<Long, Long> vertexOutDegrees = initialGraph.outDegrees();
-        KGraph<Long, Double, Double> joinedGraph = initialGraph
-            .joinWithEdgesOnSource(vertexOutDegrees, new InitWeights());
 
         long srcVertexId = 4L;
         KTable<Long, Tuple2<Double, Double>> vertices =
-            joinedGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, k == srcVertexId ? Double.NEGATIVE_INFINITY
+            initialGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, k == srcVertexId ? Double.NEGATIVE_INFINITY
                 : 0.0));
         KGraph<Long, Tuple2<Double, Double>, Double> graph =
-            new KGraph<>(vertices, joinedGraph.edges(), GraphSerialized.with(joinedGraph.keySerde(), new KryoSerde<>
+            new KGraph<>(vertices, initialGraph.edges(), GraphSerialized.with(initialGraph.keySerde(), new KryoSerde<>
                 (), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
@@ -254,7 +242,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), KryoSerde.class);
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
-        int maxIterations = 3;
+        int maxIterations = 4;
         GraphAlgorithmState<KTable<Long, Tuple2<Double, Double>>> ranks = algorithm.run(maxIterations);
         ranks.result().get();
 
@@ -288,19 +276,12 @@ public class PageRankTest extends AbstractIntegrationTest {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), IntegerSerializer.class,
             IntegerSerializer.class, new Properties()
         );
-        /*
-        KGraph<Long, Long, Long> completeGraph = GraphGenerators.completeGraph(builder, producerConfig, 25);
-        KTable<Long, Double> initialVertices = completeGraph.vertices().mapValues(v -> 1.0);
-        KTable<Edge<Long>, Double> initialEdges = completeGraph.edges().mapValues(v -> 1.0);
-        */
-        KGraph<Long, Double, Double> initialGraph = GraphGenerators.completeDoubleGraph(builder, producerConfig, 25);
-        KTable<Long, Long> vertexOutDegrees = initialGraph.outDegrees();
-        KGraph<Long, Double, Double> joinedGraph = initialGraph
-            .joinWithEdgesOnSource(vertexOutDegrees, new InitWeights());
+        KGraph<Long, Long, Long> initialGraph = GraphGenerators.completeGraph(builder, producerConfig, 25);
         KTable<Long, Tuple2<Double, Double>> vertices =
-            joinedGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
+            initialGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
+        KTable<Edge<Long>, Double> edges = initialGraph.edges().mapValues(v -> 1.0);
         KGraph<Long, Tuple2<Double, Double>, Double> graph =
-            new KGraph<>(vertices, joinedGraph.edges(), GraphSerialized.with(joinedGraph.keySerde(), new KryoSerde<>
+            new KGraph<>(vertices, edges, GraphSerialized.with(initialGraph.keySerde(), new KryoSerde<>
                 (), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
@@ -325,7 +306,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), KryoSerde.class);
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
-        int maxIterations = 30;  //Integer.MAX_VALUE;
+        int maxIterations = 31;  //Integer.MAX_VALUE;
         GraphAlgorithmState<KTable<Long, Tuple2<Double, Double>>> ranks = algorithm.run(maxIterations);
         ranks.result().get();
 
@@ -349,18 +330,12 @@ public class PageRankTest extends AbstractIntegrationTest {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), IntegerSerializer.class,
             IntegerSerializer.class, new Properties()
         );
-        KGraph<Long, Tuple2<Long, Long>, Long> gridGraph = GraphGenerators.gridGraph(builder, producerConfig, 10, 10);
-        KTable<Edge<Long>, Double> initialEdges = gridGraph.edges().mapValues(v -> 1.0);
-        KGraph<Long, Tuple2<Long, Long>, Double> initialGraph =
-            new KGraph<>(gridGraph.vertices(), initialEdges,
-                GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double()));
-        KTable<Long, Long> vertexOutDegrees = initialGraph.outDegrees();
-        KGraph<Long, Tuple2<Long, Long>, Double> joinedGraph = initialGraph
-            .joinWithEdgesOnSource(vertexOutDegrees, new InitWeights());
+        KGraph<Long, Tuple2<Long, Long>, Long> initialGraph = GraphGenerators.gridGraph(builder, producerConfig, 10, 10);
         KTable<Long, Tuple2<Double, Double>> vertices =
-            joinedGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
+            initialGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
+        KTable<Edge<Long>, Double> edges = initialGraph.edges().mapValues(v -> 1.0);
         KGraph<Long, Tuple2<Double, Double>, Double> graph =
-            new KGraph<>(vertices, joinedGraph.edges(), GraphSerialized.with(joinedGraph.keySerde(), new KryoSerde<>
+            new KGraph<>(vertices, edges, GraphSerialized.with(initialGraph.keySerde(), new KryoSerde<>
                 (), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
@@ -385,7 +360,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), KryoSerde.class);
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
-        int maxIterations = 50;  //Integer.MAX_VALUE;
+        int maxIterations = 51;  //Integer.MAX_VALUE;
         GraphAlgorithmState<KTable<Long, Tuple2<Double, Double>>> ranks = algorithm.run(maxIterations);
         ranks.result().get();
 
@@ -457,19 +432,12 @@ public class PageRankTest extends AbstractIntegrationTest {
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), IntegerSerializer.class,
             IntegerSerializer.class, new Properties()
         );
-        KGraph<Long, Long, Long> starGraph = GraphGenerators.starGraph(builder, producerConfig, 100);
-        KTable<Long, Double> initialVertices = starGraph.vertices().mapValues(v -> 1.0);
-        KTable<Edge<Long>, Double> initialEdges = starGraph.edges().mapValues(v -> 1.0);
-        KGraph<Long, Double, Double> initialGraph =
-            new KGraph<>(initialVertices, initialEdges, GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes
-                .Double()));
-        KTable<Long, Long> vertexOutDegrees = initialGraph.outDegrees();
-        KGraph<Long, Double, Double> joinedGraph = initialGraph
-            .joinWithEdgesOnSource(vertexOutDegrees, new InitWeights());
+        KGraph<Long, Long, Long> initialGraph = GraphGenerators.starGraph(builder, producerConfig, 100);
         KTable<Long, Tuple2<Double, Double>> vertices =
-            joinedGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
+            initialGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
+        KTable<Edge<Long>, Double> edges = initialGraph.edges().mapValues(v -> 1.0);
         KGraph<Long, Tuple2<Double, Double>, Double> graph =
-            new KGraph<>(vertices, joinedGraph.edges(), GraphSerialized.with(joinedGraph.keySerde(), new KryoSerde<>
+            new KGraph<>(vertices, edges, GraphSerialized.with(initialGraph.keySerde(), new KryoSerde<>
                 (), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix, CLUSTER
@@ -494,7 +462,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), KryoSerde.class);
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), props).streams();
-        int maxIterations = 2;  //Integer.MAX_VALUE;
+        int maxIterations = 3;  //Integer.MAX_VALUE;
         GraphAlgorithmState<KTable<Long, Tuple2<Double, Double>>> ranks = algorithm.run(maxIterations);
         ranks.result().get();
 
@@ -520,14 +488,6 @@ public class PageRankTest extends AbstractIntegrationTest {
         @Override
         public Double apply(Long id) {
             return Double.POSITIVE_INFINITY;
-        }
-    }
-
-    private static final class InitWeights implements EdgeJoinFunction<Double, Long> {
-        public Double edgeJoin(Double edgeValue, Long inputValue) {
-            //return edgeValue / (double) inputValue;
-            // TOOD fix
-            return 1.0 / (double) inputValue;
         }
     }
 }
