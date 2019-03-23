@@ -83,8 +83,6 @@ public class SgdTest extends AbstractIntegrationTest {
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
-        Thread.sleep(2000);
-
         Map<String, Object> configs = new HashMap<>();
         configs.put(Sgd.GAMMA, 0.005f);
         configs.put(Sgd.LAMBDA, 0.01f);

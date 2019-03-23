@@ -83,8 +83,6 @@ public class SvdppTest extends AbstractIntegrationTest {
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
-        Thread.sleep(2000);
-
         Map<String, Object> configs = new HashMap<>();
         configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
         configs.put(Svdpp.BIAS_GAMMA, 0.01f);
