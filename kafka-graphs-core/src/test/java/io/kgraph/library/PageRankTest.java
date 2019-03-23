@@ -88,8 +88,6 @@ public class PageRankTest extends AbstractIntegrationTest {
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
 
-        Thread.sleep(2000);
-
         double resetProb = 0.15;
         double tol = 0.0001;
         Map<String, Object> configs = new HashMap<>();
@@ -154,8 +152,6 @@ public class PageRankTest extends AbstractIntegrationTest {
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
-
-        Thread.sleep(2000);
 
         double resetProb = 0.15;
         double tol = 0.0001;
@@ -225,8 +221,6 @@ public class PageRankTest extends AbstractIntegrationTest {
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
 
-        Thread.sleep(2000);
-
         double resetProb = 0.15;
         double tol = 0.0001;
         Map<String, Object> configs = new HashMap<>();
@@ -289,8 +283,6 @@ public class PageRankTest extends AbstractIntegrationTest {
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
 
-        Thread.sleep(5000);
-
         double resetProb = 0.15;
         double tol = 0.0001;
         Map<String, Object> configs = new HashMap<>();
@@ -342,8 +334,6 @@ public class PageRankTest extends AbstractIntegrationTest {
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
-
-        Thread.sleep(2000);
 
         double resetProb = 0.15;
         double tol = 0.0001;
@@ -444,8 +434,6 @@ public class PageRankTest extends AbstractIntegrationTest {
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
-
-        Thread.sleep(2000);
 
         double resetProb = 0.15;
         double tol = 0.0001;

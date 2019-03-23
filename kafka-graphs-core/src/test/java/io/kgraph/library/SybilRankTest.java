@@ -99,8 +99,6 @@ public class SybilRankTest extends AbstractIntegrationTest {
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
-        Thread.sleep(2000);
-
         Map<String, Object> configs = new HashMap<>();
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),

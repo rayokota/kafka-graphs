@@ -93,8 +93,6 @@ public class SemiClusteringTest extends AbstractIntegrationTest {
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
 
-        Thread.sleep(2000);
-
         Map<String, Object> configs = new HashMap<>();
         configs.put(SemiClustering.ITERATIONS, 10);
         configs.put(SemiClustering.MAX_CLUSTERS, 2);
