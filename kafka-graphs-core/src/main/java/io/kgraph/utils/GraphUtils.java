@@ -172,8 +172,7 @@ public class GraphUtils {
             graph.keySerde().serializer().getClass(), graph.vertexValueSerde().serializer().getClass(),
             streamsConfig
         );
-        String clientId = "pregel-vertex";
-        vertexProducerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientId + "-producer");
+        vertexProducerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, "pregel-vertex-producer");
         Producer<K, VV> vertexProducer = new KafkaProducer<>(vertexProducerConfig);
 
         Properties edgeProducerConfig = ClientUtils.producerConfig(
@@ -181,8 +180,7 @@ public class GraphUtils {
             graph.keySerde().serializer().getClass(), KryoSerializer.class,
             streamsConfig
         );
-        clientId = "pregel-edge";
-        edgeProducerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientId + "-producer");
+        edgeProducerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, "pregel-edge-producer");
         Producer<K, Map<K, EV>> edgeProducer = new KafkaProducer<>(edgeProducerConfig);
 
         graph.vertices()
@@ -216,18 +214,18 @@ public class GraphUtils {
         // TODO make interval configurable
         ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
             long lastWrite = lastWriteMs.get();
-            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 60000) {
+            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 10000) {
                 //System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
                 vertexProducer.close();
                 edgeProducer.close();
-                streams.close();  // will flush/close all producers
+                streams.close();
                 future.complete(lastWrittenOffsets);
                 log.info("Last written {}", lastWrittenOffsets);
                 log.info("Finished loading graph: {} vertices, {} edges", vertexCount.get(), edgeCount.get());
             } else {
                 //System.out.println("Cancel " + lastWrite + " " + System.currentTimeMillis());
             }
-        }, 0, 10, TimeUnit.SECONDS);
+        }, 0, 1, TimeUnit.SECONDS);
 
         return future.whenCompleteAsync((v, t) -> {
             scheduledFuture.cancel(true);
@@ -276,6 +274,7 @@ public class GraphUtils {
                         }
                     }
                 });
+                producer.flush();
             } catch (Exception e) {
                 throw toRuntimeException(e);
             }
