@@ -455,12 +455,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 PregelState nextPregelState = ZKUtils.maybeCreateReadyToReceiveNode(curator, applicationId, pregelState, barrierCache);
                                 if (!pregelState.equals(nextPregelState)) {
                                     pregelState = nextPregelState;
-                                    setPregelState(sharedValue, pregelState);
                                     boolean halt = masterCompute(pregelState.superstep());
                                     if (halt) {
                                         pregelState = pregelState.state(State.CANCELLED);
-                                        setPregelState(sharedValue, pregelState);
                                     }
+                                    setPregelState(sharedValue, pregelState);
                                 } else {
                                     log.debug("Not ready to create rcv: state {}", pregelState);
                                 }
