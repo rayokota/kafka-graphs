@@ -148,7 +148,7 @@ public class GraphUtils {
         return groupEdgesBySourceAndRepartition(builder, streamsConfig, graph, verticesTopic, edgesGroupedBySourceTopic, numPartitions, replicationFactor);
     }
 
-    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartitionXXX(
+    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(
         StreamsBuilder builder,
         Properties streamsConfig,
         KGraph<K, VV, EV> graph,
@@ -196,7 +196,7 @@ public class GraphUtils {
         // TODO make interval configurable
         ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
             long lastWrite = lastWriteMs.get();
-            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 10000) {
+            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 60000) {
                 //System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
                 streams.close();  // will flush/close all producers
                 future.complete(lastWrittenOffsets);
@@ -207,7 +207,7 @@ public class GraphUtils {
             } else {
                 //System.out.println("Cancel " + lastWrite + " " + System.currentTimeMillis());
             }
-        }, 0, 1, TimeUnit.SECONDS);
+        }, 0, 10, TimeUnit.SECONDS);
 
         return future.whenCompleteAsync((v, t) -> {
             scheduledFuture.cancel(true);
@@ -281,7 +281,7 @@ public class GraphUtils {
     }
 
 
-    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(StreamsBuilder builder,
+    public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartitionXXX(StreamsBuilder builder,
                                                                                        Properties streamsConfig,
                                                                                        KGraph<K, VV, EV> graph,
                                                                                        String verticesTopic,
