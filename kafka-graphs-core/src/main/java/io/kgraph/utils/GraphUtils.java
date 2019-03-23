@@ -204,10 +204,13 @@ public class GraphUtils {
         ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
             long lastWrite = lastWriteMs.get();
             if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 10000) {
-                vertexProducer.close();
-                edgeProducer.close();
-                streams.close();
-                future.complete(lastWrittenOffsets);
+                try {
+                    vertexProducer.close();
+                    edgeProducer.close();
+                    streams.close();
+                } finally {
+                    future.complete(lastWrittenOffsets);
+                }
                 log.info("Finished loading graph: {} vertices, {} edges", vertexCount.get(), edgeCount.get());
             }
         }, 0, 1, TimeUnit.SECONDS);
