@@ -275,7 +275,7 @@ public class GraphUtils {
                             throw toRuntimeException(e);
                         }
                     }
-                }).get();
+                });
             } catch (Exception e) {
                 throw toRuntimeException(e);
             }

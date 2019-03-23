@@ -132,6 +132,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private final String verticesStoreName;
     private final String localworkSetStoreName;
     private final String localSolutionSetStoreName;
+    private final Producer<K, Tuple3<Integer, K, List<Message>>> producer;
 
     private final Map<Integer, Map<Integer, Set<K>>> activeVertices = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Boolean>> didPreSuperstep = new ConcurrentHashMap<>();
@@ -178,6 +179,13 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         this.verticesStoreName = "verticesStore-" + applicationId;
         this.localworkSetStoreName = "localworkSetStore-" + applicationId;
         this.localSolutionSetStoreName = "localSolutionSetStore-" + applicationId;
+
+        Properties producerConfig = ClientUtils.producerConfig(
+            bootstrapServers, serialized.keySerde().serializer().getClass(), KryoSerializer.class,
+            streamsConfig != null ? streamsConfig : new Properties()
+        );
+        producerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, applicationId + "-producer");
+        producer = new KafkaProducer<>(producerConfig);
 
         ComputeFunction.InitCallback cb = new ComputeFunction.InitCallback(registeredAggregators);
         cf.init(configs, cb);
@@ -283,7 +291,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             .mapValues(v -> new Tuple2<>(v._1, v._3))
             .peek((k, v) -> log.trace("workset new: (" + k + ", " + v + ")"));
 
-        newworkSet.process(SendMessages::new);
+        newworkSet.process(() -> new SendMessages(producer));
     }
 
     public PregelState run(int maxIterations, CompletableFuture<KTable<K, VV>> futureResult) {
@@ -739,15 +747,12 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
         private Producer<K, Tuple3<Integer, K, List<Message>>> producer;
 
+        public SendMessages(Producer<K, Tuple3<Integer, K, List<Message>>> producer) {
+            this.producer = producer;
+        }
+
         @Override
         public void init(final ProcessorContext context) {
-            Properties producerConfig = ClientUtils.producerConfig(
-                bootstrapServers, serialized.keySerde().serializer().getClass(), KryoSerializer.class,
-                streamsConfig != null ? streamsConfig : new Properties()
-            );
-            String clientId = "pregel-" + context.taskId();
-            producerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientId + "-producer");
-            this.producer = new KafkaProducer<>(producerConfig);
         }
 
         @Override
@@ -821,6 +826,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     @Override
     public void close() {
         try {
+            producer.close();
+
             // Clean up ZK
             ZKUtils.removeRoot(curator, applicationId);
         } catch (Exception e) {

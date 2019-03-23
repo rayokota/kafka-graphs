@@ -87,7 +87,7 @@ public class PageRankTest extends AbstractIntegrationTest {
                 .bootstrapServers(),
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         Thread.sleep(2000);
 
@@ -99,7 +99,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         Optional<Double> initMsg = Optional.of(resetProb / (1.0 - resetProb));
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
                 configs, initMsg, new PageRank<>());
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
@@ -154,7 +154,7 @@ public class PageRankTest extends AbstractIntegrationTest {
                 .bootstrapServers(),
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         Thread.sleep(2000);
 
@@ -166,7 +166,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         Optional<Double> initMsg = Optional.of(resetProb / (1.0 - resetProb));
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
                 configs, initMsg, new PageRank<>());
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
@@ -224,7 +224,7 @@ public class PageRankTest extends AbstractIntegrationTest {
                 .bootstrapServers(),
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         Thread.sleep(2000);
 
@@ -236,7 +236,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         configs.put(PageRank.SRC_VERTEX_ID, srcVertexId);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
                 configs, Optional.of(0.0), new PageRank<>());
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
@@ -342,7 +342,7 @@ public class PageRankTest extends AbstractIntegrationTest {
                 .bootstrapServers(),
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         Thread.sleep(2000);
 
@@ -354,7 +354,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         Optional<Double> initMsg = Optional.of(resetProb / (1.0 - resetProb));
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
                 configs, initMsg, new PageRank<>());
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
@@ -444,7 +444,7 @@ public class PageRankTest extends AbstractIntegrationTest {
                 .bootstrapServers(),
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         Thread.sleep(2000);
 
@@ -456,7 +456,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         Optional<Double> initMsg = Optional.of(resetProb / (1.0 - resetProb));
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
                 configs, initMsg, new PageRank<>());
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
