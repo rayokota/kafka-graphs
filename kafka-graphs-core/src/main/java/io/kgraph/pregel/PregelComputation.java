@@ -124,6 +124,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private final Map<String, AggregatorWrapper<?>> registeredAggregators;
 
     private Properties streamsConfig;
+    private Producer<K, Tuple3<Integer, K, List<Message>>> producer;
 
     private volatile int maxIterations = Integer.MAX_VALUE;
     private volatile CompletableFuture<KTable<K, VV>> futureResult;
@@ -132,7 +133,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private final String verticesStoreName;
     private final String localworkSetStoreName;
     private final String localSolutionSetStoreName;
-    private final Producer<K, Tuple3<Integer, K, List<Message>>> producer;
 
     private final Map<Integer, Map<Integer, Set<K>>> activeVertices = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Boolean>> didPreSuperstep = new ConcurrentHashMap<>();
@@ -180,13 +180,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         this.localworkSetStoreName = "localworkSetStore-" + applicationId;
         this.localSolutionSetStoreName = "localSolutionSetStore-" + applicationId;
 
-        Properties producerConfig = ClientUtils.producerConfig(
-            bootstrapServers, serialized.keySerde().serializer().getClass(), KryoSerializer.class,
-            streamsConfig != null ? streamsConfig : new Properties()
-        );
-        producerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, applicationId + "-producer");
-        producer = new KafkaProducer<>(producerConfig);
-
         ComputeFunction.InitCallback cb = new ComputeFunction.InitCallback(registeredAggregators);
         cf.init(configs, cb);
         cb.registerAggregator(LAST_WRITTEN_OFFSETS, MapOfLongMaxAggregator.class);
@@ -210,6 +203,13 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
     public void prepare(StreamsBuilder builder, Properties streamsConfig) {
         this.streamsConfig = streamsConfig;
+
+        Properties producerConfig = ClientUtils.producerConfig(
+            bootstrapServers, serialized.keySerde().serializer().getClass(), KryoSerializer.class,
+            streamsConfig != null ? streamsConfig : new Properties()
+        );
+        producerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, applicationId + "-producer");
+        this.producer = new KafkaProducer<>(producerConfig);
 
         final StoreBuilder<KeyValueStore<Integer, Map<K, Map<K, List<Message>>>>> workSetStoreBuilder =
             Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore(localworkSetStoreName),
@@ -819,14 +819,15 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
         @Override
         public void close() {
-            producer.close();
         }
     }
 
     @Override
     public void close() {
         try {
-            producer.close();
+            if (producer != null) {
+                producer.close();
+            }
 
             // Clean up ZK
             ZKUtils.removeRoot(curator, applicationId);
