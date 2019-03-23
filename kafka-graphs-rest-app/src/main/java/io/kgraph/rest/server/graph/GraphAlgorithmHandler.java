@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.nodes.GroupMember;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -161,7 +162,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                     Properties streamsConfig = streamsConfig(appId, props.getBootstrapServers(),
                         input.isValuesOfTypeDouble() ? Serdes.Double() : Serdes.Long()
                     );
-                    CompletableFuture<Void> future;
+                    CompletableFuture<Map<TopicPartition, Long>> future;
                     if (input.isValuesOfTypeDouble()) {
                         future = GraphUtils.groupEdgesBySourceAndRepartition(builder,
                             streamsConfig, input.getInitialVerticesTopic(), input.getInitialEdgesTopic(),
@@ -279,6 +280,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                 curator,
                 input.getVerticesTopic(),
                 input.getEdgesGroupedBySourceTopic(),
+                Collections.emptyMap(),
                 (GraphSerialized<Long, Object, Object>) graphSerialized,
                 input.getNumPartitions(),
                 input.getReplicationFactor(),

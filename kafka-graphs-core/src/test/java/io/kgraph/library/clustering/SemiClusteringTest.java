@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.DoubleSerializer;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -89,8 +90,10 @@ public class SemiClusteringTest extends AbstractIntegrationTest {
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Void> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         state.get();
+
+        Thread.sleep(2000);
 
         Map<String, Object> configs = new HashMap<>();
         configs.put(SemiClustering.ITERATIONS, 10);
@@ -106,6 +109,8 @@ public class SemiClusteringTest extends AbstractIntegrationTest {
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
         GraphAlgorithmState<KTable<Long, Set<SemiCluster>>> paths = algorithm.run();
         paths.result().get();
+
+        Thread.sleep(2000);
 
         Map<Long, Map<Long, Long>> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);

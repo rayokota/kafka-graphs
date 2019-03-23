@@ -72,6 +72,7 @@ public class StreamUtils {
                 ProducerRecord<K, V> producerRecord = new ProducerRecord<>(topic, value.key, value.value);
                 producer.send(producerRecord);
             }
+            producer.flush();
         }
         return builder.stream(topic, Consumed.with(keySerde, valueSerde));
     }
@@ -103,6 +104,7 @@ public class StreamUtils {
                 ProducerRecord<K, V> producerRecord = new ProducerRecord<>(topic, value.key, value.value);
                 producer.send(producerRecord);
             }
+            producer.flush();
         }
         return builder.table(topic, Consumed.with(keySerde, valueSerde), Materialized.with(keySerde, valueSerde));
     }
