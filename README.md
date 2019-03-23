@@ -1,5 +1,16 @@
 # Kafka Graphs - Graph Analytics with Kafka
 
+[![Build Status][travis-shield]][travis-link]
+[![Maven][maven-shield]][maven-link]
+[![Javadoc][javadoc-shield]][javadoc-link]
+
+[travis-shield]: https://travis-ci.org/rayokota/kafka-graphs.svg?branch=master
+[travis-link]: https://travis-ci.org/rayokota/kafka-graphs
+[maven-shield]: https://img.shields.io/maven-central/v/io.kgraph/kafka-graphs-core.svg
+[maven-link]: https://search.maven.org/#search%7Cga%7C1%7Cio.kgraph
+[javadoc-shield]: https://javadoc.io/badge/io.kgraph/kafka-graphs-core.svg?color=blue
+[javadoc-link]: https://javadoc.io/doc/io.kgraph/kafka-graphs-core
+
 Kafka Graphs is a client layer for distributed processing of graphs with Apache Kafka. 
 
 ## Installing
