@@ -709,8 +709,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             int partition = vertexToPartition(key, serialized.keySerde().serializer(), numPartitions);
 
             Map<Integer, Boolean> didFlags = didPreSuperstep.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
-            Boolean flag = didFlags.get(partition);
-            if (flag == null || !flag) {
+            Boolean flag = didFlags.getOrDefault(partition, false);
+            if (!flag) {
                 ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), aggregators(partition, superstep));
                 computeFunction.preSuperstep(superstep, aggregators);
