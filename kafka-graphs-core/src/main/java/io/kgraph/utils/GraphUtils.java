@@ -196,7 +196,7 @@ public class GraphUtils {
         // TODO make interval configurable
         ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
             long lastWrite = lastWriteMs.get();
-            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 60000) {
+            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 120000) {
                 //System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
                 streams.close();  // will flush/close all producers
                 future.complete(lastWrittenOffsets);
