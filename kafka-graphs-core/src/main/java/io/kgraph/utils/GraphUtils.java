@@ -167,14 +167,33 @@ public class GraphUtils {
         AtomicInteger edgeCount = new AtomicInteger(0);
         AtomicLong lastWriteMs = new AtomicLong(0);
 
+        Properties vertexProducerConfig = ClientUtils.producerConfig(
+            streamsConfig.getProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG),
+            graph.keySerde().serializer().getClass(), graph.vertexValueSerde().serializer().getClass(),
+            streamsConfig
+        );
+        String clientId = "pregel-vertex";
+        vertexProducerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientId + "-producer");
+        Producer<K, VV> vertexProducer = new KafkaProducer<>(vertexProducerConfig);
+
+        Properties edgeProducerConfig = ClientUtils.producerConfig(
+            streamsConfig.getProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG),
+            graph.keySerde().serializer().getClass(), KryoSerializer.class,
+            streamsConfig
+        );
+        clientId = "pregel-edge";
+        edgeProducerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientId + "-producer");
+        Producer<K, Map<K, EV>> edgeProducer = new KafkaProducer<>(edgeProducerConfig);
+
         graph.vertices()
             .toStream()
             .peek((k, v) -> {
                 vertexCount.incrementAndGet();
                 lastWriteMs.set(System.currentTimeMillis());
             })
+            //.to(verticesTopic, Produced.with(graph.keySerde(), graph.vertexValueSerde()));
             .process(() -> new SendMessages<K, VV>(verticesTopic, graph.keySerde(),
-                graph.vertexValueSerde(), streamsConfig, lastWrittenOffsets));
+                graph.vertexValueSerde(), vertexProducer, lastWrittenOffsets));
         graph.edgesGroupedBySource()
             .toStream()
             .peek((k, v) -> {
@@ -183,8 +202,9 @@ public class GraphUtils {
             })
             .mapValues(v -> StreamSupport.stream(v.spliterator(), false)
                 .collect(Collectors.toMap(EdgeWithValue::target, EdgeWithValue::value)))
+            //.to(edgesGroupedBySourceTopic, Produced.with(graph.keySerde(), new KryoSerde<>()));
             .process(() -> new SendMessages<K, Map<K, EV>>(edgesGroupedBySourceTopic,
-                graph.keySerde(), new KryoSerde<>(), streamsConfig, lastWrittenOffsets));
+                graph.keySerde(), new KryoSerde<>(), edgeProducer, lastWrittenOffsets));
 
         Topology topology = builder.build();
         log.info("Graph description {}", topology.describe());
@@ -196,14 +216,14 @@ public class GraphUtils {
         // TODO make interval configurable
         ScheduledFuture scheduledFuture = executor.scheduleWithFixedDelay(() -> {
             long lastWrite = lastWriteMs.get();
-            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 120000) {
+            if (lastWrite > 0 && System.currentTimeMillis() - lastWrite > 60000) {
                 //System.out.println("Complt " + lastWrite + " " + System.currentTimeMillis());
+                vertexProducer.close();
+                edgeProducer.close();
                 streams.close();  // will flush/close all producers
                 future.complete(lastWrittenOffsets);
                 log.info("Last written {}", lastWrittenOffsets);
-                log.info("Vertex count {}", vertexCount.get());
-                log.info("Edge count {}", edgeCount.get());
-                log.info("Finished loading graph");
+                log.info("Finished loading graph: {} vertices, {} edges", vertexCount.get(), edgeCount.get());
             } else {
                 //System.out.println("Cancel " + lastWrite + " " + System.currentTimeMillis());
             }
@@ -220,31 +240,22 @@ public class GraphUtils {
         private final String topic;
         private final Serde<K> keySerde;
         private final Serde<V> valueSerde;
-        private final Properties streamsConfig;
+        private final Producer<K, V> producer;
         private final Map<TopicPartition, Long> lastWrittenOffsets;
-        private Producer<K, V> producer;
 
         public SendMessages(String topic, Serde<K> keySerde,
-                            Serde<V> valueSerde, Properties streamsConfig,
+                            Serde<V> valueSerde, Producer<K, V> producer,
                             Map<TopicPartition, Long> lastWrittenOffsets
         ) {
             this.topic = topic;
             this.keySerde = keySerde;
             this.valueSerde = valueSerde;
-            this.streamsConfig = streamsConfig;
+            this.producer = producer;
             this.lastWrittenOffsets = lastWrittenOffsets;
         }
 
         @Override
-        public void init(final ProcessorContext context) {
-            Properties producerConfig = ClientUtils.producerConfig(
-                streamsConfig.getProperty(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG),
-                keySerde.serializer().getClass(), valueSerde.serializer().getClass(),
-                streamsConfig
-            );
-            String clientId = "pregel-" + context.taskId();
-            producerConfig.setProperty(ProducerConfig.CLIENT_ID_CONFIG, clientId + "-producer");
-            this.producer = new KafkaProducer<>(producerConfig);
+        public void init(ProcessorContext context) {
         }
 
         @Override
@@ -272,7 +283,6 @@ public class GraphUtils {
 
         @Override
         public void close() {
-            producer.close();
         }
     }
 

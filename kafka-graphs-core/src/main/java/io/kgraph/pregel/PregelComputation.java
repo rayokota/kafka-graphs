@@ -499,7 +499,9 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                             if (ZKUtils.isReady(curator, applicationId, pregelState)) {
                                 Map<K, Map<K, List<Message>>> messages = localworkSetStore.get(pregelState.superstep());
                                 if (hasVerticesToForward(messages)) {
-                                    forwardVertices(messages);
+                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep(), null)) {
+                                        forwardVertices(messages);
+                                    }
                                 }
 
                                 // clean up previous step
