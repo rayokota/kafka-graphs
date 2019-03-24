@@ -256,6 +256,8 @@ public class GraphUtils {
                         } catch (Exception e) {
                             throw toRuntimeException(e);
                         }
+                    } else {
+                        log.error("Failed to send record to {}: {}", topic, error);
                     }
                 });
                 producer.flush();

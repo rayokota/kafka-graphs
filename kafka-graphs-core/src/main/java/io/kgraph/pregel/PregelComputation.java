@@ -781,6 +781,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                             } catch (Exception e) {
                                 throw toRuntimeException(e);
                             }
+                        } else {
+                            log.error("Failed to send record to {}: {}", workSetTopic, error);
                         }
                     });
                 }
