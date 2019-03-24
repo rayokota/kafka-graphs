@@ -117,12 +117,13 @@ public class StreamUtils {
         final ReadOnlyKeyValueStore<K, V> store = streams.store(
             storeName, QueryableStoreTypes.keyValueStore());
 
-        final KeyValueIterator<K, V> all = store.all();
-        List<KeyValue<K, V>> result = new ArrayList<>();
-        while (all.hasNext()) {
-            result.add(all.next());
+        try (final KeyValueIterator<K, V> all = store.all()) {
+            List<KeyValue<K, V>> result = new ArrayList<>();
+            while (all.hasNext()) {
+                result.add(all.next());
+            }
+            return result;
         }
-        return result;
     }
 
     public static <K, V> Map<K, V> mapFromTable(KafkaStreams streams, KTable<K, V> table) {
@@ -133,12 +134,13 @@ public class StreamUtils {
         final ReadOnlyKeyValueStore<K, V> store = streams.store(
             storeName, QueryableStoreTypes.keyValueStore());
 
-        final KeyValueIterator<K, V> all = store.all();
-        Map<K, V> result = new TreeMap<>();
-        while (all.hasNext()) {
-            KeyValue<K, V> next = all.next();
-            result.put(next.key, next.value);
+        try (final KeyValueIterator<K, V> all = store.all()) {
+            Map<K, V> result = new TreeMap<>();
+            while (all.hasNext()) {
+                KeyValue<K, V> next = all.next();
+                result.put(next.key, next.value);
+            }
+            return result;
         }
-        return result;
     }
 }

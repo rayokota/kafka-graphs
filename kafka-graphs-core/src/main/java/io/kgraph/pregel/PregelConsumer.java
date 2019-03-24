@@ -141,6 +141,11 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
     }
 
     @Override
+    public void seek(TopicPartition partition, OffsetAndMetadata offsetAndMetadata) {
+        kafkaConsumer.seek(partition, offsetAndMetadata);
+    }
+    
+    @Override
     public void seekToBeginning(Collection<TopicPartition> partitions) {
         kafkaConsumer.seekToBeginning(partitions);
     }
