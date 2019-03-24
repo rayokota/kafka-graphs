@@ -521,6 +521,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 activeVertices.remove(previousStep);
                                 forwardedVertices.remove(previousStep);
                                 didPreSuperstep.remove(previousStep);
+                                lastWrittenOffsets.remove(previousStep);
                                 aggregators.remove(previousStep);
                                 previousAggregates.remove(previousStep);
                                 localworkSetStore.delete(previousStep);
