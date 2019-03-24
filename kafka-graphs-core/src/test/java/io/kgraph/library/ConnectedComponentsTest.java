@@ -79,11 +79,11 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
@@ -139,11 +139,11 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, CLUSTER.bootstrapServers(),
@@ -181,16 +181,16 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             bootstrapServers, graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
-                zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm2 =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
-                zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, bootstrapServers,
@@ -249,16 +249,16 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             bootstrapServers, graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
-                zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
         GraphAlgorithm<Long, Long, Long, KTable<Long, Long>> algorithm2 =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, bootstrapServers,
-                zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                zookeeperConnect, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 Collections.emptyMap(), Optional.empty(), new ConnectedComponents<>());
         props = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix, bootstrapServers,
