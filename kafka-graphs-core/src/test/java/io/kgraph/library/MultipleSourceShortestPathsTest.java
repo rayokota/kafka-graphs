@@ -94,7 +94,7 @@ public class MultipleSourceShortestPathsTest extends AbstractIntegrationTest {
         Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
             graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         Set<Long> landmarks = new HashSet<>();
         landmarks.add(1L);
@@ -103,7 +103,7 @@ public class MultipleSourceShortestPathsTest extends AbstractIntegrationTest {
         configs.put(MultipleSourceShortestPaths.LANDMARK_VERTEX_IDS, landmarks);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run", CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet", "solutionSetStore", "workSet", 2, (short) 1,
                 configs, Optional.empty(), new MultipleSourceShortestPaths());
         props = ClientUtils.streamsConfig("run", "run-client", CLUSTER.bootstrapServers(),

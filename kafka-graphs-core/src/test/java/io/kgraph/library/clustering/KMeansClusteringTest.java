@@ -98,7 +98,8 @@ public class KMeansClusteringTest extends AbstractIntegrationTest {
         configs.put(KMeansClustering.POINTS_COUNT, 7);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix,
+                Collections.emptyMap(), graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 configs, Optional.empty(), new KMeansClustering<>());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
@@ -158,7 +159,8 @@ public class KMeansClusteringTest extends AbstractIntegrationTest {
         configs.put(KMeansClustering.POINTS_COUNT, 8);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix,
+                Collections.emptyMap(), graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 configs, Optional.empty(), new KMeansClustering<>());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
@@ -217,7 +219,8 @@ public class KMeansClusteringTest extends AbstractIntegrationTest {
         configs.put(KMeansClustering.PRINT_FINAL_CENTERS, true);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix,
+                Collections.emptyMap(), graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 configs, Optional.empty(), new KMeansClustering<>());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
@@ -328,7 +331,8 @@ public class KMeansClusteringTest extends AbstractIntegrationTest {
         configs.put(KMeansClustering.PRINT_FINAL_CENTERS, true);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix,
+                Collections.emptyMap(), graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 configs, Optional.empty(), new KMeansClustering<>());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
@@ -389,7 +393,8 @@ public class KMeansClusteringTest extends AbstractIntegrationTest {
         configs.put(KMeansClustering.PRINT_FINAL_CENTERS, true);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix,
+                Collections.emptyMap(), graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 configs, Optional.empty(), new KMeansClustering<>());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,

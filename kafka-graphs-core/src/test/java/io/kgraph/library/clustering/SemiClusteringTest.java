@@ -91,7 +91,7 @@ public class SemiClusteringTest extends AbstractIntegrationTest {
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
         CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
-        state.get();
+        Map<TopicPartition, Long> offsets = state.get();
 
         Map<String, Object> configs = new HashMap<>();
         configs.put(SemiClustering.ITERATIONS, 10);
@@ -99,7 +99,7 @@ public class SemiClusteringTest extends AbstractIntegrationTest {
         configs.put(SemiClustering.CLUSTER_CAPACITY, 2);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
-                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, graph.serialized(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
                 "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
                 configs, Optional.empty(), new SemiClustering());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
