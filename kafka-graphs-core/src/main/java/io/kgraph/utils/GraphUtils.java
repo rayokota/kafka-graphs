@@ -213,7 +213,7 @@ public class GraphUtils {
                 }
                 log.info("Finished loading graph: {} vertices, {} edges", vertexCount.get(), edgeCount.get());
             }
-        }, 0, 1, TimeUnit.SECONDS);
+        }, 0, 1000, TimeUnit.MILLISECONDS);
 
         return future.whenCompleteAsync((v, t) -> {
             scheduledFuture.cancel(true);
