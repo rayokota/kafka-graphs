@@ -40,7 +40,7 @@
         <curator.version>4.2.0</curator.version>
         <kafka.version>2.2.0</kafka.version>
         <kafka.scala.version>2.12</kafka.scala.version>
-        <vavr.version>0.9.3</vavr.version>
+        <vavr.version>0.10.0</vavr.version>
         <zookeeper.version>3.4.12</zookeeper.version>
     </properties>
 
@@ -111,7 +111,7 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.7.25</version>
+                <version>1.7.26</version>
             </dependency>
 
             <dependency>
