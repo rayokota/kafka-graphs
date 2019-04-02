@@ -40,6 +40,7 @@
         <curator.version>4.2.0</curator.version>
         <kafka.version>2.2.0</kafka.version>
         <kafka.scala.version>2.12</kafka.scala.version>
+        <kryo.version>4.0.2</kryo.version>
         <vavr.version>0.10.0</vavr.version>
         <zookeeper.version>3.4.12</zookeeper.version>
     </properties>
@@ -93,7 +94,7 @@
             <dependency>
                 <groupId>com.esotericsoftware</groupId>
                 <artifactId>kryo</artifactId>
-                <version>4.0.2</version>
+                <version>${kryo.version}</version>
             </dependency>
 
             <dependency>
