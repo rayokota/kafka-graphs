@@ -12,8 +12,8 @@ info:
 
 kafka:
   graphs:
-    bootstrapServers: localhost:9092
-    zookeeperConnect: localhost:2181
+    bootstrapServers: ${BOOTSTRAP_SERVERS:localhost:9092}
+    zookeeperConnect: ${ZOOKEEPER_CONNECT:localhost:2181}
     verticesTopic: vertices
     edgesGroupedBySourceTopic: edges
     solutionSetTopic: solutionSet
