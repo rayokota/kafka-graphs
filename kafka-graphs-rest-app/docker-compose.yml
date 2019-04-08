@@ -31,7 +31,7 @@ services:
       - "moby:127.0.0.1"
 
   # Runs the Kafka Graphs REST application
-  kafka-graphs-rest-app:
+  kafka-graphs-rest-app-1:
     image: rayokota/kafka-graphs-rest-app:1.1.2-SNAPSHOT
     hostname: kafka-graphs-rest-app
     depends_on:
@@ -46,5 +46,44 @@ services:
     environment:
       BOOTSTRAP_SERVERS: kafka:29092
       ZOOKEEPER_CONNECT: zookeeper:32181
+      REST_APP_PORT: 8888
+    extra_hosts:
+      - "moby:127.0.0.1"
+
+  kafka-graphs-rest-app-2:
+    image: rayokota/kafka-graphs-rest-app:1.1.2-SNAPSHOT
+    hostname: kafka-graphs-rest-app
+    depends_on:
+      - kafka
+      - zookeeper
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub zk-ready zookeeper:32181 20 && \
+                       cub kafka-ready -b kafka:29092 1 20 && \
+                       /usr/bin/java -Dfile.encoding=UTF-8 -Dserver.port=8889 -jar app.jar'"
+    ports:
+      - '8889:8889'
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      ZOOKEEPER_CONNECT: zookeeper:32181
+      REST_APP_PORT: 8889
+    extra_hosts:
+      - "moby:127.0.0.1"
+
+  kafka-graphs-rest-app-3:
+    image: rayokota/kafka-graphs-rest-app:1.1.2-SNAPSHOT
+    hostname: kafka-graphs-rest-app
+    depends_on:
+      - kafka
+      - zookeeper
+    command: "bash -c 'echo Waiting for Kafka to be ready... && \
+                       cub zk-ready zookeeper:32181 20 && \
+                       cub kafka-ready -b kafka:29092 1 20 && \
+                       /usr/bin/java -Dfile.encoding=UTF-8 -Dserver.port=8890 -jar app.jar'"
+    ports:
+      - '8890:8890'
+    environment:
+      BOOTSTRAP_SERVERS: kafka:29092
+      ZOOKEEPER_CONNECT: zookeeper:32181
+      REST_APP_PORT: 8890
     extra_hosts:
       - "moby:127.0.0.1"
