@@ -120,8 +120,8 @@ public class GraphUtils {
 
     public static <K, V extends Number> void edgesToTopic(
         InputStream inputStream,
-        Function<String, K> sourceKeyParser,
-        Function<String, K> targetKeyParser,
+        Function<String, K> sourceVertexIdParser,
+        Function<String, K> targetVertexIdParser,
         Function<String, V> valueParser,
         Serializer<V> valueSerializer,
         Properties props,
@@ -136,8 +136,8 @@ public class GraphUtils {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] tokens = line.trim().split("\\s");
-                K sourceId = sourceKeyParser.apply(tokens[0]);
-                K targetId = targetKeyParser.apply(tokens[1]);
+                K sourceId = sourceVertexIdParser.apply(tokens[0]);
+                K targetId = targetVertexIdParser.apply(tokens[1]);
                 log.trace("read edge: ({}, {})", sourceId, targetId);
                 V value = tokens.length > 2 ? valueParser.apply(tokens[2]) : null;
                 ProducerRecord<Edge<K>, V> producerRecord = new ProducerRecord<>(topic, new Edge<>(sourceId, targetId), value);

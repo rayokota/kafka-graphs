@@ -165,7 +165,8 @@ public class SvdppTest extends AbstractIntegrationTest {
 
         Thread.sleep(2000);
 
-        //assertEquals("{1 0=[0.007493, 0.008374], 2 0=[0.006905, 0.008183], 1 1=[0.007407, 0.002487], 2 1=[0.006642, 0.001807]}", map.toString());
+        assertEquals("1 0=[0.158195, 0.132828]", map.firstEntry().toString());
+        assertEquals("2071 1=[0.014067, 0.003089]", map.lastEntry().toString());
     }
 
     @After
