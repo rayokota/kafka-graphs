@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.Properties;
 import java.util.concurrent.CompletableFuture;
@@ -34,7 +35,9 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
 import org.apache.kafka.streams.StreamsBuilder;
+import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Materialized;
 import org.apache.kafka.streams.kstream.ValueMapper;
 import org.jblas.FloatMatrix;
 import org.junit.After;
@@ -109,6 +112,60 @@ public class SvdppTest extends AbstractIntegrationTest {
         Thread.sleep(2000);
 
         assertEquals("{1 0=[0.007493, 0.008374], 2 0=[0.006905, 0.008183], 1 1=[0.007407, 0.002487], 2 1=[0.006642, 0.001807]}", map.toString());
+    }
+
+    //@Test
+    public void testSvdppFromFile() throws Exception {
+        String suffix = "file";
+        StreamsBuilder builder = new StreamsBuilder();
+
+        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), KryoSerializer.class,
+            FloatSerializer.class, new Properties()
+        );
+        GraphUtils.edgesToTopic(GraphUtils.class.getResourceAsStream("/ratings.txt"),
+            s -> new CfLongId((byte) 0, Long.parseLong(s)),
+            s -> new CfLongId((byte) 1, Long.parseLong(s)),
+            Float::parseFloat,
+            new FloatSerializer(),
+            producerConfig, "initEdges-" + suffix, 50, (short) 1);
+        KTable<Edge<CfLongId>, Float> edges =
+            builder.table("initEdges-" + suffix, Consumed.with(new KryoSerde<>(), Serdes.Float()),
+                Materialized.with(new KryoSerde<>(), Serdes.Float()));
+        KGraph<CfLongId, Svdpp.SvdppValue, Float> graph = KGraph.fromEdges(edges, new InitVertices(),
+            GraphSerialized.with(new KryoSerde<>(), new KryoSerde<>(), Serdes.Float()));
+
+        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        Map<TopicPartition, Long> offsets = state.get();
+
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
+        configs.put(Svdpp.BIAS_GAMMA, 0.01f);
+        configs.put(Svdpp.FACTOR_LAMBDA, 0.005f);
+        configs.put(Svdpp.FACTOR_GAMMA, 0.01f);
+        configs.put(Svdpp.MIN_RATING, 0f);
+        configs.put(Svdpp.MAX_RATING, 5f);
+        configs.put(Svdpp.VECTOR_SIZE, 2);
+        configs.put(Svdpp.ITERATIONS, 6);
+        algorithm =
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
+                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
+                configs, Optional.empty(), new Svdpp());
+        streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
+        KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
+        GraphAlgorithmState<KTable<CfLongId, Svdpp.SvdppValue>> paths = algorithm.run();
+        paths.result().get();
+
+        NavigableMap<CfLongId, Svdpp.SvdppValue> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
+        log.debug("first: {}", map.firstEntry());
+        log.debug("last: {}", map.lastEntry());
+
+        Thread.sleep(2000);
+
+        //assertEquals("{1 0=[0.007493, 0.008374], 2 0=[0.006905, 0.008183], 1 1=[0.007407, 0.002487], 2 1=[0.006642, 0.001807]}", map.toString());
     }
 
     @After

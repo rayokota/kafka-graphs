@@ -64,10 +64,25 @@ import io.kgraph.KGraph;
 public class GraphUtils {
     private static final Logger log = LoggerFactory.getLogger(GraphUtils.class);
 
-    public static <T extends Number> void verticesToTopic(
+    public static <V extends Number> void verticesToTopic(
         InputStream inputStream,
-        Function<String, T> valueParser,
-        Serializer<T> valueSerializer,
+        Function<String, V> valueParser,
+        Serializer<V> valueSerializer,
+        Properties props,
+        String topic,
+        int numPartitions,
+        short replicationFactor
+    ) throws IOException {
+        verticesToTopic(inputStream, Long::parseLong, new LongSerializer(), valueParser,
+            valueSerializer, props, topic, numPartitions, replicationFactor);
+    }
+
+    public static <K, V extends Number> void verticesToTopic(
+        InputStream inputStream,
+        Function<String, K> keyParser,
+        Serializer<K> keySerializer,
+        Function<String, V> valueParser,
+        Serializer<V> valueSerializer,
         Properties props,
         String topic,
         int numPartitions,
@@ -76,24 +91,39 @@ public class GraphUtils {
         ClientUtils.createTopic(topic, numPartitions, replicationFactor, props);
         try (BufferedReader reader =
                  new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-             Producer<Long, T> producer = new KafkaProducer<>(props, new LongSerializer(), valueSerializer)) {
+             Producer<K, V> producer = new KafkaProducer<>(props, keySerializer, valueSerializer)) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] tokens = line.trim().split("\\s");
-                long id = Long.parseLong(tokens[0]);
+                K id = keyParser.apply(tokens[0]);
                 log.trace("read vertex: {}", id);
-                T value = tokens.length > 1 ? valueParser.apply(tokens[1]) : null;
-                ProducerRecord<Long, T> producerRecord = new ProducerRecord<>(topic, id, value);
+                V value = tokens.length > 1 ? valueParser.apply(tokens[1]) : null;
+                ProducerRecord<K, V> producerRecord = new ProducerRecord<>(topic, id, value);
                 producer.send(producerRecord);
             }
             producer.flush();
         }
     }
 
-    public static <T extends Number> void edgesToTopic(
+    public static <V extends Number> void edgesToTopic(
         InputStream inputStream,
-        Function<String, T> valueParser,
-        Serializer<T> valueSerializer,
+        Function<String, V> valueParser,
+        Serializer<V> valueSerializer,
+        Properties props,
+        String topic,
+        int numPartitions,
+        short replicationFactor
+    ) throws IOException {
+        edgesToTopic(inputStream, Long::parseLong, Long::parseLong, valueParser, valueSerializer,
+            props, topic, numPartitions, replicationFactor);
+    }
+
+    public static <K, V extends Number> void edgesToTopic(
+        InputStream inputStream,
+        Function<String, K> sourceKeyParser,
+        Function<String, K> targetKeyParser,
+        Function<String, V> valueParser,
+        Serializer<V> valueSerializer,
         Properties props,
         String topic,
         int numPartitions,
@@ -102,25 +132,25 @@ public class GraphUtils {
         ClientUtils.createTopic(topic, numPartitions, replicationFactor, props);
         try (BufferedReader reader =
                  new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-             Producer<Edge<Long>, T> producer = new KafkaProducer<>(props, new KryoSerializer<>(), valueSerializer)) {
+             Producer<Edge<K>, V> producer = new KafkaProducer<>(props, new KryoSerializer<>(), valueSerializer)) {
             String line;
             while ((line = reader.readLine()) != null) {
                 String[] tokens = line.trim().split("\\s");
-                long sourceId = Long.parseLong(tokens[0]);
-                long targetId = Long.parseLong(tokens[1]);
+                K sourceId = sourceKeyParser.apply(tokens[0]);
+                K targetId = targetKeyParser.apply(tokens[1]);
                 log.trace("read edge: ({}, {})", sourceId, targetId);
-                T value = tokens.length > 2 ? valueParser.apply(tokens[2]) : null;
-                ProducerRecord<Edge<Long>, T> producerRecord = new ProducerRecord<>(topic, new Edge<>(sourceId, targetId), value);
+                V value = tokens.length > 2 ? valueParser.apply(tokens[2]) : null;
+                ProducerRecord<Edge<K>, V> producerRecord = new ProducerRecord<>(topic, new Edge<>(sourceId, targetId), value);
                 producer.send(producerRecord);
             }
             producer.flush();
         }
     }
 
-    public static <T extends Number> void verticesToFile(
-        KTable<Long, T> vertices,
+    public static <V extends Number> void verticesToFile(
+        KTable<Long, V> vertices,
         String fileName) {
-        vertices.toStream().print(Printed.<Long, T>toFile(fileName).withKeyValueMapper((k, v) -> String.format("%d %f", k , v)));
+        vertices.toStream().print(Printed.<Long, V>toFile(fileName).withKeyValueMapper((k, v) -> String.format("%d %f", k , v)));
     }
 
     public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(

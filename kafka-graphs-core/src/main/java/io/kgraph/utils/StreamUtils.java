@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
 import java.util.Properties;
 import java.util.TreeMap;
 import java.util.UUID;
@@ -126,16 +127,16 @@ public class StreamUtils {
         }
     }
 
-    public static <K, V> Map<K, V> mapFromTable(KafkaStreams streams, KTable<K, V> table) {
+    public static <K, V> NavigableMap<K, V> mapFromTable(KafkaStreams streams, KTable<K, V> table) {
         return mapFromStore(streams, table.queryableStoreName());
     }
 
-    public static <K, V> Map<K, V> mapFromStore(KafkaStreams streams, String storeName) {
+    public static <K, V> NavigableMap<K, V> mapFromStore(KafkaStreams streams, String storeName) {
         final ReadOnlyKeyValueStore<K, V> store = streams.store(
             storeName, QueryableStoreTypes.keyValueStore());
 
         try (final KeyValueIterator<K, V> all = store.all()) {
-            Map<K, V> result = new TreeMap<>();
+            NavigableMap<K, V> result = new TreeMap<>();
             while (all.hasNext()) {
                 KeyValue<K, V> next = all.next();
                 result.put(next.key, next.value);

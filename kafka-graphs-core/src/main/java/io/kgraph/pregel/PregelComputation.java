@@ -45,11 +45,13 @@ import org.apache.curator.framework.recipes.nodes.GroupMember;
 import org.apache.curator.framework.recipes.shared.SharedValue;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.errors.RecordTooLargeException;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.common.utils.Bytes;
@@ -766,26 +768,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 int superstep = value._1 - 1;
                 for (Map.Entry<K, List<Message>> entry : value._2.entrySet()) {
                     // List of messages may be empty in case of sending to self
-                    Tuple3<Integer, K, List<Message>> message = new Tuple3<>(superstep + 1, readOnlyKey, entry.getValue());
+                    Tuple3<Integer, K, List<Message>> tuple = new Tuple3<>(superstep + 1, readOnlyKey, entry.getValue());
                     ProducerRecord<K, Tuple3<Integer, K, List<Message>>> producerRecord =
-                        new ProducerRecord<>(workSetTopic, entry.getKey(), message);
-                    producer.send(producerRecord, (metadata, error) -> {
-                        if (error == null) {
-                            try {
-                                // Activate partition for next step
-                                int p = vertexToPartition(entry.getKey(), serialized.keySerde().serializer(), numPartitions);
-                                log.debug("adding partition {} for vertex {}", p, entry.getKey());
-                                ZKUtils.addChild(curator, applicationId, new PregelState(State.RUNNING, superstep + 1, Stage.SEND), "partition-" + p);
-
-                                Map<Integer, Long> endOffsets = lastWrittenOffsets.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
-                                endOffsets.merge(metadata.partition(), metadata.offset(), Math::max);
-                            } catch (Exception e) {
-                                throw toRuntimeException(e);
-                            }
-                        } else {
-                            log.error("Failed to send record to {}: {}", workSetTopic, error);
-                        }
-                    });
+                        new ProducerRecord<>(workSetTopic, entry.getKey(), tuple);
+                    Callback cb = callback(superstep, readOnlyKey, entry.getKey(), entry.getValue());
+                    producer.send(producerRecord, cb);
                 }
                 producer.flush();
                 // Deactivate this vertex
@@ -793,6 +780,35 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             } catch (Exception e) {
                 throw toRuntimeException(e);
             }
+        }
+
+        private Callback callback(int superstep, K readOnlyKey, K vertex, List<Message> messages) {
+            return (metadata, error) -> {
+                if (error == null) {
+                    try {
+                        // Activate partition for next step
+                        int p = vertexToPartition(vertex, serialized.keySerde().serializer(), numPartitions);
+                        log.debug("adding partition {} for vertex {}", p, vertex);
+                        ZKUtils.addChild(curator, applicationId, new PregelState(State.RUNNING, superstep + 1, Stage.SEND), "partition-" + p);
+
+                        Map<Integer, Long> endOffsets = lastWrittenOffsets.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
+                        endOffsets.merge(metadata.partition(), metadata.offset(), Math::max);
+                    } catch (Exception e) {
+                        throw toRuntimeException(e);
+                    }
+                } else if (error instanceof RecordTooLargeException && messages.size() > 1) {
+                    log.warn("Record too large, retrying with smaller messages");
+                    for (Message message : messages) {
+                        List<Message> singleton = Collections.singletonList(message);
+                        Tuple3<Integer, K, List<Message>> tuple = new Tuple3<>(superstep + 1, readOnlyKey, singleton);
+                        ProducerRecord<K, Tuple3<Integer, K, List<Message>>> record =
+                            new ProducerRecord<>(workSetTopic, vertex, tuple);
+                        producer.send(record, callback(superstep, readOnlyKey, vertex, singleton));
+                    }
+                } else {
+                    log.error("Failed to send record to {}: {}", workSetTopic, error);
+                }
+            };
         }
 
         private void deactivateVertex(int superstep, K vertex) throws Exception {
@@ -935,7 +951,9 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
         boolean synced = endOffsets.equals(positions);
         if (synced) {
-            log.debug("Synced topic {}, step {}, offsets {}", topic, superstep, positions);
+            log.debug("Synced Topic {}, step {}, end {}", topic, superstep, endOffsets);
+        } else {
+            log.debug("Not synced topic {}, step {}, pos {}, end {}", topic, superstep, positions, endOffsets);
         }
         return synced;
     }

@@ -31,7 +31,9 @@ import io.kgraph.utils.ClientUtils;
 
 public abstract class AbstractIntegrationTest {
     @ClassRule
-    public static final EmbeddedKafkaCluster CLUSTER = new EmbeddedKafkaCluster(1);
+    public static final EmbeddedKafkaCluster CLUSTER = new EmbeddedKafkaCluster(1, new Properties() {{
+        setProperty("message.max.bytes", String.valueOf(100 * 1024 * 1024));
+    }});
 
     protected KafkaStreams streams;
     protected Properties streamsConfiguration;
