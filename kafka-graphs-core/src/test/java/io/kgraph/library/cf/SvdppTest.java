@@ -22,11 +22,14 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.kafka.common.TopicPartition;
@@ -83,7 +86,8 @@ public class SvdppTest extends AbstractIntegrationTest {
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(
+            builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
 
         Map<String, Object> configs = new HashMap<>();
@@ -107,11 +111,11 @@ public class SvdppTest extends AbstractIntegrationTest {
         paths.result().get();
 
         Map<CfLongId, Svdpp.SvdppValue> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
-        log.debug("result: {}", map);
+        log.info("result: {}", map);
 
         Thread.sleep(2000);
 
-        assertEquals("{1 0=[0.007493, 0.008374], 2 0=[0.006905, 0.008183], 1 1=[0.007407, 0.002487], 2 1=[0.006642, 0.001807]}", map.toString());
+        assertEquals("{1 0=[0.007494, 0.008374], 2 0=[0.006907, 0.008184], 1 1=[0.007407, 0.002487], 2 1=[0.006642, 0.001807]}", map.toString());
     }
 
     //@Test
@@ -136,8 +140,11 @@ public class SvdppTest extends AbstractIntegrationTest {
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
-        CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 2, (short) 1);
+        CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(
+            builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
+
+        Thread.sleep(10000);
 
         Map<String, Object> configs = new HashMap<>();
         configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
@@ -147,11 +154,11 @@ public class SvdppTest extends AbstractIntegrationTest {
         configs.put(Svdpp.MIN_RATING, 0f);
         configs.put(Svdpp.MAX_RATING, 5f);
         configs.put(Svdpp.VECTOR_SIZE, 2);
-        configs.put(Svdpp.ITERATIONS, 6);
+        configs.put(Svdpp.ITERATIONS, 3);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
                 CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
-                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 2, (short) 1,
+                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
                 configs, Optional.empty(), new Svdpp());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
@@ -160,13 +167,18 @@ public class SvdppTest extends AbstractIntegrationTest {
         paths.result().get();
 
         NavigableMap<CfLongId, Svdpp.SvdppValue> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
-        log.debug("first: {}", map.firstEntry());
-        log.debug("last: {}", map.lastEntry());
+        Set<String> result = new TreeSet<>();
+        for (Map.Entry<CfLongId, Svdpp.SvdppValue> entry : map.entrySet()) {
+            result.add(entry.getKey().toString() + " " + entry.getValue().toString());
+        }
+        log.info("result: {}", result);
+        log.info("first: {}", map.firstEntry());
+        log.info("last: {}", map.lastEntry());
 
         Thread.sleep(2000);
 
-        assertEquals("1 0=[0.158195, 0.132828]", map.firstEntry().toString());
-        assertEquals("2071 1=[0.014067, 0.003089]", map.lastEntry().toString());
+        assertEquals("1 0=[0.006352, 0.007996]", map.firstEntry().toString());
+        assertEquals("2071 1=[0.007310, 0.002405]", map.lastEntry().toString());
     }
 
     @After

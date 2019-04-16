@@ -19,8 +19,11 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
+import java.util.TreeMap;
 
 import org.jblas.FloatMatrix;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
@@ -31,6 +34,8 @@ import io.kgraph.pregel.aggregators.LongSumAggregator;
 
 public class Svdpp implements ComputeFunction<CfLongId,
     Svdpp.SvdppValue, Float, FloatMatrixMessage> {
+
+    private static final Logger log = LoggerFactory.getLogger(Svdpp.class);
 
     /**
      * Name of aggregator that aggregates all ratings.
@@ -408,16 +413,19 @@ public class Svdpp implements ComputeFunction<CfLongId,
                 edgeValues.put(edge.target(), edge.value());
             }
             FloatMatrix userFactors = vertex.value().getFactors();
-
-            FloatMatrix sumWeights = new FloatMatrix(1, vectorSize);
+            Map<CfLongId, FloatMatrixMessage> sortedMessages = new TreeMap<>();
             for (FloatMatrixMessage msg : messages) {
+                sortedMessages.put(msg.getSenderId(), msg);
+            }
+            FloatMatrix sumWeights = new FloatMatrix(1, vectorSize);
+            for (FloatMatrixMessage msg : sortedMessages.values()) {
                 // The weights are in the 2nd row of the matrix
                 sumWeights.addi(msg.getFactors().getRow(1));
             }
 
             FloatMatrix itemWeightStep = new FloatMatrix(1, vectorSize);
 
-            for (FloatMatrixMessage msg : messages) {
+            for (FloatMatrixMessage msg : sortedMessages.values()) {
                 // row 1 of the matrix in the message holds the item factors
                 FloatMatrix itemFactors = msg.getFactors().getRow(0);
                 // score holds the item baseline estimate
@@ -442,13 +450,14 @@ public class Svdpp implements ComputeFunction<CfLongId,
                 itemWeightStep.addi(itemFactors.mul(error));
             }
 
-            cb.setNewVertexValue(new SvdppValue(userBaseline, vertex.value().factors, vertex.value().weight));
+            SvdppValue newValue = new SvdppValue(userBaseline, vertex.value().factors, vertex.value().weight);
+            cb.setNewVertexValue(newValue);
 
             itemWeightStep.muli(factorGamma / (float) Math.sqrt(numRatings));
 
             // Now we iterate again to get the new predictions and send the updates
             // to each item.
-            for (FloatMatrixMessage msg : messages) {
+            for (FloatMatrixMessage msg : sortedMessages.values()) {
                 FloatMatrix itemFactors = msg.getFactors().getRow(0);
                 float itemBaseline = msg.getScore();
                 float observed = edgeValues.get(msg.getSenderId());
@@ -532,7 +541,9 @@ public class Svdpp implements ComputeFunction<CfLongId,
                 cb.sendMessageTo(edge.target(), new FloatMatrixMessage(vertex.id(), packedVectors, itemBaseline));
             }
 
-            cb.setNewVertexValue(new SvdppValue(itemBaseline, vertex.value().factors, vertex.value().weight));
+            SvdppValue newValue = new SvdppValue(itemBaseline, vertex.value().factors, vertex.value().weight);
+            cb.setNewVertexValue(newValue);
+
             cb.voteToHalt();
         }
     }

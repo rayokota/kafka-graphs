@@ -138,6 +138,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
     private final Map<Integer, Map<Integer, Set<K>>> activeVertices = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Boolean>> didPreSuperstep = new ConcurrentHashMap<>();
+    private final Map<TopicPartition, Long> positions = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Long>> lastWrittenOffsets = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Map<String, Aggregator<?>>>> aggregators = new ConcurrentHashMap<>();
     private final Map<Integer, Map<String, ?>> previousAggregates = new ConcurrentHashMap<>();
@@ -388,7 +389,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         private LeaderLatch leaderLatch;
         private GroupMember group;
         private SharedValue sharedValue;
-        private TreeCache aggregateCache;
         private TreeCache barrierCache;
         private PregelState pregelState = new PregelState(State.CREATED, -1, Stage.SEND);
 
@@ -435,10 +435,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                         }
 
                         if (leaderLatch.hasLeadership()) {
-                            if (aggregateCache == null) {
-                                aggregateCache = new TreeCache(curator, ZKPaths.makePath(ZKUtils.PREGEL_PATH + applicationId, ZKUtils.AGGREGATES));
-                                aggregateCache.start();
-                            }
                             if (barrierCache == null) {
                                 barrierCache = new TreeCache(curator, ZKPaths.makePath(ZKUtils.PREGEL_PATH + applicationId, ZKUtils.BARRIERS));
                                 barrierCache.start();
@@ -478,8 +474,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 if (!ZKUtils.hasChild(curator, applicationId, pregelState, workerName)) {
                                     Set<TopicPartition> workSetTps = localPartitions(internalConsumer, workSetTopic);
                                     Set<TopicPartition> solutionSetTps = localPartitions(internalConsumer, solutionSetTopic);
-                                    if (isTopicSynced(internalConsumer, verticesTopic, 0, graphOffsets::get)
-                                        && isTopicSynced(internalConsumer, edgesGroupedBySourceTopic, 0, graphOffsets::get)) {
+                                    if (isTopicSynced(internalConsumer, verticesTopic, 0, null, graphOffsets::get)
+                                        && isTopicSynced(internalConsumer, edgesGroupedBySourceTopic, 0, null, graphOffsets::get)) {
                                         ZKUtils.addChild(curator, applicationId, pregelState, workerName, CreateMode.EPHEMERAL);
                                         // Ensure vertices and edges are read into tables first
                                         internalConsumer.seekToBeginning(workSetTps);
@@ -496,10 +492,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 if (!ZKUtils.hasChild(curator, applicationId, pregelState, workerName)) {
                                     // Try to ensure we have all messages; however the consumer may not yet
                                     // be in sync so we do another check in the next stage
-                                    Map<Integer, Long> lastWrittenOffsets = (Map<Integer, Long>) previousAggregates(pregelState.superstep()).get(LAST_WRITTEN_OFFSETS);
-                                    Function<TopicPartition, Long> lastWritten =
-                                        lastWrittenOffsets != null ? tp -> lastWrittenOffsets.get(tp.partition()) : null;
-                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep(), lastWritten)) {
+                                    Function<TopicPartition, Long> lastWritten = lastWrittenOffsets(pregelState.superstep());
+                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep(), positions, lastWritten)) {
                                         ZKUtils.addChild(curator, applicationId, pregelState, workerName, CreateMode.EPHEMERAL);
                                     }
                                 }
@@ -510,10 +504,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 if (hasVerticesToForward(messages)) {
                                     // This check is to ensure we have all messages produced in the last stage;
                                     // we may get new messages as well but that is fine
-                                    Map<Integer, Long> lastWrittenOffsets = (Map<Integer, Long>) previousAggregates(pregelState.superstep()).get(LAST_WRITTEN_OFFSETS);
-                                    Function<TopicPartition, Long> lastWritten =
-                                        lastWrittenOffsets != null ? tp -> lastWrittenOffsets.get(tp.partition()) : null;
-                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep(), lastWritten)) {
+                                    Function<TopicPartition, Long> lastWritten = lastWrittenOffsets(pregelState.superstep());
+                                    if (isTopicSynced(internalConsumer, workSetTopic, pregelState.superstep(), positions, lastWritten)) {
                                         forwardVertices(messages);
                                     }
                                 }
@@ -538,6 +530,15 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             }
         }
 
+        private Function<TopicPartition, Long> lastWrittenOffsets(int superstep) {
+            if (superstep == 0) {
+                // Use the vertices lastWrittenOffsets for superstep 0
+                return tp -> graphOffsets.get(new TopicPartition(verticesTopic, tp.partition()));
+            }
+            Map<Integer, Long> lastWrittenOffsets = (Map<Integer, Long>) previousAggregates(superstep).get(LAST_WRITTEN_OFFSETS);
+            return lastWrittenOffsets != null ? tp -> lastWrittenOffsets.get(tp.partition()) : null;
+        }
+
         private boolean masterCompute(int superstep) throws Exception {
             // Collect aggregator values, then run the masterCompute() and
             // finally save the aggregator values
@@ -548,17 +549,17 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             return cb.haltComputation;
         }
 
-        private Map<String, Aggregator<?>> reduceAggregates(int superstep) {
+        private Map<String, Aggregator<?>> reduceAggregates(int superstep) throws Exception {
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
             Map<String, Aggregator<?>> newAggregators = newAggregators();
             newAggregators = initAggregators(newAggregators, previousAggregates(superstep));
-            Map<String, ChildData> children = aggregateCache.getCurrentChildren(rootPath);
+            boolean exists = curator.checkExists().forPath(rootPath) != null;
+            if (!exists) return newAggregators;
+            List<String> children = curator.getChildren().forPath(rootPath);
             if (children != null) {
-                for (Map.Entry<String, ChildData> entry : children.entrySet()) {
-                    ChildData childData = entry.getValue();
-                    String path = childData.getPath();
+                for (String path : children) {
                     if (!path.endsWith("all")) {
-                        byte[] data = childData.getData();
+                        byte[] data = curator.getData().forPath(ZKPaths.makePath(rootPath, path));
                         if (data.length > 0) {
                             Map<String, Aggregator<?>> aggregators = KryoUtils.deserialize(data);
                             newAggregators = mergeAggregators(newAggregators, aggregators);
@@ -626,6 +627,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 messagesForSuperstep.put(value._2, value._3);
             }
             localworkSetStore.put(value._1, messages);
+            positions.merge(new TopicPartition(context.topic(), context.partition()), context.offset() + 1, Math::max);
 
             Set<K> forwarded = forwardedVertices.get(value._1);
             if (forwarded != null) {
@@ -637,9 +639,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
         @Override
         public void close() {
-            if (aggregateCache != null) {
-                aggregateCache.close();
-            }
             if (barrierCache != null) {
                 barrierCache.close();
             }
@@ -834,8 +833,14 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             if (stepAggregators != null) {
                 Map<String, Aggregator<?>> partitionAggregators = stepAggregators.get(partition);
                 if (partitionAggregators != null) {
-                    ZKUtils.addChild(curator, ZKUtils.aggregatePath(applicationId, superstep), "partition-" + partition,
-                        CreateMode.PERSISTENT, KryoUtils.serialize(partitionAggregators));
+                    String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
+                    String childPath = "partition-" + partition;
+                    byte[] childData = KryoUtils.serialize(partitionAggregators);
+                    if (ZKUtils.hasChild(curator, rootPath, childPath)) {
+                        ZKUtils.updateChild(curator, rootPath, childPath, childData);
+                    } else {
+                        ZKUtils.addChild(curator, rootPath, childPath, CreateMode.PERSISTENT, childData);
+                    }
                 }
             }
         }
@@ -934,9 +939,17 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     }
 
     private static boolean isTopicSynced(Consumer<byte[], byte[]> consumer, String topic,
-                                         int superstep, Function<TopicPartition, Long> lastWrittenOffsets) {
+                                         int superstep,
+                                         Map<TopicPartition, Long> positions,
+                                         Function<TopicPartition, Long> lastWrittenOffsets) {
         Set<TopicPartition> partitions = localPartitions(consumer, topic);
-        Map<TopicPartition, Long> positions = positions(consumer, partitions);
+        Map<TopicPartition, Long> pos;
+        if (positions != null) {
+            pos = partitions.stream()
+                .collect(Collectors.toMap(Function.identity(), tp -> positions.getOrDefault(tp, 0L)));
+        } else {
+            pos = positions(consumer, partitions);
+        }
         Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
 
         // Consumer end offsets may be stale; use last written offset if available
@@ -949,11 +962,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             }
         }
 
-        boolean synced = endOffsets.equals(positions);
+        boolean synced = endOffsets.equals(pos);
         if (synced) {
-            log.debug("Synced Topic {}, step {}, end {}", topic, superstep, endOffsets);
+            log.info("Synced Topic {}, step {}, end {}", topic, superstep, endOffsets);
         } else {
-            log.debug("Not synced topic {}, step {}, pos {}, end {}", topic, superstep, positions, endOffsets);
+            log.info("Not synced topic {}, step {}, pos {}, end {}", topic, superstep, pos, endOffsets);
         }
         return synced;
     }

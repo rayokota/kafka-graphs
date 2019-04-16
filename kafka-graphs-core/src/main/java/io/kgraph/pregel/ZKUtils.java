@@ -130,7 +130,12 @@ public class ZKUtils {
     public static boolean hasChild(CuratorFramework curator, String id, PregelState pregelState,
                                    String child) throws Exception {
         String barrierPath = barrierPath(id, pregelState);
-        String path = ZKPaths.makePath(barrierPath, child);
+        return hasChild(curator, barrierPath, child);
+    }
+
+    public static boolean hasChild(CuratorFramework curator, String rootPath,
+                                   String child) throws Exception {
+        String path = ZKPaths.makePath(rootPath, child);
         boolean exists = curator.checkExists().forPath(path) != null;
         return exists;
     }
@@ -161,6 +166,17 @@ public class ZKUtils {
         try {
             log.debug("adding child {}", path);
             curator.create().creatingParentContainersIfNeeded().withMode(createMode).forPath(path, data);
+        } catch (KeeperException.NodeExistsException e) {
+            // ignore
+        }
+    }
+
+    public static void updateChild(CuratorFramework curator, String rootPath,
+                                   String child, byte[] data) throws Exception {
+        String path = ZKPaths.makePath(rootPath, child);
+        try {
+            log.debug("adding child {}", path);
+            curator.setData().forPath(path, data);
         } catch (KeeperException.NodeExistsException e) {
             // ignore
         }
