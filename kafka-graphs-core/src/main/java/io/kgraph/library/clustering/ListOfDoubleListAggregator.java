@@ -20,7 +20,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
-
 import org.apache.kafka.common.Configurable;
 
 import io.kgraph.pregel.aggregators.Aggregator;

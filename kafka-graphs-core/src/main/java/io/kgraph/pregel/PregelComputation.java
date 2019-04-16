@@ -38,7 +38,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.TreeCache;
 import org.apache.curator.framework.recipes.leader.LeaderLatch;
 import org.apache.curator.framework.recipes.nodes.GroupMember;
@@ -107,7 +106,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private KTable<K, VV> vertices;
     private final String edgesGroupedBySourceTopic;
     private KTable<K, Map<K, EV>> edgesGroupedBySource;
-    private Map<TopicPartition, Long> graphOffsets;
+    private final Map<TopicPartition, Long> graphOffsets;
 
     private final String solutionSetTopic;
     private final String solutionSetStore;
@@ -530,6 +529,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             }
         }
 
+        @SuppressWarnings("unchecked")
         private Function<TopicPartition, Long> lastWrittenOffsets(int superstep) {
             if (superstep == 0) {
                 // Use the vertices lastWrittenOffsets for superstep 0
@@ -751,7 +751,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
     private final class SendMessages implements Processor<K, Tuple2<Integer, Map<K, List<Message>>>> {
 
-        private Producer<K, Tuple3<Integer, K, List<Message>>> producer;
+        private final Producer<K, Tuple3<Integer, K, List<Message>>> producer;
 
         public SendMessages(Producer<K, Tuple3<Integer, K, List<Message>>> producer) {
             this.producer = producer;

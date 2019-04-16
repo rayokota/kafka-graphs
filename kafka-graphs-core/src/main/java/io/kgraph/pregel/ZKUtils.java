@@ -16,7 +16,6 @@
  */
 package io.kgraph.pregel;
 
-import java.util.Base64;
 import java.util.Map;
 
 import org.apache.curator.RetryPolicy;
@@ -26,7 +25,6 @@ import org.apache.curator.framework.recipes.cache.ChildData;
 import org.apache.curator.framework.recipes.cache.TreeCache;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.utils.ZKPaths;
-import org.apache.kafka.common.serialization.Serializer;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
