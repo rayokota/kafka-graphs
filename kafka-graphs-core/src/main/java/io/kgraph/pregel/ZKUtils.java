@@ -122,11 +122,6 @@ public class ZKUtils {
         return exists;
     }
 
-    public static <K> boolean hasChild(CuratorFramework curator, String id, PregelState pregelState,
-                                       K child, Serializer<K> serializer) throws Exception {
-        return hasChild(curator, id, pregelState, base64EncodedString(child, serializer));
-    }
-
     public static boolean hasChild(CuratorFramework curator, String id, PregelState pregelState,
                                    String child) throws Exception {
         String barrierPath = barrierPath(id, pregelState);
@@ -138,11 +133,6 @@ public class ZKUtils {
         String path = ZKPaths.makePath(rootPath, child);
         boolean exists = curator.checkExists().forPath(path) != null;
         return exists;
-    }
-
-    public static <K> void addChild(CuratorFramework curator, String id, PregelState pregelState,
-                                    K child, Serializer<K> serializer) throws Exception {
-        addChild(curator, id, pregelState, base64EncodedString(child, serializer));
     }
 
     public static void addChild(CuratorFramework curator, String id, PregelState pregelState,
@@ -182,11 +172,6 @@ public class ZKUtils {
         }
     }
 
-    public static <K> void removeChild(CuratorFramework curator, String id, PregelState pregelState,
-                                       K child, Serializer<K> serializer) throws Exception {
-        removeChild(curator, id, pregelState, base64EncodedString(child, serializer));
-    }
-
     public static void removeChild(CuratorFramework curator, String id, PregelState pregelState,
                                    String child) throws Exception {
         removeChild(curator, barrierPath(id, pregelState), child);
@@ -221,9 +206,5 @@ public class ZKUtils {
         return ZKPaths.makePath(
             PREGEL_PATH + id, BARRIERS,
             (pregelState.stage() == PregelState.Stage.RECEIVE ? "rcv-" : "snd-") + pregelState.superstep());
-    }
-
-    private static <K> String base64EncodedString(K key, Serializer<K> serializer) {
-        return Base64.getEncoder().encodeToString(serializer.serialize(null, key));
     }
 }

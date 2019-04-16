@@ -256,7 +256,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             .peek((k, v) -> {
                 try {
                     int partition = PregelComputation.vertexToPartition(k, serialized.keySerde().serializer(), numPartitions);
-                    ZKUtils.addChild(curator, applicationId, new PregelState(State.CREATED, 0, Stage.SEND), "partition-" + partition);
+                    ZKUtils.addChild(curator, applicationId, new PregelState(State.CREATED, 0, Stage.SEND), childPath(partition));
                 } catch (Exception e) {
                     throw toRuntimeException(e);
                 }
@@ -788,7 +788,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                         // Activate partition for next step
                         int p = vertexToPartition(vertex, serialized.keySerde().serializer(), numPartitions);
                         log.debug("adding partition {} for vertex {}", p, vertex);
-                        ZKUtils.addChild(curator, applicationId, new PregelState(State.RUNNING, superstep + 1, Stage.SEND), "partition-" + p);
+                        ZKUtils.addChild(curator, applicationId, new PregelState(State.RUNNING, superstep + 1, Stage.SEND), childPath(p));
 
                         Map<Integer, Long> endOffsets = lastWrittenOffsets.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
                         endOffsets.merge(metadata.partition(), metadata.offset(), Math::max);
@@ -819,7 +819,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             if (vertices.isEmpty()) {
                 // Deactivate partition
                 log.debug("removing partition {} for last vertex {}", partition, vertex);
-                ZKUtils.removeChild(curator, applicationId, new PregelState(State.RUNNING, superstep, Stage.SEND), "partition-" + partition);
+                ZKUtils.removeChild(curator, applicationId, new PregelState(State.RUNNING, superstep, Stage.SEND), childPath(partition));
                 ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), aggregators(partition, superstep));
                 computeFunction.postSuperstep(superstep, aggregators);
@@ -834,7 +834,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 Map<String, Aggregator<?>> partitionAggregators = stepAggregators.get(partition);
                 if (partitionAggregators != null) {
                     String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
-                    String childPath = "partition-" + partition;
+                    String childPath = childPath(partition);
                     byte[] childData = KryoUtils.serialize(partitionAggregators);
                     if (ZKUtils.hasChild(curator, rootPath, childPath)) {
                         ZKUtils.updateChild(curator, rootPath, childPath, childData);
@@ -966,7 +966,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         if (synced) {
             log.info("Synced Topic {}, step {}, end {}", topic, superstep, endOffsets);
         } else {
-            log.info("Not synced topic {}, step {}, pos {}, end {}", topic, superstep, pos, endOffsets);
+            log.debug("Not synced topic {}, step {}, pos {}, end {}", topic, superstep, pos, endOffsets);
         }
         return synced;
     }
@@ -988,6 +988,10 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             positions.put(tp, consumer.position(tp));
         }
         return positions;
+    }
+
+    private static String childPath(int partition) {
+        return "partition-" + partition;
     }
 
     private static RuntimeException toRuntimeException(Exception e) {
