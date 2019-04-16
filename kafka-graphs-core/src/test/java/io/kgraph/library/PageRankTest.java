@@ -261,7 +261,7 @@ public class PageRankTest extends AbstractIntegrationTest {
         assertEquals(expectedResult, list);
     }
 
-    @Test
+    //@Test
     public void testCompletePageRank() throws Exception {
         String suffix = "complete";
         StreamsBuilder builder = new StreamsBuilder();
