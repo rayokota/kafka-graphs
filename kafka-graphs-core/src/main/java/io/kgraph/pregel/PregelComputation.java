@@ -267,9 +267,9 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
         this.workSet = builder
             .stream(workSetTopic, Consumed.with(serialized.keySerde(), new KryoSerde<Tuple3<Integer, K, List<Message>>>()))
-            .peek((k, v) -> log.trace("workset 1 after topic: (" + k + ", " + v + ")"))
+            .peek((k, v) -> log.trace("workset 1 after topic: (" + k + ", " + v + ")"));
             // 0th iteration does not count as it just sets up the initial message
-            .filter((K k, Tuple3<Integer, K, List<Message>> v) -> v._1 <= maxIterations + 1);
+            //.filter((K k, Tuple3<Integer, K, List<Message>> v) -> v._1 <= maxIterations + 1);
 
         KStream<K, Tuple2<Integer, Map<K, List<Message>>>> syncedWorkSet = workSet
             .transform(BarrierSync::new, localworkSetStoreName)
