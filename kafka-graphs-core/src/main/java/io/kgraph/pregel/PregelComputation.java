@@ -268,8 +268,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         this.workSet = builder
             .stream(workSetTopic, Consumed.with(serialized.keySerde(), new KryoSerde<Tuple3<Integer, K, List<Message>>>()))
             .peek((k, v) -> log.trace("workset 1 after topic: (" + k + ", " + v + ")"));
-            // 0th iteration does not count as it just sets up the initial message
-            //.filter((K k, Tuple3<Integer, K, List<Message>> v) -> v._1 <= maxIterations + 1);
 
         KStream<K, Tuple2<Integer, Map<K, List<Message>>>> syncedWorkSet = workSet
             .transform(BarrierSync::new, localworkSetStoreName)
@@ -451,20 +449,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                             } else if (pregelState.stage() == Stage.SEND) {
                                 PregelState nextPregelState = ZKUtils.maybeCreateReadyToReceiveNode(curator, applicationId, pregelState, barrierCache);
                                 if (!pregelState.equals(nextPregelState)) {
-                                    pregelState = nextPregelState;
-                                    boolean halt = masterCompute(pregelState.superstep());
-                                    if (halt) {
-                                        pregelState = pregelState.state(State.CANCELLED);
-                                    }
+                                    pregelState = masterCompute(nextPregelState);
                                     setPregelState(sharedValue, pregelState);
                                 } else {
                                     log.debug("Not ready to create rcv: state {}", pregelState);
                                 }
-                            }
-                            if (pregelState.superstep() > maxIterations) {
-                                pregelState = pregelState.state(State.COMPLETED);
-                                setPregelState(sharedValue, pregelState);
-                                return;
                             }
                         }
 
@@ -539,14 +528,21 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             return lastWrittenOffsets != null ? tp -> lastWrittenOffsets.get(tp.partition()) : null;
         }
 
-        private boolean masterCompute(int superstep) throws Exception {
+        private PregelState masterCompute(PregelState pregelState) throws Exception {
+            int superstep = pregelState.superstep();
             // Collect aggregator values, then run the masterCompute() and
             // finally save the aggregator values
             Map<String, Aggregator<?>> newAggregators = reduceAggregates(superstep - 1);
             ComputeFunction.MasterCallback cb = new ComputeFunction.MasterCallback(newAggregators);
             computeFunction.masterCompute(superstep, cb);
             saveAggregates(superstep - 1, newAggregators);
-            return cb.haltComputation;
+            if (cb.haltComputation) {
+                return pregelState.state(State.CANCELLED);
+            } else if (pregelState.superstep() > maxIterations) {
+                return pregelState.state(State.COMPLETED);
+            } else {
+                return pregelState;
+            }
         }
 
         private Map<String, Aggregator<?>> reduceAggregates(int superstep) throws Exception {
