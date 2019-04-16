@@ -18,6 +18,7 @@ package io.kgraph.utils;
 
 import static org.junit.Assert.assertEquals;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -85,7 +86,7 @@ public class StreamUtilsTest extends AbstractIntegrationTest {
             while (System.currentTimeMillis() < pollEnd &&
                 continueConsuming(result.size(), expectedNumMessages)) {
                 for (ConsumerRecord<K, V> record :
-                    consumer.poll(Math.max(1, pollEnd - System.currentTimeMillis()))) {
+                    consumer.poll(Duration.ofMillis(Math.max(1, pollEnd - System.currentTimeMillis())))) {
                     if (record.value() != null) {
                         result.add(new KeyValue<>(record.key(), record.value()));
                     }

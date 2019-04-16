@@ -155,19 +155,17 @@ public class ZKUtils {
             log.debug("adding child {}", path);
             curator.create().creatingParentContainersIfNeeded().withMode(createMode).forPath(path, data);
         } catch (KeeperException.NodeExistsException e) {
-            // ignore
+            if (data.length != 0) {
+                log.warn("could not add child {}", path);
+            }
         }
     }
 
     public static void updateChild(CuratorFramework curator, String rootPath,
                                    String child, byte[] data) throws Exception {
         String path = ZKPaths.makePath(rootPath, child);
-        try {
-            log.debug("adding child {}", path);
-            curator.setData().forPath(path, data);
-        } catch (KeeperException.NodeExistsException e) {
-            // ignore
-        }
+        log.debug("adding child {}", path);
+        curator.setData().forPath(path, data);
     }
 
     public static void removeChild(CuratorFramework curator, String id, PregelState pregelState,
