@@ -95,6 +95,7 @@ import io.vavr.Tuple4;
 public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private static final Logger log = LoggerFactory.getLogger(PregelComputation.class);
 
+    private static final String ALL_PARTITIONS = "all";
     private static final String LAST_WRITTEN_OFFSETS = "last.written.offsets";
 
     private final String hostAndPort;
@@ -124,7 +125,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private final ComputeFunction<K, VV, EV, Message> computeFunction;
     private final Map<String, AggregatorWrapper<?>> registeredAggregators;
 
-    private Properties streamsConfig;
     private Producer<K, Tuple3<Integer, K, List<Message>>> producer;
 
     private volatile int maxIterations = Integer.MAX_VALUE;
@@ -204,8 +204,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     }
 
     public void prepare(StreamsBuilder builder, Properties streamsConfig) {
-        this.streamsConfig = streamsConfig;
-
         Properties producerConfig = ClientUtils.producerConfig(
             bootstrapServers, serialized.keySerde().serializer().getClass(), KryoSerializer.class,
             streamsConfig != null ? streamsConfig : new Properties()
@@ -319,7 +317,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         }
     }
 
-    protected Map<String, Aggregator<?>> newAggregators() {
+    private Map<String, Aggregator<?>> newAggregators() {
         Set<Map.Entry<String, AggregatorWrapper<?>>> entries = registeredAggregators.entrySet();
         return entries.stream()
             .collect(Collectors.toConcurrentMap(Map.Entry::getKey, entry -> {
@@ -332,7 +330,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     }
 
     @SuppressWarnings("unchecked")
-    protected Map<String, Aggregator<?>> initAggregators(Map<String, Aggregator<?>> agg, Map<String, ?> values) {
+    private Map<String, Aggregator<?>> initAggregators(Map<String, Aggregator<?>> agg, Map<String, ?> values) {
         return agg.entrySet().stream()
             .collect(Collectors.toMap(Map.Entry::getKey, e -> {
                 Aggregator<Object> a = (Aggregator<Object>) e.getValue();
@@ -345,7 +343,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     }
 
     @SuppressWarnings("unchecked")
-    protected Map<String, Aggregator<?>> mergeAggregators(Map<String, Aggregator<?>> agg1, Map<String, Aggregator<?>> agg2) {
+    private Map<String, Aggregator<?>> mergeAggregators(Map<String, Aggregator<?>> agg1, Map<String, Aggregator<?>> agg2) {
         return Stream.of(agg1, agg2).map(Map::entrySet).flatMap(Collection::stream).collect(
             Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> {
                 Aggregator<Object> a1 = (Aggregator<Object>) v1;
@@ -358,7 +356,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private Map<String, ?> previousAggregates(int superstep) {
         return previousAggregates.computeIfAbsent(superstep, k -> {
             try {
-                String path = ZKPaths.makePath(ZKUtils.aggregatePath(applicationId, superstep - 1), "all");
+                String path = ZKPaths.makePath(ZKUtils.aggregatePath(applicationId, superstep - 1), ALL_PARTITIONS);
                 if (curator.checkExists().forPath(path) == null) {
                     return new HashMap<>();
                 }
@@ -554,7 +552,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             List<String> children = curator.getChildren().forPath(rootPath);
             if (children != null) {
                 for (String path : children) {
-                    if (!path.endsWith("all")) {
+                    if (!path.endsWith(ALL_PARTITIONS)) {
                         byte[] data = curator.getData().forPath(ZKPaths.makePath(rootPath, path));
                         if (data.length > 0) {
                             Map<String, Aggregator<?>> aggregators = KryoUtils.deserialize(data);
@@ -571,7 +569,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             Set<Map.Entry<String, Aggregator<?>>> entries = newAggregators.entrySet();
             Map<String, ?> newAggregates = entries.stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getAggregate()));
-            ZKUtils.addChild(curator, rootPath, "all", CreateMode.PERSISTENT, KryoUtils.serialize(newAggregates));
+            ZKUtils.addChild(curator, rootPath, ALL_PARTITIONS, CreateMode.PERSISTENT, KryoUtils.serialize(newAggregates));
         }
 
         private boolean hasVerticesToForward(Map<K, Map<K, List<Message>>> messages) {
