@@ -76,7 +76,7 @@ public class SgdTest extends AbstractIntegrationTest {
         KTable<Edge<CfLongId>, Float> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Float(), list);
         KGraph<CfLongId, FloatMatrix, Float> graph = KGraph.fromEdges(edges, new InitVertices(),
-            GraphSerialized.with(new KryoSerde<>(), new KryoSerde<>(), Serdes.Float()));
+            GraphSerialized.with(new CfLongIdSerde(), new KryoSerde<>(), Serdes.Float()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());

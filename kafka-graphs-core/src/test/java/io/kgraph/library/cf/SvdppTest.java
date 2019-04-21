@@ -31,6 +31,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.FloatSerializer;
 import org.apache.kafka.common.serialization.Serdes;
@@ -81,7 +82,7 @@ public class SvdppTest extends AbstractIntegrationTest {
         KTable<Edge<CfLongId>, Float> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Float(), list);
         KGraph<CfLongId, Svdpp.SvdppValue, Float> graph = KGraph.fromEdges(edges, new InitVertices(),
-            GraphSerialized.with(new KryoSerde<>(), new KryoSerde<>(), Serdes.Float()));
+            GraphSerialized.with(new CfLongIdSerde(), new KryoSerde<>(), Serdes.Float()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
@@ -135,7 +136,7 @@ public class SvdppTest extends AbstractIntegrationTest {
             builder.table("initEdges-" + suffix, Consumed.with(new KryoSerde<>(), Serdes.Float()),
                 Materialized.with(new KryoSerde<>(), Serdes.Float()));
         KGraph<CfLongId, Svdpp.SvdppValue, Float> graph = KGraph.fromEdges(edges, new InitVertices(),
-            GraphSerialized.with(new KryoSerde<>(), new KryoSerde<>(), Serdes.Float()));
+            GraphSerialized.with(new CfLongIdSerde(), new KryoSerde<>(), Serdes.Float()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
@@ -143,7 +144,7 @@ public class SvdppTest extends AbstractIntegrationTest {
             builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
 
-        Thread.sleep(10000);
+        Thread.sleep(2000);
 
         Map<String, Object> configs = new HashMap<>();
         configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
@@ -161,6 +162,7 @@ public class SvdppTest extends AbstractIntegrationTest {
                 configs, Optional.empty(), new Svdpp());
         streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
             CLUSTER.bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
+        //streamsConfiguration.setProperty(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, String.valueOf(10 * 1024 * 1024));
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
         GraphAlgorithmState<KTable<CfLongId, Svdpp.SvdppValue>> paths = algorithm.run();
         paths.result().get();
