@@ -28,6 +28,10 @@ import org.apache.kafka.clients.CommonClientConfigs;
 import org.apache.kafka.common.serialization.DoubleSerializer;
 import org.apache.kafka.common.serialization.LongSerializer;
 
+import io.kgraph.rest.server.utils.EdgeLongIdDoubleValueParser;
+import io.kgraph.rest.server.utils.EdgeLongIdLongValueParser;
+import io.kgraph.rest.server.utils.VertexLongIdDoubleValueParser;
+import io.kgraph.rest.server.utils.VertexLongIdLongValueParser;
 import io.kgraph.utils.GraphUtils;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
@@ -89,23 +93,23 @@ public class GraphImporter implements Callable<Void> {
         if (valuesOfTypeDouble) {
             GraphUtils.verticesToTopic(
                 new BufferedInputStream(new FileInputStream(verticesFile)),
-                Double::parseDouble, new DoubleSerializer(),
+                new VertexLongIdDoubleValueParser(), new LongSerializer(), new DoubleSerializer(),
                 props, verticesTopic, numPartitions, replicationFactor
             );
             GraphUtils.edgesToTopic(
                 new BufferedInputStream(new FileInputStream(edgesFile)),
-                Double::parseDouble, new DoubleSerializer(),
+                new EdgeLongIdDoubleValueParser(), new DoubleSerializer(),
                 props, edgesTopic, numPartitions, replicationFactor
             );
         } else {
             GraphUtils.verticesToTopic(
                 new BufferedInputStream(new FileInputStream(verticesFile)),
-                Long::parseLong, new LongSerializer(),
+                new VertexLongIdLongValueParser(), new LongSerializer(), new LongSerializer(),
                 props, verticesTopic, numPartitions, replicationFactor
             );
             GraphUtils.edgesToTopic(
                 new BufferedInputStream(new FileInputStream(edgesFile)),
-                Long::parseLong, new LongSerializer(),
+                new EdgeLongIdLongValueParser(), new LongSerializer(),
                 props, edgesTopic, numPartitions, replicationFactor
             );
         }

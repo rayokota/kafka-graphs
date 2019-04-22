@@ -18,6 +18,7 @@
 
 package io.kgraph;
 
+@FunctionalInterface
 public interface VertexJoinFunction<VV, T> {
 
     VV vertexJoin(VV vertexValue, T inputValue);

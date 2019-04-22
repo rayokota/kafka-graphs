@@ -20,6 +20,7 @@ package io.kgraph;
 
 import java.util.Map;
 
+@FunctionalInterface
 public interface NeighborsFunctionWithVertexValue<K, VV, EV, T> {
 
     T iterateNeighbors(VV vertexValue, Map<EdgeWithValue<K, EV>, VV> neighbors);

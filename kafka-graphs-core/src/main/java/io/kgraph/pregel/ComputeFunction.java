@@ -38,6 +38,7 @@ import io.kgraph.pregel.aggregators.Aggregator;
  * @param <EV> The type of the values that are associated with the edges.
  * @param <Message> The type of the message sent between vertices along the edges.
  */
+@FunctionalInterface
 public interface ComputeFunction<K, VV, EV, Message> {
 
     /**

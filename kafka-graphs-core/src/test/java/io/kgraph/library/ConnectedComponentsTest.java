@@ -54,6 +54,7 @@ import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphGenerators;
 import io.kgraph.utils.GraphUtils;
 import io.kgraph.utils.KryoSerde;
+import io.kgraph.utils.Parsers;
 import io.kgraph.utils.StreamUtils;
 import io.vavr.Tuple2;
 
@@ -234,11 +235,10 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
             LongSerializer.class, new Properties()
         );
         GraphUtils.verticesToTopic(GraphUtils.class.getResourceAsStream("/vertices.txt"),
-            Long::parseLong,
-            new LongSerializer(),
+            Long::parseLong, Long::parseLong, new LongSerializer(), new LongSerializer(),
             producerConfig, "initVertices-" + suffix, 50, (short) 1);
         GraphUtils.edgesToTopic(GraphUtils.class.getResourceAsStream("/edges.txt"),
-            Long::parseLong,
+            Long::parseLong, Long::parseLong, Long::parseLong,
             new LongSerializer(),
             producerConfig, "initEdges-" + suffix, 50, (short) 1);
         KGraph<Long, Long, Long> graph = new KGraph<>(

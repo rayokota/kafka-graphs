@@ -18,6 +18,7 @@
 
 package io.kgraph;
 
+@FunctionalInterface
 public interface EdgesFunctionWithVertexValue<K, VV, EV, T> {
 
     T iterateEdges(VV vertexValue, Iterable<EdgeWithValue<K, EV>> edges);

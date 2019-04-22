@@ -16,10 +16,12 @@
  * limitations under the License.
  */
 
-package io.kgraph;
+package io.kgraph.rest.server.utils;
 
-@FunctionalInterface
-public interface EdgeJoinFunction<EV, T> {
+import io.kgraph.utils.Parsers;
 
-    EV edgeJoin(EV edgeValue, T inputValue);
+public class VertexLongIdDoubleValueParser extends Parsers.VertexParser<Long, Double> {
+    public VertexLongIdDoubleValueParser() {
+        super(Long::parseLong, Double::parseDouble);
+    }
 }

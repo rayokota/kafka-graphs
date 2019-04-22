@@ -16,10 +16,9 @@
  * limitations under the License.
  */
 
-package io.kgraph;
+package io.kgraph.utils;
 
 @FunctionalInterface
-public interface EdgeJoinFunction<EV, T> {
-
-    EV edgeJoin(EV edgeValue, T inputValue);
+public interface Parser<T> {
+    T parse(String s);
 }

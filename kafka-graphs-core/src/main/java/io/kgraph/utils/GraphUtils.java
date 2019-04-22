@@ -33,7 +33,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
@@ -60,28 +59,30 @@ import io.kgraph.Edge;
 import io.kgraph.EdgeWithValue;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
+import io.kgraph.VertexWithValue;
 
 public class GraphUtils {
     private static final Logger log = LoggerFactory.getLogger(GraphUtils.class);
 
-    public static <V extends Number> void verticesToTopic(
+    public static <K, V extends Number> void verticesToTopic(
         InputStream inputStream,
-        Function<String, V> valueParser,
+        Parser<K> keyParser,
+        Parser<V> valueParser,
+        Serializer<K> keySerializer,
         Serializer<V> valueSerializer,
         Properties props,
         String topic,
         int numPartitions,
         short replicationFactor
     ) throws IOException {
-        verticesToTopic(inputStream, Long::parseLong, new LongSerializer(), valueParser,
-            valueSerializer, props, topic, numPartitions, replicationFactor);
+        verticesToTopic(inputStream, new Parsers.VertexParser<>(keyParser, valueParser),
+            keySerializer, valueSerializer, props, topic, numPartitions, replicationFactor);
     }
 
     public static <K, V extends Number> void verticesToTopic(
         InputStream inputStream,
-        Function<String, K> keyParser,
+        Parser<VertexWithValue<K, V>> vertexParser,
         Serializer<K> keySerializer,
-        Function<String, V> valueParser,
         Serializer<V> valueSerializer,
         Properties props,
         String topic,
@@ -94,35 +95,34 @@ public class GraphUtils {
              Producer<K, V> producer = new KafkaProducer<>(props, keySerializer, valueSerializer)) {
             String line;
             while ((line = reader.readLine()) != null) {
-                String[] tokens = line.trim().split("\\s");
-                K id = keyParser.apply(tokens[0]);
-                log.trace("read vertex: {}", id);
-                V value = tokens.length > 1 ? valueParser.apply(tokens[1]) : null;
-                ProducerRecord<K, V> producerRecord = new ProducerRecord<>(topic, id, value);
+                VertexWithValue<K, V> vertex = vertexParser.parse(line);
+                log.trace("read vertex: {}", vertex.id());
+                ProducerRecord<K, V> producerRecord =
+                    new ProducerRecord<>(topic, vertex.id(), vertex.value());
                 producer.send(producerRecord);
             }
             producer.flush();
         }
     }
 
-    public static <V extends Number> void edgesToTopic(
+    public static <K, V extends Number> void edgesToTopic(
         InputStream inputStream,
-        Function<String, V> valueParser,
+        Parser<K> sourceVertexIdParser,
+        Parser<K> targetVertexIdParser,
+        Parser<V> valueParser,
         Serializer<V> valueSerializer,
         Properties props,
         String topic,
         int numPartitions,
         short replicationFactor
     ) throws IOException {
-        edgesToTopic(inputStream, Long::parseLong, Long::parseLong, valueParser, valueSerializer,
-            props, topic, numPartitions, replicationFactor);
+        edgesToTopic(inputStream, new Parsers.EdgeParser<>(sourceVertexIdParser, targetVertexIdParser, valueParser),
+            valueSerializer, props, topic, numPartitions, replicationFactor);
     }
 
     public static <K, V extends Number> void edgesToTopic(
         InputStream inputStream,
-        Function<String, K> sourceVertexIdParser,
-        Function<String, K> targetVertexIdParser,
-        Function<String, V> valueParser,
+        Parser<EdgeWithValue<K, V>> edgeParser,
         Serializer<V> valueSerializer,
         Properties props,
         String topic,
@@ -135,12 +135,10 @@ public class GraphUtils {
              Producer<Edge<K>, V> producer = new KafkaProducer<>(props, new KryoSerializer<>(), valueSerializer)) {
             String line;
             while ((line = reader.readLine()) != null) {
-                String[] tokens = line.trim().split("\\s");
-                K sourceId = sourceVertexIdParser.apply(tokens[0]);
-                K targetId = targetVertexIdParser.apply(tokens[1]);
-                log.trace("read edge: ({}, {})", sourceId, targetId);
-                V value = tokens.length > 2 ? valueParser.apply(tokens[2]) : null;
-                ProducerRecord<Edge<K>, V> producerRecord = new ProducerRecord<>(topic, new Edge<>(sourceId, targetId), value);
+                EdgeWithValue<K, V> edge = edgeParser.parse(line);
+                log.trace("read edge: ({}, {})", edge.source(), edge.target());
+                ProducerRecord<Edge<K>, V> producerRecord =
+                    new ProducerRecord<>(topic, new Edge<>(edge.source(), edge.target()), edge.value());
                 producer.send(producerRecord);
             }
             producer.flush();
