@@ -23,6 +23,7 @@ import static org.junit.Assert.assertEquals;
 import java.io.IOException;
 import java.util.Map;
 
+import org.apache.kafka.common.serialization.LongSerializer;
 import org.apache.kafka.streams.integration.utils.EmbeddedKafkaCluster;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -42,6 +43,8 @@ import org.springframework.util.MultiValueMap;
 
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.rest.server.KafkaGraphsApplication;
+import io.kgraph.rest.server.utils.EdgeLongIdLongValueParser;
+import io.kgraph.rest.server.utils.VertexLongIdLongValueParser;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient(timeout = "36000")
@@ -146,11 +149,15 @@ public class GraphIntegrationTest {
 
     private MultiValueMap<String, HttpEntity<?>> generateBody() {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("verticesFile", new ClassPathResource("vertices_simple.txt"));
-        builder.part("edgesFile", new ClassPathResource("edges_simple.txt"));
         builder.part("verticesTopic", "initial-vertices");
         builder.part("edgesTopic", "initial-edges");
-        builder.part("useDouble", "false");
+        builder.part("vertexFile", new ClassPathResource("vertices_simple.txt"));
+        builder.part("edgeFile", new ClassPathResource("edges_simple.txt"));
+        builder.part("vertexParser", VertexLongIdLongValueParser.class.getName());
+        builder.part("edgeParser", EdgeLongIdLongValueParser.class.getName());
+        builder.part("keySerializer", LongSerializer.class.getName());
+        builder.part("vertexValueSerializer", LongSerializer.class.getName());
+        builder.part("edgeValueSerializer", LongSerializer.class.getName());
         builder.part("numPartitions", "50");
         builder.part("replicationFactor", "1");
         return builder.build();

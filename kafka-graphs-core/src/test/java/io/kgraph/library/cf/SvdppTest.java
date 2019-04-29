@@ -127,9 +127,7 @@ public class SvdppTest extends AbstractIntegrationTest {
             FloatSerializer.class, new Properties()
         );
         GraphUtils.edgesToTopic(GraphUtils.class.getResourceAsStream("/ratings.txt"),
-            s -> new CfLongId((byte) 0, Long.parseLong(s)),
-            s -> new CfLongId((byte) 1, Long.parseLong(s)),
-            Float::parseFloat,
+            new EdgeCfLongIdFloatValueParser(),
             new FloatSerializer(),
             producerConfig, "initEdges-" + suffix, 50, (short) 1);
         KTable<Edge<CfLongId>, Float> edges =

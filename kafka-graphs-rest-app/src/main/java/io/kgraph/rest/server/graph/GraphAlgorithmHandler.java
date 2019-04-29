@@ -116,22 +116,40 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
             try {
                 Map<String, Part> map = parts.toSingleValueMap();
 
-                FilePart verticesFilePart = (FilePart) map.get("verticesFile");
-                File verticesFile = new File(ClientUtils.tempDirectory(), verticesFilePart.filename());
-                verticesFilePart.transferTo(verticesFile);
-
-                FilePart edgesFilePart = (FilePart) map.get("edgesFile");
-                File edgesFile = new File(ClientUtils.tempDirectory(), edgesFilePart.filename());
-                edgesFilePart.transferTo(edgesFile);
-
                 FormFieldPart verticesTopicPart = (FormFieldPart) map.get("verticesTopic");
                 String verticesTopic = verticesTopicPart.value();
 
                 FormFieldPart edgesTopicPart = (FormFieldPart) map.get("edgesTopic");
                 String edgesTopic = edgesTopicPart.value();
 
-                FormFieldPart useDoublePart = (FormFieldPart) map.get("useDouble");
-                boolean useDouble = Boolean.parseBoolean(useDoublePart.value());
+                File vertexFile = null;
+                FilePart vertexFilePart = (FilePart) map.get("vertexFile");
+                if (vertexFilePart != null) {
+                    vertexFile = new File(ClientUtils.tempDirectory(), vertexFilePart.filename());
+                    vertexFilePart.transferTo(vertexFile);
+                }
+
+                File edgeFile = null;
+                FilePart edgeFilePart = (FilePart) map.get("edgeFile");
+                if (edgeFilePart != null) {
+                    edgeFile = new File(ClientUtils.tempDirectory(), edgeFilePart.filename());
+                    edgeFilePart.transferTo(edgeFile);
+                }
+
+                FormFieldPart vertexParserPart = (FormFieldPart) map.get("vertexParser");
+                String vertexParser = vertexParserPart.value();
+
+                FormFieldPart edgeParserPart = (FormFieldPart) map.get("edgeParser");
+                String edgeParser = edgeParserPart.value();
+
+                FormFieldPart keySerializerPart = (FormFieldPart) map.get("keySerializer");
+                String keySerializer = keySerializerPart.value();
+
+                FormFieldPart vertexValueSerializerPart = (FormFieldPart) map.get("vertexValueSerializer");
+                String vertexValueSerializer = vertexValueSerializerPart.value();
+
+                FormFieldPart edgeValueSerializerPart = (FormFieldPart) map.get("edgeValueSerializer");
+                String edgeValueSerializer = edgeValueSerializerPart.value();
 
                 FormFieldPart numPartitionsPart = (FormFieldPart) map.get("numPartitions");
                 int numPartitions = Integer.parseInt(numPartitionsPart.value());
@@ -139,8 +157,11 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                 FormFieldPart replicatorFactorPart = (FormFieldPart) map.get("replicationFactor");
                 short replicationFactor = Short.parseShort(replicatorFactorPart.value());
 
-                GraphImporter importer = new GraphImporter(props.getBootstrapServers(), verticesFile, edgesFile,
-                    verticesTopic, edgesTopic, useDouble, numPartitions, replicationFactor
+                GraphImporter importer = new GraphImporter(
+                    props.getBootstrapServers(),
+                    verticesTopic, edgesTopic, vertexFile, edgeFile, vertexParser, edgeParser,
+                    keySerializer, vertexValueSerializer, edgeValueSerializer,
+                    numPartitions, replicationFactor
                 );
                 importer.call();
             } catch (NumberFormatException e) {

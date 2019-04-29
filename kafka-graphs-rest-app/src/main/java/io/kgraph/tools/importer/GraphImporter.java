@@ -25,39 +25,51 @@ import java.util.Properties;
 import java.util.concurrent.Callable;
 
 import org.apache.kafka.clients.CommonClientConfigs;
-import org.apache.kafka.common.serialization.DoubleSerializer;
 import org.apache.kafka.common.serialization.LongSerializer;
+import org.apache.kafka.common.serialization.Serializer;
 
-import io.kgraph.rest.server.utils.EdgeLongIdDoubleValueParser;
 import io.kgraph.rest.server.utils.EdgeLongIdLongValueParser;
-import io.kgraph.rest.server.utils.VertexLongIdDoubleValueParser;
 import io.kgraph.rest.server.utils.VertexLongIdLongValueParser;
+import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphUtils;
+import io.kgraph.utils.Parsers;
 import picocli.CommandLine;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.Parameters;
 
 @CommandLine.Command(description = "Imports a Kafka graph.",
     name = "graph-import", mixinStandardHelpOptions = true, version = "graph-import 1.0")
-public class GraphImporter implements Callable<Void> {
+public class GraphImporter<K, VV, EV> implements Callable<Void> {
 
     @Parameters(index = "0", description = "List of Kafka servers.")
     private String bootstrapServers;
 
-    @Parameters(index = "1", description = "The vertices file.")
-    private File verticesFile;
-
-    @Parameters(index = "2", description = "The edges file.")
-    private File edgesFile;
-
-    @Parameters(index = "3", description = "The vertices topic.")
+    @Parameters(index = "1", description = "The vertices topic.")
     private String verticesTopic;
 
-    @Parameters(index = "4", description = "The edges topic.")
+    @Parameters(index = "2", description = "The edges topic.")
     private String edgesTopic;
 
-    @Option(names = {"-d", "--double"}, description = "Whether values are of type double or long.")
-    private boolean valuesOfTypeDouble = false;
+    @Option(names = {"-vf", "--vertexFile"}, description = "The name of the file containing vertices.")
+    private File vertexFile;
+
+    @Option(names = {"-ef", "--edgeFile"}, description = "The name of the file containing edges.")
+    private File edgeFile;
+
+    @Option(names = {"-vp", "--vertexParser"}, description = "The vertex parser.")
+    private String vertexParser = VertexLongIdLongValueParser.class.getName();
+
+    @Option(names = {"-ep", "--edgeParser"}, description = "The edge parser.")
+    private String edgeParser = EdgeLongIdLongValueParser.class.getName();
+
+    @Option(names = {"-k", "--keySerializer"}, description = "The key serializer.")
+    private String keySerializer = LongSerializer.class.getName();
+
+    @Option(names = {"-vv", "--vertexValueSerializer"}, description = "The vertex value serializer.")
+    private String vertexValueSerializer = LongSerializer.class.getName();
+
+    @Option(names = {"-ev", "--edgeValueSerializer"}, description = "The edge value serializer.")
+    private String edgeValueSerializer = LongSerializer.class.getName();
 
     @Option(names = {"-np", "--numPartitions"}, description = "The number of partitions for topics.")
     private int numPartitions = 50;
@@ -69,47 +81,57 @@ public class GraphImporter implements Callable<Void> {
     }
 
     public GraphImporter(String bootstrapServers,
-                         File verticesFile,
-                         File edgesFile,
                          String verticesTopic,
                          String edgesTopic,
-                         boolean valuesOfTypeDouble,
+                         File vertexFile,
+                         File edgeFile,
+                         String vertexParser,
+                         String edgeParser,
+                         String keySerializer,
+                         String vertexValueSerializer,
+                         String edgeValueSerializer,
                          int numPartitions,
                          short replicationFactor) {
         this.bootstrapServers = bootstrapServers;
-        this.verticesFile = verticesFile;
-        this.edgesFile = edgesFile;
         this.verticesTopic = verticesTopic;
         this.edgesTopic = edgesTopic;
-        this.valuesOfTypeDouble = valuesOfTypeDouble;
+        this.vertexFile = vertexFile;
+        this.edgeFile = edgeFile;
+        this.vertexParser = vertexParser;
+        this.edgeParser = edgeParser;
+        this.keySerializer = keySerializer;
+        this.vertexValueSerializer = vertexValueSerializer;
+        this.edgeValueSerializer = edgeValueSerializer;
         this.numPartitions = numPartitions;
         this.replicationFactor = replicationFactor;
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public Void call() throws Exception {
         Properties props = new Properties();
         props.setProperty(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        if (valuesOfTypeDouble) {
-            GraphUtils.verticesToTopic(
-                new BufferedInputStream(new FileInputStream(verticesFile)),
-                new VertexLongIdDoubleValueParser(), new LongSerializer(), new DoubleSerializer(),
+        if (vertexFile != null) {
+            Parsers.VertexParser<K, VV> vertexReader = (Parsers.VertexParser<K, VV>)
+                ClientUtils.getConfiguredInstance(Class.forName(vertexParser), null);
+            Serializer<K> keyWriter = (Serializer<K>)
+                ClientUtils.getConfiguredInstance(Class.forName(keySerializer), null);
+            Serializer<VV> vertexValueWriter = (Serializer<VV>)
+                ClientUtils.getConfiguredInstance(Class.forName(vertexValueSerializer), null);
+            GraphUtils.<K, VV>verticesToTopic(
+                new BufferedInputStream(new FileInputStream(vertexFile)),
+                vertexReader, keyWriter, vertexValueWriter,
                 props, verticesTopic, numPartitions, replicationFactor
             );
-            GraphUtils.edgesToTopic(
-                new BufferedInputStream(new FileInputStream(edgesFile)),
-                new EdgeLongIdDoubleValueParser(), new DoubleSerializer(),
-                props, edgesTopic, numPartitions, replicationFactor
-            );
-        } else {
-            GraphUtils.verticesToTopic(
-                new BufferedInputStream(new FileInputStream(verticesFile)),
-                new VertexLongIdLongValueParser(), new LongSerializer(), new LongSerializer(),
-                props, verticesTopic, numPartitions, replicationFactor
-            );
-            GraphUtils.edgesToTopic(
-                new BufferedInputStream(new FileInputStream(edgesFile)),
-                new EdgeLongIdLongValueParser(), new LongSerializer(),
+        }
+        if (edgeFile != null) {
+            Parsers.EdgeParser<K, EV> edgeReader = (Parsers.EdgeParser<K, EV>)
+                ClientUtils.getConfiguredInstance(Class.forName(edgeParser), null);
+            Serializer<EV> edgeValueWriter = (Serializer<EV>)
+                ClientUtils.getConfiguredInstance(Class.forName(edgeValueSerializer), null);
+            GraphUtils.<K, EV>edgesToTopic(
+                new BufferedInputStream(new FileInputStream(edgeFile)),
+                edgeReader, edgeValueWriter,
                 props, edgesTopic, numPartitions, replicationFactor
             );
         }

@@ -64,7 +64,7 @@ import io.kgraph.VertexWithValue;
 public class GraphUtils {
     private static final Logger log = LoggerFactory.getLogger(GraphUtils.class);
 
-    public static <K, V extends Number> void verticesToTopic(
+    public static <K, V> void verticesToTopic(
         InputStream inputStream,
         Parser<K> keyParser,
         Parser<V> valueParser,
@@ -79,7 +79,7 @@ public class GraphUtils {
             keySerializer, valueSerializer, props, topic, numPartitions, replicationFactor);
     }
 
-    public static <K, V extends Number> void verticesToTopic(
+    public static <K, V> void verticesToTopic(
         InputStream inputStream,
         Parser<VertexWithValue<K, V>> vertexParser,
         Serializer<K> keySerializer,
@@ -105,7 +105,7 @@ public class GraphUtils {
         }
     }
 
-    public static <K, V extends Number> void edgesToTopic(
+    public static <K, V> void edgesToTopic(
         InputStream inputStream,
         Parser<K> sourceVertexIdParser,
         Parser<K> targetVertexIdParser,
@@ -120,7 +120,7 @@ public class GraphUtils {
             valueSerializer, props, topic, numPartitions, replicationFactor);
     }
 
-    public static <K, V extends Number> void edgesToTopic(
+    public static <K, V> void edgesToTopic(
         InputStream inputStream,
         Parser<EdgeWithValue<K, V>> edgeParser,
         Serializer<V> valueSerializer,
@@ -145,10 +145,10 @@ public class GraphUtils {
         }
     }
 
-    public static <V extends Number> void verticesToFile(
+    public static <V> void verticesToFile(
         KTable<Long, V> vertices,
         String fileName) {
-        vertices.toStream().print(Printed.<Long, V>toFile(fileName).withKeyValueMapper((k, v) -> String.format("%d %f", k , v)));
+        vertices.toStream().print(Printed.<Long, V>toFile(fileName).withKeyValueMapper((k, v) -> String.format("%s %s", k, v)));
     }
 
     public static <K, VV, EV> CompletableFuture<Map<TopicPartition, Long>> groupEdgesBySourceAndRepartition(
