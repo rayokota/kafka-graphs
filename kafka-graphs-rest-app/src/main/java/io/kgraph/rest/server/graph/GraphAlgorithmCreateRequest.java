@@ -20,6 +20,7 @@ package io.kgraph.rest.server.graph;
 
 import java.util.Map;
 
+import io.kgraph.library.GraphAlgorithmType;
 import lombok.Getter;
 import lombok.Setter;
 

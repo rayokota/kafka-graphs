@@ -18,12 +18,14 @@
 
 package io.kgraph.rest.server.graph;
 
+import io.kgraph.library.GraphAlgorithmType;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
 class GroupEdgesBySourceRequest {
+    private GraphAlgorithmType algorithm;
     private String initialVerticesTopic;
     private String initialEdgesTopic;
     private String verticesTopic;

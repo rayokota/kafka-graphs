@@ -68,7 +68,7 @@ public class LabelPropagationTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Long> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Long(),
                 TestGraphUtils.getTwoCliques(5));
-        KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges, new InitVertices(),
+        KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges, id -> id,
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
         Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
@@ -108,12 +108,5 @@ public class LabelPropagationTest extends AbstractIntegrationTest {
     @After
     public void tearDown() throws Exception {
         algorithm.close();
-    }
-
-    private static final class InitVertices implements ValueMapper<Long, Long> {
-        @Override
-        public Long apply(Long id) {
-            return id;
-        }
     }
 }

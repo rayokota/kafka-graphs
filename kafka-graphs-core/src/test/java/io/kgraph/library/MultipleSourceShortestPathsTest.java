@@ -88,7 +88,8 @@ public class MultipleSourceShortestPathsTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Double> table =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 edges);
-        KGraph<Long, Map<Long, Double>, Double> graph = KGraph.fromEdges(table, new InitVertices(),
+        KGraph<Long, Map<Long, Double>, Double> graph = KGraph.fromEdges(table,
+            id -> (Map<Long, Double>) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.mssp),
             GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),

@@ -68,7 +68,8 @@ public class BreadthFirstSearchTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Long> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Long(),
                 TestGraphUtils.getTwoChains());
-        KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges, new InitVertices(),
+        KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges,
+            id -> (Long) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.bfs),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
@@ -122,12 +123,5 @@ public class BreadthFirstSearchTest extends AbstractIntegrationTest {
     @After
     public void tearDown() throws Exception {
         algorithm.close();
-    }
-
-    private static final class InitVertices implements ValueMapper<Long, Long> {
-        @Override
-        public Long apply(Long id) {
-            return UNVISITED;
-        }
     }
 }

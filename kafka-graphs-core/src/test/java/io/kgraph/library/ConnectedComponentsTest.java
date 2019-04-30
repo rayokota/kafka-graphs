@@ -74,7 +74,7 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Long> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Long(),
                 TestGraphUtils.getTwoChains());
-        KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges, new InitVertices(),
+        KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges, id -> id,
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
@@ -133,7 +133,7 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
             LongSerializer.class, new Properties()
         );
         KGraph<Long, Tuple2<Long, Long>, Long> gridGraph = GraphGenerators.gridGraph(builder, producerConfig, 10, 10);
-        KTable<Long, Long> initialVertices = gridGraph.vertices().mapValues(new InitVerticesFromId<>());
+        KTable<Long, Long> initialVertices = gridGraph.vertices().mapValues((id, v) -> id);
         KGraph<Long, Long, Long> graph = new KGraph<>(initialVertices, gridGraph.edges(),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
@@ -175,7 +175,7 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
             LongSerializer.class, new Properties()
         );
         KGraph<Long, Tuple2<Long, Long>, Long> gridGraph = GraphGenerators.gridGraph(builder, producerConfig, 10, 10);
-        KTable<Long, Long> initialVertices = gridGraph.vertices().mapValues(new InitVerticesFromId<>());
+        KTable<Long, Long> initialVertices = gridGraph.vertices().mapValues((id, v) -> id);
         KGraph<Long, Long, Long> graph = new KGraph<>(initialVertices, gridGraph.edges(),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
@@ -299,20 +299,6 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
     public void tearDown() throws Exception {
         if (algorithm != null) {
             algorithm.close();
-        }
-    }
-
-    private static final class InitVertices implements ValueMapper<Long, Long> {
-        @Override
-        public Long apply(Long id) {
-            return id;
-        }
-    }
-
-    private static final class InitVerticesFromId<VV> implements ValueMapperWithKey<Long, VV, Long> {
-        @Override
-        public Long apply(Long key, VV value) {
-            return key;
         }
     }
 }

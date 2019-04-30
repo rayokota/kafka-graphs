@@ -69,7 +69,8 @@ public class LocalClusteringCoefficientTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getLCCEdges());
-        KGraph<Long, Double, Double> graph = KGraph.fromEdges(edges, new InitVertices(),
+        KGraph<Long, Double, Double> graph = KGraph.fromEdges(edges,
+            id -> (Double) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.lcc),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),
@@ -105,12 +106,5 @@ public class LocalClusteringCoefficientTest extends AbstractIntegrationTest {
     @After
     public void tearDown() throws Exception {
         algorithm.close();
-    }
-
-    private static final class InitVertices implements ValueMapper<Long, Double> {
-        @Override
-        public Double apply(Long id) {
-            return 1.0;
-        }
     }
 }

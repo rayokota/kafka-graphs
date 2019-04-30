@@ -74,7 +74,8 @@ public class PageRankTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getChain());
-        KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges, new InitVertices(),
+        KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges,
+            id -> (Double) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.pagerank),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
         KTable<Long, Tuple2<Double, Double>> vertices =
             initialGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
@@ -139,7 +140,8 @@ public class PageRankTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getChain());
-        KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges, new InitVertices(),
+        KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges,
+            id -> (Double) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.pagerank),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
         KTable<Long, Tuple2<Double, Double>> vertices =
             initialGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
@@ -204,7 +206,8 @@ public class PageRankTest extends AbstractIntegrationTest {
         KTable<Edge<Long>, Double> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getChain());
-        KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges, new InitVertices(),
+        KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges,
+            id -> (Double) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.pagerank),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
 
         long srcVertexId = 4L;
@@ -469,12 +472,5 @@ public class PageRankTest extends AbstractIntegrationTest {
     @After
     public void tearDown() throws Exception {
         algorithm.close();
-    }
-
-    private static final class InitVertices implements ValueMapper<Long, Double> {
-        @Override
-        public Double apply(Long id) {
-            return Double.POSITIVE_INFINITY;
-        }
     }
 }

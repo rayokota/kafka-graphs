@@ -65,6 +65,7 @@ import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.library.BreadthFirstSearch;
 import io.kgraph.library.ConnectedComponents;
+import io.kgraph.library.GraphAlgorithmType;
 import io.kgraph.library.LabelPropagation;
 import io.kgraph.library.LocalClusteringCoefficient;
 import io.kgraph.library.MultipleSourceShortestPaths;
@@ -96,7 +97,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
     private final String host;
     private int port;
     private GroupMember group;
-    private final ConcurrentMap<String, PregelGraphAlgorithm<Long, ?, ?, ?>> algorithms = new ConcurrentHashMap<>();
+    private final ConcurrentMap<String, PregelGraphAlgorithm<?, ?, ?, ?>> algorithms = new ConcurrentHashMap<>();
 
     public GraphAlgorithmHandler(KafkaGraphsProperties props, CuratorFramework curator) {
         this.props = props;
@@ -211,7 +212,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
         String appId = appIdHeaders.isEmpty() ? ClientUtils.generateRandomString(8) : appIdHeaders.iterator().next();
         return request.bodyToMono(GraphAlgorithmCreateRequest.class)
             .doOnNext(input -> {
-                PregelGraphAlgorithm<Long, ?, ?, ?> algorithm = getAlgorithm(appId, input);
+                PregelGraphAlgorithm<?, ?, ?, ?> algorithm = getAlgorithm(appId, input);
                 StreamsBuilder builder = new StreamsBuilder();
                 Properties streamsConfig = streamsConfig(appId, props.getBootstrapServers(), new KryoSerde<>());
                 algorithm.configure(builder, streamsConfig);
@@ -225,53 +226,31 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
     }
 
     @SuppressWarnings("unchecked")
-    private PregelGraphAlgorithm<Long, ?, ?, ?> getAlgorithm(String appId, GraphAlgorithmCreateRequest input) {
+    private PregelGraphAlgorithm<?, ?, ?, ?> getAlgorithm(String appId, GraphAlgorithmCreateRequest input) {
         try {
-            long srcVertexId;
-            ComputeFunction<Long, ?, ?, ?> cf;
+            GraphAlgorithmType type = input.getAlgorithm();
+            ComputeFunction<?, ?, ?, ?> cf = GraphAlgorithmType.computeFunction(type);
             Map<String, Object> configs = new HashMap<>();
             Optional<?> initMsg = Optional.empty();
-            GraphSerialized<Long, ?, ?> graphSerialized;
-            switch (input.getAlgorithm()) {
+            GraphSerialized<?, ?, ?> graphSerialized =
+                GraphAlgorithmType.graphSerialized(type, input.isValuesOfTypeDouble());
+            switch (type) {
                 case bfs:
-                    cf = new BreadthFirstSearch<>();
-                    srcVertexId = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
+                    long srcVertexId = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
                     configs.put(BreadthFirstSearch.SRC_VERTEX_ID, srcVertexId);
-                    if (input.isValuesOfTypeDouble()) {
-                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double());
-                    } else {
-                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long());
-                    }
                     break;
                 case wcc:
-                    cf = new ConnectedComponents<>();
-                    if (input.isValuesOfTypeDouble()) {
-                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double());
-                    } else {
-                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long());
-                    }
                     break;
                 case lcc:
-                    cf = new LocalClusteringCoefficient();
-                    graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double());
                     break;
                 case lp:
-                    cf = new LabelPropagation<>();
-                    if (input.isValuesOfTypeDouble()) {
-                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double());
-                    } else {
-                        graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long());
-                    }
                     break;
                 case mssp:
-                    cf = new MultipleSourceShortestPaths();
                     String[] values = getParam(input.getParams(), "landmarkVertexIds", true).split(",");
                     Set<Long> landmarkVertexIds = Arrays.stream(values).map((Long::parseLong)).collect(Collectors.toSet());
                     configs.put(MultipleSourceShortestPaths.LANDMARK_VERTEX_IDS, landmarkVertexIds);
-                    graphSerialized = GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double());
                     break;
                 case pagerank:
-                    cf = new PageRank<>();
                     double tolerance = Double.parseDouble(getParam(input.getParams(), "tolerance", true));
                     double resetProbability = Double.parseDouble(getParam(input.getParams(), "resetProbability", true));
                     String srcVertexIdStr = getParam(input.getParams(), "srcVertexId", false);
@@ -283,16 +262,13 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                     } else {
                         initMsg = Optional.of(resetProbability / (1.0 - resetProbability));
                     }
-                    graphSerialized = GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double());
                     break;
                 case sssp:
-                    cf = new SingleSourceShortestPaths();
-                    srcVertexId = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
-                    configs.put(SingleSourceShortestPaths.SRC_VERTEX_ID, srcVertexId);
-                    graphSerialized = GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double());
+                    long srcVertexId2 = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
+                    configs.put(SingleSourceShortestPaths.SRC_VERTEX_ID, srcVertexId2);
                     break;
                 default:
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid algorithm: " + input.getAlgorithm());
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid algorithm: " + type);
             }
             return new PregelGraphAlgorithm<>(
                 getHostAndPort(),
@@ -339,7 +315,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
 
     public Mono<ServerResponse> state(ServerRequest request) {
         String appId = request.pathVariable("id");
-        PregelGraphAlgorithm<Long, ?, ?, ?> algorithm = algorithms.get(appId);
+        PregelGraphAlgorithm<?, ?, ?, ?> algorithm = algorithms.get(appId);
         return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
             .body(Mono.just(new GraphAlgorithmStatus(algorithm.state())), GraphAlgorithmStatus.class);
@@ -351,7 +327,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
         return request.bodyToMono(GraphAlgorithmRunRequest.class)
             .flatMapMany(input -> {
                 log.debug("num iterations: {}", input.getNumIterations());
-                PregelGraphAlgorithm<Long, ?, ?, ?> algorithm = algorithms.get(appId);
+                PregelGraphAlgorithm<?, ?, ?, ?> algorithm = algorithms.get(appId);
                 GraphAlgorithmState state = algorithm.run(input.getNumIterations());
                 GraphAlgorithmStatus status = new GraphAlgorithmStatus(state);
                 Flux<GraphAlgorithmStatus> states =
@@ -386,7 +362,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
     public Mono<ServerResponse> result(ServerRequest request) {
         List<String> appIdHeaders = request.headers().header(X_KGRAPH_APPID);
         String appId = request.pathVariable("id");
-        PregelGraphAlgorithm<Long, ?, ?, ?> algorithm = algorithms.get(appId);
+        PregelGraphAlgorithm<?, ?, ?, ?> algorithm = algorithms.get(appId);
         Flux<String> body = Flux.fromIterable(algorithm.result()).map(kv -> {
             log.trace("result: ({}, {})", kv.key, kv.value);
             return kv.key + " " + kv.value;
@@ -416,7 +392,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
     public Mono<ServerResponse> delete(ServerRequest request) {
         List<String> appIdHeaders = request.headers().header(X_KGRAPH_APPID);
         String appId = request.pathVariable("id");
-        PregelGraphAlgorithm<Long, ?, ?, ?> algorithm = algorithms.remove(appId);
+        PregelGraphAlgorithm<?, ?, ?, ?> algorithm = algorithms.remove(appId);
         algorithm.close();
         return proxyDelete(appIdHeaders.isEmpty() ? group.getCurrentMembers().keySet() : Collections.emptySet(), appId)
             .then(ServerResponse.noContent().build());
