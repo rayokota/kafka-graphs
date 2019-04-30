@@ -69,7 +69,7 @@ public class BreadthFirstSearchTest extends AbstractIntegrationTest {
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Long(),
                 TestGraphUtils.getTwoChains());
         KGraph<Long, Long, Long> graph = KGraph.fromEdges(edges,
-            id -> (Long) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.bfs),
+            GraphAlgorithmType.initialVertexValueMapper(GraphAlgorithmType.bfs),
             GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,

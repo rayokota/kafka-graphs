@@ -22,6 +22,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -54,6 +55,7 @@ import io.kgraph.GraphAlgorithm;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
 import io.kgraph.KGraph;
+import io.kgraph.library.GraphAlgorithmType;
 import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphUtils;
@@ -81,7 +83,8 @@ public class SvdppTest extends AbstractIntegrationTest {
         );
         KTable<Edge<CfLongId>, Float> edges =
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Float(), list);
-        KGraph<CfLongId, Svdpp.SvdppValue, Float> graph = KGraph.fromEdges(edges, new InitVertices(),
+        KGraph<CfLongId, Svdpp.SvdppValue, Float> graph = KGraph.fromEdges(edges,
+            GraphAlgorithmType.initialVertexValueMapper(GraphAlgorithmType.svdpp),
             GraphSerialized.with(new CfLongIdSerde(), new KryoSerde<>(), Serdes.Float()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
@@ -119,7 +122,7 @@ public class SvdppTest extends AbstractIntegrationTest {
     }
 
     //@Test
-    public void testSvdppFromFile() throws Exception {
+    public void testSvdppFromRankingsFile() throws Exception {
         String suffix = "file";
         StreamsBuilder builder = new StreamsBuilder();
 
@@ -133,7 +136,8 @@ public class SvdppTest extends AbstractIntegrationTest {
         KTable<Edge<CfLongId>, Float> edges =
             builder.table("initEdges-" + suffix, Consumed.with(new KryoSerde<>(), Serdes.Float()),
                 Materialized.with(new KryoSerde<>(), Serdes.Float()));
-        KGraph<CfLongId, Svdpp.SvdppValue, Float> graph = KGraph.fromEdges(edges, new InitVertices(),
+        KGraph<CfLongId, Svdpp.SvdppValue, Float> graph = KGraph.fromEdges(edges,
+            GraphAlgorithmType.initialVertexValueMapper(GraphAlgorithmType.svdpp),
             GraphSerialized.with(new CfLongIdSerde(), new KryoSerde<>(), Serdes.Float()));
 
         Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
@@ -180,15 +184,70 @@ public class SvdppTest extends AbstractIntegrationTest {
         assertEquals("2071 1=[0.007310, 0.002405]", map.lastEntry().toString());
     }
 
+    @Test
+    public void testSvdppFromRankingsSimpleFile() throws Exception {
+        String suffix = "simplefile";
+        StreamsBuilder builder = new StreamsBuilder();
+
+        Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), KryoSerializer.class,
+            FloatSerializer.class, new Properties()
+        );
+        GraphUtils.edgesToTopic(GraphUtils.class.getResourceAsStream("/ratings_simple.txt"),
+            new EdgeCfLongIdFloatValueParser(),
+            new FloatSerializer(),
+            producerConfig, "initEdges-" + suffix, 50, (short) 1);
+        KTable<Edge<CfLongId>, Float> edges =
+            builder.table("initEdges-" + suffix, Consumed.with(new KryoSerde<>(), Serdes.Float()),
+                Materialized.with(new KryoSerde<>(), Serdes.Float()));
+        KGraph<CfLongId, Svdpp.SvdppValue, Float> graph = KGraph.fromEdges(edges,
+            GraphAlgorithmType.initialVertexValueMapper(GraphAlgorithmType.svdpp),
+            GraphSerialized.with(new CfLongIdSerde(), new KryoSerde<>(), Serdes.Float()));
+
+        Properties props = ClientUtils.streamsConfig("prepare-" + suffix, "prepare-client-" + suffix,
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), graph.vertexValueSerde().getClass());
+        CompletableFuture<Map<TopicPartition, Long>> state = GraphUtils.groupEdgesBySourceAndRepartition(
+            builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
+        Map<TopicPartition, Long> offsets = state.get();
+
+        Thread.sleep(2000);
+
+        Map<String, Object> configs = new HashMap<>();
+        configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
+        configs.put(Svdpp.BIAS_GAMMA, 0.01f);
+        configs.put(Svdpp.FACTOR_LAMBDA, 0.005f);
+        configs.put(Svdpp.FACTOR_GAMMA, 0.01f);
+        configs.put(Svdpp.MIN_RATING, 0f);
+        configs.put(Svdpp.MAX_RATING, 5f);
+        configs.put(Svdpp.VECTOR_SIZE, 2);
+        configs.put(Svdpp.ITERATIONS, 3);
+        algorithm =
+            new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
+                CLUSTER.zKConnectString(), "vertices-" + suffix, "edgesGroupedBySource-" + suffix, offsets, graph.serialized(),
+                "solutionSet-" + suffix, "solutionSetStore-" + suffix, "workSet-" + suffix, 50, (short) 1,
+                configs, Optional.empty(), new Svdpp());
+        streamsConfiguration = ClientUtils.streamsConfig("run-" + suffix, "run-client-" + suffix,
+            CLUSTER.bootstrapServers(), graph.keySerde().getClass(), KryoSerde.class);
+        //streamsConfiguration.setProperty(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, String.valueOf(10 * 1024 * 1024));
+        KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
+        GraphAlgorithmState<KTable<CfLongId, Svdpp.SvdppValue>> paths = algorithm.run();
+        paths.result().get();
+
+        NavigableMap<CfLongId, Svdpp.SvdppValue> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
+        Set<String> result = new TreeSet<>();
+        for (Map.Entry<CfLongId, Svdpp.SvdppValue> entry : map.entrySet()) {
+            result.add(entry.getKey().toString() + " " + entry.getValue().toString());
+        }
+        log.info("result: {}", result);
+        log.info("first: {}", map.firstEntry());
+        log.info("last: {}", map.lastEntry());
+
+        Thread.sleep(2000);
+
+        assertEquals("1 0=[0.006397, 0.008010]", map.firstEntry().toString());
+        assertEquals("20 1=[0.007310, 0.002405]", map.lastEntry().toString());
+    }
     @After
     public void tearDown() throws Exception {
         algorithm.close();
-    }
-
-    private static final class InitVertices implements ValueMapper<CfLongId, Svdpp.SvdppValue> {
-        @Override
-        public Svdpp.SvdppValue apply(CfLongId id) {
-            return new Svdpp.SvdppValue(0f, new FloatMatrix(), new FloatMatrix());
-        }
     }
 }

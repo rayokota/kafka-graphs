@@ -22,8 +22,11 @@ import java.util.HashMap;
 
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.kstream.ValueMapper;
+import org.jblas.FloatMatrix;
 
 import io.kgraph.GraphSerialized;
+import io.kgraph.library.cf.CfLongIdSerde;
+import io.kgraph.library.cf.Svdpp;
 import io.kgraph.pregel.ComputeFunction;
 import io.kgraph.utils.KryoSerde;
 
@@ -34,9 +37,10 @@ public enum GraphAlgorithmType {
     mssp,
     pagerank,
     sssp,
+    svdpp,
     wcc;
 
-    public static ComputeFunction<?, ?, ?, ?> computeFunction(GraphAlgorithmType type) {
+    public static ComputeFunction computeFunction(GraphAlgorithmType type) {
         switch (type) {
             case bfs:
                 return new BreadthFirstSearch<>();
@@ -50,6 +54,8 @@ public enum GraphAlgorithmType {
                 return new PageRank<>();
             case sssp:
                 return new SingleSourceShortestPaths();
+            case svdpp:
+                return new Svdpp();
             case wcc:
                 return new ConnectedComponents<>();
             default:
@@ -57,7 +63,7 @@ public enum GraphAlgorithmType {
         }
     }
 
-    public static GraphSerialized<?, ?, ?> graphSerialized(GraphAlgorithmType type, boolean useDouble) {
+    public static GraphSerialized graphSerialized(GraphAlgorithmType type, boolean useDouble) {
         switch (type) {
             case bfs:
                 return useDouble
@@ -75,6 +81,8 @@ public enum GraphAlgorithmType {
                 return GraphSerialized.with(Serdes.Long(), new KryoSerde<>(), Serdes.Double());
             case sssp:
                 return GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double());
+            case svdpp:
+                return GraphSerialized.with(new CfLongIdSerde(), new KryoSerde<>(), Serdes.Float());
             case wcc:
                 return useDouble
                     ? GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double())
@@ -84,22 +92,24 @@ public enum GraphAlgorithmType {
         }
     }
 
-    public static Object initialVertexValue(GraphAlgorithmType type) {
+    public static ValueMapper initialVertexValueMapper(GraphAlgorithmType type) {
         switch (type) {
             case bfs:
-                return BreadthFirstSearch.UNVISITED;
+                return id -> BreadthFirstSearch.UNVISITED;
             case lcc:
-                return 1.0;
+                return id -> 1.0;
             case lp:
-                return null;
+                return id -> id;
             case mssp:
-                return new HashMap<>();
+                return id -> new HashMap<>();
             case pagerank:
-                return Double.POSITIVE_INFINITY;
+                return id -> Double.POSITIVE_INFINITY;
             case sssp:
-                return Double.POSITIVE_INFINITY;
+                return id -> Double.POSITIVE_INFINITY;
+            case svdpp:
+                return id -> new Svdpp.SvdppValue(0f, new FloatMatrix(), new FloatMatrix());
             case wcc:
-                return null;
+                return id -> id;
             default:
                 throw new IllegalArgumentException("Unsupported algorithm type");
         }

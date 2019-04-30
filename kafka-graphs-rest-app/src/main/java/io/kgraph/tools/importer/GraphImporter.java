@@ -44,17 +44,17 @@ public class GraphImporter<K, VV, EV> implements Callable<Void> {
     @Parameters(index = "0", description = "List of Kafka servers.")
     private String bootstrapServers;
 
-    @Parameters(index = "1", description = "The vertices topic.")
+    @Option(names = {"-vt", "--verticesTopic"}, description = "The vertices topic.")
     private String verticesTopic;
 
-    @Parameters(index = "2", description = "The edges topic.")
+    @Option(names = {"-et", "--edgesTopic"}, description = "The edges topic.")
     private String edgesTopic;
 
-    @Option(names = {"-vf", "--vertexFile"}, description = "The name of the file containing vertices.")
-    private File vertexFile;
+    @Option(names = {"-vf", "--verticesFile"}, description = "The vertices file.")
+    private File verticesFile;
 
-    @Option(names = {"-ef", "--edgeFile"}, description = "The name of the file containing edges.")
-    private File edgeFile;
+    @Option(names = {"-ef", "--edgesFile"}, description = "The edges file.")
+    private File edgesFile;
 
     @Option(names = {"-vp", "--vertexParser"}, description = "The vertex parser.")
     private String vertexParser = VertexLongIdLongValueParser.class.getName();
@@ -83,8 +83,8 @@ public class GraphImporter<K, VV, EV> implements Callable<Void> {
     public GraphImporter(String bootstrapServers,
                          String verticesTopic,
                          String edgesTopic,
-                         File vertexFile,
-                         File edgeFile,
+                         File verticesFile,
+                         File edgesFile,
                          String vertexParser,
                          String edgeParser,
                          String keySerializer,
@@ -95,8 +95,8 @@ public class GraphImporter<K, VV, EV> implements Callable<Void> {
         this.bootstrapServers = bootstrapServers;
         this.verticesTopic = verticesTopic;
         this.edgesTopic = edgesTopic;
-        this.vertexFile = vertexFile;
-        this.edgeFile = edgeFile;
+        this.verticesFile = verticesFile;
+        this.edgesFile = edgesFile;
         this.vertexParser = vertexParser;
         this.edgeParser = edgeParser;
         this.keySerializer = keySerializer;
@@ -111,7 +111,10 @@ public class GraphImporter<K, VV, EV> implements Callable<Void> {
     public Void call() throws Exception {
         Properties props = new Properties();
         props.setProperty(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        if (vertexFile != null) {
+        if (verticesFile != null) {
+            if (verticesTopic == null) {
+                throw new IllegalArgumentException("Missing vertices topic.");
+            }
             Parsers.VertexParser<K, VV> vertexReader = (Parsers.VertexParser<K, VV>)
                 ClientUtils.getConfiguredInstance(Class.forName(vertexParser), null);
             Serializer<K> keyWriter = (Serializer<K>)
@@ -119,18 +122,21 @@ public class GraphImporter<K, VV, EV> implements Callable<Void> {
             Serializer<VV> vertexValueWriter = (Serializer<VV>)
                 ClientUtils.getConfiguredInstance(Class.forName(vertexValueSerializer), null);
             GraphUtils.<K, VV>verticesToTopic(
-                new BufferedInputStream(new FileInputStream(vertexFile)),
+                new BufferedInputStream(new FileInputStream(verticesFile)),
                 vertexReader, keyWriter, vertexValueWriter,
                 props, verticesTopic, numPartitions, replicationFactor
             );
         }
-        if (edgeFile != null) {
+        if (edgesFile != null) {
+            if (edgesTopic == null) {
+                throw new IllegalArgumentException("Missing edges topic.");
+            }
             Parsers.EdgeParser<K, EV> edgeReader = (Parsers.EdgeParser<K, EV>)
                 ClientUtils.getConfiguredInstance(Class.forName(edgeParser), null);
             Serializer<EV> edgeValueWriter = (Serializer<EV>)
                 ClientUtils.getConfiguredInstance(Class.forName(edgeValueSerializer), null);
             GraphUtils.<K, EV>edgesToTopic(
-                new BufferedInputStream(new FileInputStream(edgeFile)),
+                new BufferedInputStream(new FileInputStream(edgesFile)),
                 edgeReader, edgeValueWriter,
                 props, edgesTopic, numPartitions, replicationFactor
             );

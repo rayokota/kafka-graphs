@@ -75,7 +75,7 @@ public class PageRankTest extends AbstractIntegrationTest {
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getChain());
         KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges,
-            id -> (Double) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.pagerank),
+            GraphAlgorithmType.initialVertexValueMapper(GraphAlgorithmType.pagerank),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
         KTable<Long, Tuple2<Double, Double>> vertices =
             initialGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
@@ -141,7 +141,7 @@ public class PageRankTest extends AbstractIntegrationTest {
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getChain());
         KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges,
-            id -> (Double) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.pagerank),
+            GraphAlgorithmType.initialVertexValueMapper(GraphAlgorithmType.pagerank),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
         KTable<Long, Tuple2<Double, Double>> vertices =
             initialGraph.vertices().mapValues((k, v) -> new Tuple2<>(0.0, 0.0));
@@ -207,7 +207,7 @@ public class PageRankTest extends AbstractIntegrationTest {
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getChain());
         KGraph<Long, Double, Double> initialGraph = KGraph.fromEdges(edges,
-            id -> (Double) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.pagerank),
+            GraphAlgorithmType.initialVertexValueMapper(GraphAlgorithmType.pagerank),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
 
         long srcVertexId = 4L;

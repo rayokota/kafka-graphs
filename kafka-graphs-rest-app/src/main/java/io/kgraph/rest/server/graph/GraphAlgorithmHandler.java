@@ -43,6 +43,9 @@ import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
+import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.KTable;
+import org.apache.kafka.streams.kstream.Materialized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -63,14 +66,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphSerialized;
+import io.kgraph.KGraph;
 import io.kgraph.library.BreadthFirstSearch;
-import io.kgraph.library.ConnectedComponents;
 import io.kgraph.library.GraphAlgorithmType;
-import io.kgraph.library.LabelPropagation;
-import io.kgraph.library.LocalClusteringCoefficient;
 import io.kgraph.library.MultipleSourceShortestPaths;
 import io.kgraph.library.PageRank;
 import io.kgraph.library.SingleSourceShortestPaths;
+import io.kgraph.library.cf.Svdpp;
 import io.kgraph.pregel.ComputeFunction;
 import io.kgraph.pregel.PregelGraphAlgorithm;
 import io.kgraph.pregel.ZKUtils;
@@ -117,11 +119,17 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
             try {
                 Map<String, Part> map = parts.toSingleValueMap();
 
+                String verticesTopic = null;
                 FormFieldPart verticesTopicPart = (FormFieldPart) map.get("verticesTopic");
-                String verticesTopic = verticesTopicPart.value();
+                if (verticesTopicPart != null) {
+                    verticesTopic = verticesTopicPart.value();
+                }
 
+                String edgesTopic = null;
                 FormFieldPart edgesTopicPart = (FormFieldPart) map.get("edgesTopic");
-                String edgesTopic = edgesTopicPart.value();
+                if (edgesTopicPart != null) {
+                    edgesTopic = edgesTopicPart.value();
+                }
 
                 File vertexFile = null;
                 FilePart vertexFilePart = (FilePart) map.get("vertexFile");
@@ -137,26 +145,47 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                     edgeFilePart.transferTo(edgeFile);
                 }
 
+                String vertexParser = null;
                 FormFieldPart vertexParserPart = (FormFieldPart) map.get("vertexParser");
-                String vertexParser = vertexParserPart.value();
+                if (vertexParserPart != null) {
+                    vertexParser = vertexParserPart.value();
+                }
 
+                String edgeParser = null;
                 FormFieldPart edgeParserPart = (FormFieldPart) map.get("edgeParser");
-                String edgeParser = edgeParserPart.value();
+                if (edgeParserPart != null) {
+                    edgeParser = edgeParserPart.value();
+                }
 
+                String keySerializer = null;
                 FormFieldPart keySerializerPart = (FormFieldPart) map.get("keySerializer");
-                String keySerializer = keySerializerPart.value();
+                if (keySerializerPart != null) {
+                    keySerializer = keySerializerPart.value();
+                }
 
+                String vertexValueSerializer = null;
                 FormFieldPart vertexValueSerializerPart = (FormFieldPart) map.get("vertexValueSerializer");
-                String vertexValueSerializer = vertexValueSerializerPart.value();
+                if (vertexValueSerializerPart != null) {
+                    vertexValueSerializer = vertexValueSerializerPart.value();
+                }
 
+                String edgeValueSerializer = null;
                 FormFieldPart edgeValueSerializerPart = (FormFieldPart) map.get("edgeValueSerializer");
-                String edgeValueSerializer = edgeValueSerializerPart.value();
+                if (edgeValueSerializerPart != null) {
+                    edgeValueSerializer = edgeValueSerializerPart.value();
+                }
 
+                int numPartitions = 50;
                 FormFieldPart numPartitionsPart = (FormFieldPart) map.get("numPartitions");
-                int numPartitions = Integer.parseInt(numPartitionsPart.value());
+                if (numPartitionsPart != null) {
+                    numPartitions = Integer.parseInt(numPartitionsPart.value());
+                }
 
+                short replicationFactor = 1;
                 FormFieldPart replicatorFactorPart = (FormFieldPart) map.get("replicationFactor");
-                short replicationFactor = Short.parseShort(replicatorFactorPart.value());
+                if (replicatorFactorPart != null) {
+                    replicationFactor = Short.parseShort(replicatorFactorPart.value());
+                }
 
                 GraphImporter importer = new GraphImporter(
                     props.getBootstrapServers(),
@@ -175,31 +204,43 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
         });
     }
 
+    @SuppressWarnings("unchecked")
     public Mono<ServerResponse> prepareGraph(ServerRequest request) {
         String appId = ClientUtils.generateRandomString(8);
         return request.bodyToMono(GroupEdgesBySourceRequest.class)
             .doOnNext(input -> {
                 try {
+                    GraphAlgorithmType type = input.getAlgorithm();
                     StreamsBuilder builder = new StreamsBuilder();
-                    Properties streamsConfig = streamsConfig(appId, props.getBootstrapServers(),
-                        input.isValuesOfTypeDouble() ? Serdes.Double() : Serdes.Long()
-                    );
                     CompletableFuture<Map<TopicPartition, Long>> future;
-                    if (input.isValuesOfTypeDouble()) {
-                        future = GraphUtils.groupEdgesBySourceAndRepartition(builder,
-                            streamsConfig, input.getInitialVerticesTopic(), input.getInitialEdgesTopic(),
-                            GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Double()),
-                            input.getVerticesTopic(), input.getEdgesGroupedBySourceTopic(),
-                            input.getNumPartitions(), input.getReplicationFactor()
+                    GraphSerialized serialized =
+                        GraphAlgorithmType.graphSerialized(type, input.isValuesOfTypeDouble());
+                    Properties streamsConfig = streamsConfig(
+                        appId, props.getBootstrapServers(),
+                        serialized.keySerde(), serialized.vertexValueSerde()
+                    );
+
+                    KTable edges = builder.table(input.getInitialEdgesTopic(),
+                        Consumed.with(new KryoSerde<>(), serialized.edgeValueSerde()),
+                        Materialized.with(new KryoSerde<>(), serialized.edgeValueSerde()));
+                    KGraph graph;
+                    if (input.getInitialVerticesTopic() != null) {
+                        KTable vertices = builder.table(
+                            input.getInitialVerticesTopic(),
+                            Consumed.with(serialized.keySerde(), serialized.vertexValueSerde()),
+                            Materialized.with(new KryoSerde<>(), serialized.edgeValueSerde())
                         );
+                        graph = new KGraph<>(vertices, edges, serialized);
                     } else {
-                        future = GraphUtils.groupEdgesBySourceAndRepartition(builder,
-                            streamsConfig, input.getInitialVerticesTopic(), input.getInitialEdgesTopic(),
-                            GraphSerialized.with(Serdes.Long(), Serdes.Long(), Serdes.Long()),
-                            input.getVerticesTopic(), input.getEdgesGroupedBySourceTopic(),
-                            input.getNumPartitions(), input.getReplicationFactor()
-                        );
+                        graph = KGraph.fromEdges(edges,
+                            GraphAlgorithmType.initialVertexValueMapper(type),
+                            serialized);
                     }
+                    future = GraphUtils.groupEdgesBySourceAndRepartition(
+                        builder, streamsConfig, graph,
+                        input.getVerticesTopic(), input.getEdgesGroupedBySourceTopic(),
+                        input.getNumPartitions(), input.getReplicationFactor()
+                    );
                     if (!input.isAsync()) future.get();
                 } catch (Exception e) {
                     throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -214,7 +255,10 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
             .doOnNext(input -> {
                 PregelGraphAlgorithm<?, ?, ?, ?> algorithm = getAlgorithm(appId, input);
                 StreamsBuilder builder = new StreamsBuilder();
-                Properties streamsConfig = streamsConfig(appId, props.getBootstrapServers(), new KryoSerde<>());
+                Properties streamsConfig = streamsConfig(
+                    appId, props.getBootstrapServers(),
+                    algorithm.serialized().keySerde(), algorithm.serialized().vertexValueSerde()
+                );
                 algorithm.configure(builder, streamsConfig);
                 algorithms.put(appId, algorithm);
             })
@@ -229,10 +273,10 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
     private PregelGraphAlgorithm<?, ?, ?, ?> getAlgorithm(String appId, GraphAlgorithmCreateRequest input) {
         try {
             GraphAlgorithmType type = input.getAlgorithm();
-            ComputeFunction<?, ?, ?, ?> cf = GraphAlgorithmType.computeFunction(type);
+            ComputeFunction cf = GraphAlgorithmType.computeFunction(type);
             Map<String, Object> configs = new HashMap<>();
             Optional<?> initMsg = Optional.empty();
-            GraphSerialized<?, ?, ?> graphSerialized =
+            GraphSerialized graphSerialized =
                 GraphAlgorithmType.graphSerialized(type, input.isValuesOfTypeDouble());
             switch (type) {
                 case bfs:
@@ -266,6 +310,17 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                 case sssp:
                     long srcVertexId2 = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
                     configs.put(SingleSourceShortestPaths.SRC_VERTEX_ID, srcVertexId2);
+                    break;
+                case svdpp:
+                    // TODO
+                    configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
+                    configs.put(Svdpp.BIAS_GAMMA, 0.01f);
+                    configs.put(Svdpp.FACTOR_LAMBDA, 0.005f);
+                    configs.put(Svdpp.FACTOR_GAMMA, 0.01f);
+                    configs.put(Svdpp.MIN_RATING, 0f);
+                    configs.put(Svdpp.MAX_RATING, 5f);
+                    configs.put(Svdpp.VECTOR_SIZE, 2);
+                    configs.put(Svdpp.ITERATIONS, 3);
                     break;
                 default:
                     throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid algorithm: " + type);
@@ -413,12 +468,15 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
         return flux;
     }
 
-    public static Properties streamsConfig(String appId, String bootstrapServers, Serde<?> valueSerde) {
+    public static Properties streamsConfig(String appId,
+                                           String bootstrapServers,
+                                           Serde<?> keySerde,
+                                           Serde<?> valueSerde) {
         final Properties streamsConfig = new Properties();
         streamsConfig.put(StreamsConfig.APPLICATION_ID_CONFIG, appId);
         streamsConfig.put(StreamsConfig.CLIENT_ID_CONFIG, appId + "-client");
         streamsConfig.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        streamsConfig.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.Long().getClass().getName());
+        streamsConfig.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, keySerde.getClass().getName());
         streamsConfig.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, valueSerde.getClass().getName());
         streamsConfig.put(StreamsConfig.CACHE_MAX_BYTES_BUFFERING_CONFIG, 0);
         streamsConfig.put(StreamsConfig.NUM_STREAM_THREADS_CONFIG, 2);

@@ -70,7 +70,7 @@ public class LocalClusteringCoefficientTest extends AbstractIntegrationTest {
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getLCCEdges());
         KGraph<Long, Double, Double> graph = KGraph.fromEdges(edges,
-            id -> (Double) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.lcc),
+            GraphAlgorithmType.initialVertexValueMapper(GraphAlgorithmType.lcc),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),

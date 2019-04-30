@@ -69,7 +69,7 @@ public class SingleSourceShortestPathsTest extends AbstractIntegrationTest {
             StreamUtils.tableFromCollection(builder, producerConfig, new KryoSerde<>(), Serdes.Double(),
                 TestGraphUtils.getLongDoubleEdges());
         KGraph<Long, Double, Double> graph = KGraph.fromEdges(edges,
-            id -> (Double) GraphAlgorithmType.initialVertexValue(GraphAlgorithmType.sssp),
+            GraphAlgorithmType.initialVertexValueMapper(GraphAlgorithmType.sssp),
             GraphSerialized.with(Serdes.Long(), Serdes.Double(), Serdes.Double()));
 
         Properties props = ClientUtils.streamsConfig("prepare", "prepare-client", CLUSTER.bootstrapServers(),

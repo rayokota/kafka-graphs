@@ -21,7 +21,10 @@ package io.kgraph.rest.server.graph;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
+import java.util.NavigableMap;
+import java.util.TreeMap;
 
 import org.apache.kafka.common.serialization.FloatSerializer;
 import org.apache.kafka.common.serialization.LongSerializer;
@@ -44,6 +47,7 @@ import org.springframework.util.MultiValueMap;
 
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.library.GraphAlgorithmType;
+import io.kgraph.library.cf.CfLongId;
 import io.kgraph.library.cf.CfLongIdSerializer;
 import io.kgraph.library.cf.EdgeCfLongIdFloatValueParser;
 import io.kgraph.rest.server.KafkaGraphsApplication;
@@ -125,7 +129,7 @@ public class GraphIntegrationTest {
             .returnResult();
 
         GraphAlgorithmState.State state = GraphAlgorithmState.State.RUNNING;
-        while (state != GraphAlgorithmState.State.COMPLETED) {
+        while (state == GraphAlgorithmState.State.RUNNING) {
             EntityExchangeResult<GraphAlgorithmStatus> statusResponse = webTestClient
                 .get()
                 .uri("/pregel/{id}", id)
@@ -169,24 +173,23 @@ public class GraphIntegrationTest {
         return builder.build();
     }
 
-    //@Test
+    @Test
     public void testSvdpp() {
         webTestClient
             .post()
             .uri("/import")
-            .syncBody(generateCCBody())
+            .syncBody(generateSvdppBody())
             .exchange()
             .expectStatus().isOk()
             .expectBody(Void.class);
 
         GroupEdgesBySourceRequest prepareRequest = new GroupEdgesBySourceRequest();
-        prepareRequest.setInitialVerticesTopic("initial-vertices");
+        prepareRequest.setAlgorithm(GraphAlgorithmType.svdpp);
         prepareRequest.setInitialEdgesTopic("initial-edges");
         prepareRequest.setVerticesTopic("new-vertices");
         prepareRequest.setEdgesGroupedBySourceTopic("new-edges");
         prepareRequest.setAsync(false);
 
-        /*
         webTestClient
             .post()
             .uri("/prepare")
@@ -197,7 +200,7 @@ public class GraphIntegrationTest {
             .expectBody(Void.class);
 
         GraphAlgorithmCreateRequest createRequest = new GraphAlgorithmCreateRequest();
-        createRequest.setAlgorithm(GraphAlgorithmType.wcc);
+        createRequest.setAlgorithm(GraphAlgorithmType.svdpp);
         createRequest.setVerticesTopic("new-vertices");
         createRequest.setEdgesGroupedBySourceTopic("new-edges");
 
@@ -225,7 +228,7 @@ public class GraphIntegrationTest {
             .returnResult();
 
         GraphAlgorithmState.State state = GraphAlgorithmState.State.RUNNING;
-        while (state != GraphAlgorithmState.State.COMPLETED) {
+        while (state == GraphAlgorithmState.State.RUNNING) {
             EntityExchangeResult<GraphAlgorithmStatus> statusResponse = webTestClient
                 .get()
                 .uri("/pregel/{id}", id)
@@ -244,24 +247,19 @@ public class GraphIntegrationTest {
             .expectStatus().isOk()
             .returnResult(String.class);
 
-        Map<String, String> map = result.getResponseBody().collectMap(s -> s.split(" ")[0], s -> s.split(" ")[1]).block();
-        for (int i = 0; i < 10; i++) {
-            assertEquals("0", map.get(String.valueOf(i)));
-        }
-        for (int i = 10; i < 21; i++) {
-            assertEquals("10", map.get(String.valueOf(i)));
-        }
-        */
+        NavigableMap<CfLongId, String> map = (NavigableMap<CfLongId, String>) result.getResponseBody().collectMap(
+            s -> new CfLongId(Byte.parseByte(s.split(" ")[1]), Long.parseLong(s.split(" ")[0])),
+            s -> s.substring(s.indexOf("[")),
+            () -> new TreeMap<>()).block();
+        assertEquals("1 0=[0.006397, 0.008010]", map.firstEntry().toString());
+        assertEquals("20 1=[0.007310, 0.002405]", map.lastEntry().toString());
     }
 
     private MultiValueMap<String, HttpEntity<?>> generateSvdppBody() {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("verticesTopic", "initial-vertices");
         builder.part("edgesTopic", "initial-edges");
         builder.part("edgeFile", new ClassPathResource("ratings_simple.txt"));
         builder.part("edgeParser", EdgeCfLongIdFloatValueParser.class.getName());
-        builder.part("keySerializer", CfLongIdSerializer.class.getName());
-        builder.part("vertexValueSerializer", KryoSerializer.class.getName());
         builder.part("edgeValueSerializer", FloatSerializer.class.getName());
         builder.part("numPartitions", "50");
         builder.part("replicationFactor", "1");

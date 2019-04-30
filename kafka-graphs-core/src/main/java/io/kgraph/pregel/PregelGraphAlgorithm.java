@@ -165,6 +165,10 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
             configs, initialMessage, cf);
     }
 
+    public GraphSerialized<K, VV, EV> serialized() {
+        return serialized;
+    }
+
     @Override
     public GraphAlgorithmState<Void> configure(StreamsBuilder builder, Properties streamsConfig) {
         ClientUtils.createTopic(solutionSetTopic, numPartitions, replicationFactor, streamsConfig);

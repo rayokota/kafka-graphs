@@ -26,7 +26,7 @@ import lombok.Setter;
 @Setter
 class GroupEdgesBySourceRequest {
     private GraphAlgorithmType algorithm;
-    private String initialVerticesTopic;
+    private String initialVerticesTopic = null;
     private String initialEdgesTopic;
     private String verticesTopic;
     private String edgesGroupedBySourceTopic;
