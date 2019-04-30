@@ -21,7 +21,6 @@ package io.kgraph.rest.server.graph;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -48,12 +47,10 @@ import org.springframework.util.MultiValueMap;
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.library.GraphAlgorithmType;
 import io.kgraph.library.cf.CfLongId;
-import io.kgraph.library.cf.CfLongIdSerializer;
 import io.kgraph.library.cf.EdgeCfLongIdFloatValueParser;
 import io.kgraph.rest.server.KafkaGraphsApplication;
 import io.kgraph.rest.server.utils.EdgeLongIdLongValueParser;
 import io.kgraph.rest.server.utils.VertexLongIdLongValueParser;
-import io.kgraph.utils.KryoSerializer;
 
 @RunWith(SpringRunner.class)
 @AutoConfigureWebTestClient(timeout = "36000")
@@ -250,7 +247,8 @@ public class GraphIntegrationTest {
         NavigableMap<CfLongId, String> map = (NavigableMap<CfLongId, String>) result.getResponseBody().collectMap(
             s -> new CfLongId(Byte.parseByte(s.split(" ")[1]), Long.parseLong(s.split(" ")[0])),
             s -> s.substring(s.indexOf("[")),
-            () -> new TreeMap<>()).block();
+            TreeMap::new
+        ).block();
         assertEquals("1 0=[0.006397, 0.008010]", map.firstEntry().toString());
         assertEquals("20 1=[0.007310, 0.002405]", map.lastEntry().toString());
     }

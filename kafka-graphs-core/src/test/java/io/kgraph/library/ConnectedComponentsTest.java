@@ -35,8 +35,6 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.ValueMapper;
-import org.apache.kafka.streams.kstream.ValueMapperWithKey;
 import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
@@ -54,7 +52,6 @@ import io.kgraph.utils.ClientUtils;
 import io.kgraph.utils.GraphGenerators;
 import io.kgraph.utils.GraphUtils;
 import io.kgraph.utils.KryoSerde;
-import io.kgraph.utils.Parsers;
 import io.kgraph.utils.StreamUtils;
 import io.vavr.Tuple2;
 

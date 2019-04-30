@@ -59,8 +59,8 @@ public class Parsers<T> {
     }
 
     public static class VertexParser<K, V> implements Parser<VertexWithValue<K, V>> {
-        private Parser<K> idParser;
-        private Parser<V> valueParser;
+        private final Parser<K> idParser;
+        private final Parser<V> valueParser;
         public VertexParser(Parser<K> idParser, Parser<V> valueParser) {
             this.idParser = idParser;
             this.valueParser = valueParser;
@@ -75,9 +75,9 @@ public class Parsers<T> {
     }
 
     public static class EdgeParser<K, V> implements Parser<EdgeWithValue<K, V>> {
-        private Parser<K> sourceIdParser;
-        private Parser<K> targetIdParser;
-        private Parser<V> valueParser;
+        private final Parser<K> sourceIdParser;
+        private final Parser<K> targetIdParser;
+        private final Parser<V> valueParser;
         public EdgeParser(Parser<K> sourceIdParser, Parser<K> targetIdParser, Parser<V> valueParser) {
             this.sourceIdParser = sourceIdParser;
             this.targetIdParser = targetIdParser;

@@ -144,7 +144,8 @@ public class GraphImporter<K, VV, EV> implements Callable<Void> {
         return null;
     }
 
-    public static void main(String[] args) throws Exception {
+    @SuppressWarnings("unchecked")
+    public static void main(String[] args) {
         CommandLine.call(new GraphImporter(), args);
     }
 }

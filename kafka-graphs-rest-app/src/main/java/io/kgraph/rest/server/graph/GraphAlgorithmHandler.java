@@ -40,7 +40,6 @@ import org.apache.curator.framework.recipes.nodes.GroupMember;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.Serde;
-import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.kstream.Consumed;

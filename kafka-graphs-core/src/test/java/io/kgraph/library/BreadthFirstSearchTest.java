@@ -33,7 +33,6 @@ import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.KTable;
-import org.apache.kafka.streams.kstream.ValueMapper;
 import org.junit.After;
 import org.junit.Test;
 import org.slf4j.Logger;
