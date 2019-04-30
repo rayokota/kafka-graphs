@@ -416,9 +416,9 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
                         if (state == State.CREATED) {
                             return;
-                        } else if (state == State.COMPLETED || state == State.CANCELLED) {
+                        } else if (state == State.COMPLETED || state == State.HALTED) {
                             if (futureResult != null && !futureResult.isDone()) {
-                                if (pregelState.superstep() > maxIterations || state == State.CANCELLED) {
+                                if (pregelState.superstep() > maxIterations || state == State.HALTED) {
                                     log.info("Pregel computation halted after {} iterations", pregelState.superstep());
                                 } else {
                                     log.info("Pregel computation converged after {} iterations", pregelState.superstep());
@@ -535,7 +535,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             computeFunction.masterCompute(superstep, cb);
             saveAggregates(superstep - 1, newAggregators);
             if (cb.haltComputation) {
-                return pregelState.state(State.CANCELLED);
+                return pregelState.state(State.HALTED);
             } else if (pregelState.superstep() > maxIterations) {
                 return pregelState.state(State.COMPLETED);
             } else {

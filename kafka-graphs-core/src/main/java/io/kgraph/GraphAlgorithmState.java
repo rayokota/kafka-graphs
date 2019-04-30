@@ -65,7 +65,7 @@ public class GraphAlgorithmState<T> {
         CREATED(0),
         RUNNING(1),
         COMPLETED(2),
-        CANCELLED(3),
+        HALTED(3),
         ERROR(4);
 
         private static final Map<Integer, State> lookup = new HashMap<>();
