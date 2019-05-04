@@ -114,7 +114,7 @@ public class SvdppTest extends AbstractIntegrationTest {
 
         Thread.sleep(2000);
 
-        assertEquals("{1 0=[0.007494, 0.008374], 2 0=[0.006907, 0.008184], 1 1=[0.007407, 0.002487], 2 1=[0.006642, 0.001807]}", map.toString());
+        assertEquals("(1, 0)=(0.26593804, [0.007494, 0.008374]), (2, 0)=(0.18473601, [0.006907, 0.008184]), (1, 1)=(0.6420079, [0.007407, 0.002487]), (2, 1)=(0.6016106, [0.006642, 0.001807])}", map.toString());
     }
 
     //@Test
@@ -176,8 +176,8 @@ public class SvdppTest extends AbstractIntegrationTest {
 
         Thread.sleep(2000);
 
-        assertEquals("1 0=[0.006352, 0.007996]", map.firstEntry().toString());
-        assertEquals("2071 1=[0.007310, 0.002405]", map.lastEntry().toString());
+        assertEquals("(1, 0)=(0.10995317, [0.006352, 0.007996])", map.firstEntry().toString());
+        assertEquals("(2071, 1)=(0.6374174, [0.007310, 0.002405])", map.lastEntry().toString());
     }
 
     @Test
@@ -227,6 +227,7 @@ public class SvdppTest extends AbstractIntegrationTest {
         KafkaStreams streams = algorithm.configure(new StreamsBuilder(), streamsConfiguration).streams();
         GraphAlgorithmState<KTable<CfLongId, Svdpp.SvdppValue>> paths = algorithm.run();
         paths.result().get();
+        log.info("agg: {}", algorithm.state().aggregates());
 
         NavigableMap<CfLongId, Svdpp.SvdppValue> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         Set<String> result = new TreeSet<>();
@@ -239,8 +240,8 @@ public class SvdppTest extends AbstractIntegrationTest {
 
         Thread.sleep(2000);
 
-        assertEquals("1 0=[0.006397, 0.008010]", map.firstEntry().toString());
-        assertEquals("20 1=[0.007310, 0.002405]", map.lastEntry().toString());
+        assertEquals("(1, 0)=(0.11611404, [0.006397, 0.008010])", map.firstEntry().toString());
+        assertEquals("(20, 1)=(0.6374174, [0.007310, 0.002405])", map.lastEntry().toString());
     }
     @After
     public void tearDown() throws Exception {

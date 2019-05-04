@@ -91,6 +91,6 @@ public class CfLongId implements CfId<Long>, Comparable<CfId<Long>> {
 
     @Override
     public String toString() {
-        return id + " " + type;
+        return "(" + id + ", " + type + ")";
     }
 }

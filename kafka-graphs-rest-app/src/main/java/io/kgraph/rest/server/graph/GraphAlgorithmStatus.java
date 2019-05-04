@@ -18,8 +18,12 @@
 
 package io.kgraph.rest.server.graph;
 
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import io.kgraph.GraphAlgorithmState;
 import io.kgraph.GraphAlgorithmState.State;
+import io.kgraph.pregel.PregelComputation;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,9 +37,13 @@ class GraphAlgorithmStatus {
         this.state = state.state();
         this.superstep = state.superstep();
         this.runningTime = state.runningTime();
+        this.aggregates = state.aggregates().entrySet().stream()
+            .filter(e -> e.getKey().equals(PregelComputation.LAST_WRITTEN_OFFSETS))
+            .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
     }
 
     private State state;
     private int superstep;
     private long runningTime;
+    private Map<String, String> aggregates;
 }

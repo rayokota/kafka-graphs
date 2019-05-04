@@ -261,7 +261,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
 
         @Override
         public String toString() {
-            return factors.toString();
+            return "(" + baseline + ", " + factors.toString() + ")";
         }
     }
 

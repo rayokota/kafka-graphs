@@ -18,6 +18,7 @@
 
 package io.kgraph.pregel;
 
+import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
@@ -181,7 +182,8 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
         streams = new KafkaStreams(topology, streamsConfig, new PregelClientSupplier());
         streams.start();
 
-        return new GraphAlgorithmState<>(streams, GraphAlgorithmState.State.CREATED, 0, 0L, null);
+        return new GraphAlgorithmState<>(streams, GraphAlgorithmState.State.CREATED, 0,
+            0L, Collections.emptyMap(), null);
     }
 
     @Override
@@ -190,7 +192,8 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
 
         PregelState state = computation.run(maxIterations, futureResult);
 
-        return new GraphAlgorithmState<>(streams, state.state(), state.superstep(), state.runningTime(), futureResult);
+        return new GraphAlgorithmState<>(streams, state.state(), state.superstep(),
+            state.runningTime(), computation.previousAggregates(state.superstep()), futureResult);
     }
 
     @Override
@@ -198,7 +201,8 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
         PregelState state = computation.state();
         CompletableFuture<KTable<K, VV>> futureResult = computation.futureResult();
 
-        return new GraphAlgorithmState<>(streams, state.state(), state.superstep(), state.runningTime(), futureResult);
+        return new GraphAlgorithmState<>(streams, state.state(), state.superstep(),
+            state.runningTime(), computation.previousAggregates(state.superstep()), futureResult);
     }
 
     @Override

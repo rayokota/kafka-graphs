@@ -95,8 +95,8 @@ import io.vavr.Tuple4;
 public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private static final Logger log = LoggerFactory.getLogger(PregelComputation.class);
 
-    private static final String ALL_PARTITIONS = "all";
-    private static final String LAST_WRITTEN_OFFSETS = "last.written.offsets";
+    public static final String ALL_PARTITIONS = "all";
+    public static final String LAST_WRITTEN_OFFSETS = "last.written.offsets";
 
     private final String hostAndPort;
     private final String applicationId;
@@ -353,7 +353,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             }));
     }
 
-    private Map<String, ?> previousAggregates(int superstep) {
+    protected Map<String, ?> previousAggregates(int superstep) {
         return previousAggregates.computeIfAbsent(superstep, k -> {
             try {
                 String path = ZKPaths.makePath(ZKUtils.aggregatePath(applicationId, superstep - 1), ALL_PARTITIONS);

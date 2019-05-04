@@ -30,14 +30,17 @@ public class GraphAlgorithmState<T> {
     private final KafkaStreams streams;
     private final State state;
     private final long runningTime;
+    private final Map<String, ?> aggregates;
     private final CompletableFuture<T> result;
     private final int superstep;
 
-    public GraphAlgorithmState(KafkaStreams streams, State state, int superstep, long runningTime, CompletableFuture<T> result) {
+    public GraphAlgorithmState(KafkaStreams streams, State state, int superstep, long runningTime,
+                               Map<String, ?> aggregates, CompletableFuture<T> result) {
         this.streams = streams;
         this.state = state;
         this.superstep = superstep;
         this.runningTime = runningTime;
+        this.aggregates = aggregates;
         this.result = result;
     }
 
@@ -51,6 +54,10 @@ public class GraphAlgorithmState<T> {
 
     public long runningTime() {
         return runningTime;
+    }
+
+    public Map<String, ?> aggregates() {
+        return aggregates;
     }
 
     public CompletableFuture<T> result() {
