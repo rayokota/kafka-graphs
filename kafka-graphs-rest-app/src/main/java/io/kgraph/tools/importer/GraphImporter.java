@@ -65,10 +65,10 @@ public class GraphImporter<K, VV, EV> implements Callable<Void> {
     @Option(names = {"-k", "--keySerializer"}, description = "The key serializer.")
     private String keySerializer = LongSerializer.class.getName();
 
-    @Option(names = {"-vv", "--vertexValueSerializer"}, description = "The vertex value serializer.")
+    @Option(names = {"-vs", "--vertexValueSerializer"}, description = "The vertex value serializer.")
     private String vertexValueSerializer = LongSerializer.class.getName();
 
-    @Option(names = {"-ev", "--edgeValueSerializer"}, description = "The edge value serializer.")
+    @Option(names = {"-es", "--edgeValueSerializer"}, description = "The edge value serializer.")
     private String edgeValueSerializer = LongSerializer.class.getName();
 
     @Option(names = {"-np", "--numPartitions"}, description = "The number of partitions for topics.")

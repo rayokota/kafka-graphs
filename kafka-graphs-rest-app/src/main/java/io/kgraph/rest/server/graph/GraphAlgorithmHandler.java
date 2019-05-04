@@ -205,7 +205,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
 
     @SuppressWarnings("unchecked")
     public Mono<ServerResponse> prepareGraph(ServerRequest request) {
-        String appId = ClientUtils.generateRandomString(8);
+        String appId = ClientUtils.generateRandomHexString(8);
         return request.bodyToMono(GroupEdgesBySourceRequest.class)
             .doOnNext(input -> {
                 try {
@@ -249,7 +249,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
 
     public Mono<ServerResponse> configure(ServerRequest request) {
         List<String> appIdHeaders = request.headers().header(X_KGRAPH_APPID);
-        String appId = appIdHeaders.isEmpty() ? ClientUtils.generateRandomString(8) : appIdHeaders.iterator().next();
+        String appId = appIdHeaders.isEmpty() ? ClientUtils.generateRandomHexString(8) : appIdHeaders.iterator().next();
         return request.bodyToMono(GraphAlgorithmCreateRequest.class)
             .doOnNext(input -> {
                 PregelGraphAlgorithm<?, ?, ?, ?> algorithm = getAlgorithm(appId, input);

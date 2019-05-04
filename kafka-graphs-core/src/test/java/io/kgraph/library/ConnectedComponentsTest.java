@@ -165,7 +165,7 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         // Run against a locally running Kafka broker
         String bootstrapServers = "localhost:9092";
         String zookeeperConnect = "localhost:2181";
-        String suffix = "grid-" + ClientUtils.generateRandomString(8);
+        String suffix = "grid-" + ClientUtils.generateRandomHexString(8);
         StreamsBuilder builder = new StreamsBuilder();
 
         Properties producerConfig = ClientUtils.producerConfig(bootstrapServers, LongSerializer.class,
@@ -225,7 +225,7 @@ public class ConnectedComponentsTest extends AbstractIntegrationTest {
         // Run against a locally running Kafka broker
         String bootstrapServers = "localhost:9092";
         String zookeeperConnect = "localhost:2181";
-        String suffix = "file-" + ClientUtils.generateRandomString(8);
+        String suffix = "file-" + ClientUtils.generateRandomHexString(8);
         StreamsBuilder builder = new StreamsBuilder();
 
         Properties producerConfig = ClientUtils.producerConfig(bootstrapServers, LongSerializer.class,
