@@ -104,7 +104,7 @@ public class SgdTest extends AbstractIntegrationTest {
         Map<CfLongId, FloatMatrix> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);
 
-        assertEquals("{1 0=[0.007530; 0.008566], 2 0=[0.007827; 0.008902], 1 1=[0.007459; 0.008485], 2 1=[0.007534; 0.008570]}", map.toString());
+        assertEquals("{(1, 0)=[0.007530; 0.008566], (2, 0)=[0.007827; 0.008902], (1, 1)=[0.007459; 0.008485], (2, 1)=[0.007534; 0.008570]}", map.toString());
     }
 
     @After

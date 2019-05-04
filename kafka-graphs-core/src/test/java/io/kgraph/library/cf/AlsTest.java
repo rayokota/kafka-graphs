@@ -103,7 +103,7 @@ public class AlsTest extends AbstractIntegrationTest {
         Map<CfLongId, FloatMatrix> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);
 
-        assertEquals("{1 0=[1.100964; 1.252018], 2 0=[2.488711; 2.831024], 1 1=[0.499041; 0.567667], 2 1=[0.706991; 0.804180]}", map.toString());
+        assertEquals("{(1, 0)=[1.100964; 1.252018], (2, 0)=[2.488711; 2.831024], (1, 1)=[0.499041; 0.567667], (2, 1)=[0.706991; 0.804180]}", map.toString());
     }
 
     @After
