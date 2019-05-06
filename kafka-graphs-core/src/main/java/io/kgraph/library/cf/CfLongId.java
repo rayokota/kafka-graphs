@@ -16,6 +16,8 @@
 package io.kgraph.library.cf;
 
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * This class represents the ID of a node in a CF scenario that has an 
@@ -26,12 +28,23 @@ import java.util.Objects;
  */
 public class CfLongId implements CfId<Long>, Comparable<CfId<Long>> {
 
+    private static Pattern CF_LONG_ID_PATTERN = Pattern.compile("\\((\\d+),\\s*(\\d+)\\)");
+
     private final byte type;
     private final Long id;
 
     public CfLongId(byte type, long id) {
         this.type = type;
         this.id = id;
+    }
+
+    public CfLongId(String s) {
+        Matcher m = CF_LONG_ID_PATTERN.matcher(s);
+        if (!m.matches()) {
+            throw new IllegalArgumentException("Invalid string: " + s);
+        }
+        this.type = Byte.parseByte(m.group(2));
+        this.id = Long.parseLong(m.group(1));
     }
 
     public boolean isItem() {

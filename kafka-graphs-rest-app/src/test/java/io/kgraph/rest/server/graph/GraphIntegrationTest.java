@@ -137,15 +137,15 @@ public class GraphIntegrationTest {
             state = statusResponse.getResponseBody().getState();
         }
 
-        FluxExchangeResult<String> result = webTestClient
+        FluxExchangeResult<KeyValue> result = webTestClient
             .get()
             .uri("/pregel/{id}/result", id)
             .accept(MediaType.TEXT_EVENT_STREAM)
             .exchange()
             .expectStatus().isOk()
-            .returnResult(String.class);
+            .returnResult(KeyValue.class);
 
-        Map<String, String> map = result.getResponseBody().collectMap(s -> s.split(" ")[0], s -> s.split(" ")[1]).block();
+        Map<String, String> map = result.getResponseBody().collectMap(kv -> kv.getKey(), kv -> kv.getValue()).block();
         for (int i = 0; i < 10; i++) {
             assertEquals("0", map.get(String.valueOf(i)));
         }
@@ -236,21 +236,21 @@ public class GraphIntegrationTest {
             state = statusResponse.getResponseBody().getState();
         }
 
-        FluxExchangeResult<String> result = webTestClient
+        FluxExchangeResult<KeyValue> result = webTestClient
             .get()
             .uri("/pregel/{id}/result", id)
             .accept(MediaType.TEXT_EVENT_STREAM)
             .exchange()
             .expectStatus().isOk()
-            .returnResult(String.class);
+            .returnResult(KeyValue.class);
 
         NavigableMap<CfLongId, String> map = (NavigableMap<CfLongId, String>) result.getResponseBody().collectMap(
-            s -> new CfLongId(Byte.parseByte(s.split(" ")[1]), Long.parseLong(s.split(" ")[0])),
-            s -> s.substring(s.indexOf("[")),
+            kv -> new CfLongId(kv.getKey()),
+            kv -> kv.getValue(),
             TreeMap::new
         ).block();
-        assertEquals("1 0=[0.006397, 0.008010]", map.firstEntry().toString());
-        assertEquals("20 1=[0.007310, 0.002405]", map.lastEntry().toString());
+        assertEquals("(1, 0)=(0.11611404, [0.006397, 0.008010])", map.firstEntry().toString());
+        assertEquals("(20, 1)=(0.6374174, [0.007310, 0.002405])", map.lastEntry().toString());
     }
 
     private MultiValueMap<String, HttpEntity<?>> generateSvdppBody() {
