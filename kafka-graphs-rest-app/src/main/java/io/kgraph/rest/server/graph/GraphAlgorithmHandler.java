@@ -18,6 +18,9 @@
 
 package io.kgraph.rest.server.graph;
 
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+
 import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -194,7 +197,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                 );
                 importer.call();
             } catch (NumberFormatException e) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid number", e);
+                throw new ResponseStatusException(BAD_REQUEST, "Invalid number", e);
             } catch (Exception e) {
                 throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR);
             }
@@ -322,7 +325,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                     configs.put(Svdpp.ITERATIONS, 3);
                     break;
                 default:
-                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid algorithm: " + type);
+                    throw new ResponseStatusException(BAD_REQUEST, "Invalid algorithm: " + type);
             }
             return new PregelGraphAlgorithm<>(
                 getHostAndPort(),
@@ -339,14 +342,14 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                 (Optional<Object>) initMsg,
                 (ComputeFunction<Long, Object, Object, Object>) cf);
         } catch (NumberFormatException e) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid number", e);
+            throw new ResponseStatusException(BAD_REQUEST, "Invalid number", e);
         }
     }
 
     private String getParam(Map<String, String> params, String key, boolean isRequired) {
         String value = params.get(key);
         if (isRequired && value == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing param: " + key);
+            throw new ResponseStatusException(BAD_REQUEST, "Missing param: " + key);
         }
         return value;
     }
@@ -370,6 +373,9 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
     public Mono<ServerResponse> state(ServerRequest request) {
         String appId = request.pathVariable("id");
         PregelGraphAlgorithm<?, ?, ?, ?> algorithm = algorithms.get(appId);
+        if (algorithm == null) {
+            return ServerResponse.notFound().build();
+        }
         return ServerResponse.ok()
             .contentType(MediaType.APPLICATION_JSON)
             .body(Mono.just(new GraphAlgorithmStatus(algorithm.state())), GraphAlgorithmStatus.class);
@@ -388,6 +394,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                     proxyRun(appIdHeaders.isEmpty() ? group.getCurrentMembers().keySet() : Collections.emptySet(), appId, input);
                 return Mono.just(status).mergeWith(states);
             })
+            .onErrorMap(RuntimeException.class, e -> new ResponseStatusException(NOT_FOUND))
             .reduce((state1, state2) -> state1)
             .flatMap(state ->
                 ServerResponse.ok()
@@ -417,18 +424,21 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
         List<String> appIdHeaders = request.headers().header(X_KGRAPH_APPID);
         String appId = request.pathVariable("id");
         PregelGraphAlgorithm<?, ?, ?, ?> algorithm = algorithms.get(appId);
-        Flux<String> body = Flux.fromIterable(algorithm.result()).map(kv -> {
+        if (algorithm == null) {
+            return ServerResponse.notFound().build();
+        }
+        Flux<KeyValue> body = Flux.fromIterable(algorithm.result()).map(kv -> {
             log.trace("result: ({}, {})", kv.key, kv.value);
-            return kv.key + " " + kv.value;
+            return new KeyValue(kv.key.toString(), kv.value.toString());
         });
         body = proxyResult(appIdHeaders.isEmpty() ? group.getCurrentMembers().keySet() : Collections.emptySet(), appId, body);
         return ServerResponse.ok()
             .contentType(MediaType.TEXT_EVENT_STREAM)
-            .body(BodyInserters.fromPublisher(body, String.class));
+            .body(BodyInserters.fromPublisher(body, KeyValue.class));
     }
 
-    private Flux<String> proxyResult(Set<String> groupMembers, String appId, Flux<String> body) {
-        Flux<String> flux = groupMembers.stream()
+    private Flux<KeyValue> proxyResult(Set<String> groupMembers, String appId, Flux<KeyValue> body) {
+        Flux<KeyValue> flux = groupMembers.stream()
             .filter(s -> !s.equals(getHostAndPort()))
             .map(s -> {
                 log.debug("proxy result to {}", s);
@@ -437,7 +447,49 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                     .accept(MediaType.TEXT_EVENT_STREAM)
                     .header(X_KGRAPH_APPID, appId)
                     .retrieve()
-                    .bodyToFlux(String.class);
+                    .bodyToFlux(KeyValue.class);
+            })
+            .reduce(body, Flux::mergeWith);
+        return flux;
+    }
+
+    public Mono<ServerResponse> filterResult(ServerRequest request) {
+        List<String> appIdHeaders = request.headers().header(X_KGRAPH_APPID);
+        String appId = request.pathVariable("id");
+        PregelGraphAlgorithm<?, ?, ?, ?> algorithm = algorithms.get(appId);
+        if (algorithm == null) {
+            return ServerResponse.notFound().build();
+        }
+        Flux<KeyValue> filteredBody = request.bodyToMono(GraphAlgorithmResultRequest.class)
+            .flatMapMany(input -> {
+                Flux<KeyValue> body = Flux.fromIterable(algorithm.result())
+                    .filter(kv -> kv.key.toString().equals(input.getKey()))
+                    .map(kv -> {
+                        log.trace("result: ({}, {})", kv.key, kv.value);
+                        return new KeyValue(kv.key.toString(), kv.value.toString());
+                    });
+                return proxyFilterResult(appIdHeaders.isEmpty()
+                    ? group.getCurrentMembers().keySet()
+                    : Collections.emptySet(), appId, input, body);
+            });
+        return ServerResponse.ok()
+            .contentType(MediaType.TEXT_EVENT_STREAM)
+            .body(BodyInserters.fromPublisher(filteredBody, KeyValue.class));
+    }
+
+    private Flux<KeyValue> proxyFilterResult(Set<String> groupMembers, String appId,
+                                             GraphAlgorithmResultRequest input, Flux<KeyValue> body) {
+        Flux<KeyValue> flux = groupMembers.stream()
+            .filter(s -> !s.equals(getHostAndPort()))
+            .map(s -> {
+                log.debug("proxy result to {}", s);
+                WebClient client = WebClient.create("http://" + s);
+                return client.post().uri("/pregel/" + appId + "/result")
+                    .accept(MediaType.TEXT_EVENT_STREAM)
+                    .header(X_KGRAPH_APPID, appId)
+                    .body(Mono.just(input), GraphAlgorithmResultRequest.class)
+                    .retrieve()
+                    .bodyToFlux(KeyValue.class);
             })
             .reduce(body, Flux::mergeWith);
         return flux;

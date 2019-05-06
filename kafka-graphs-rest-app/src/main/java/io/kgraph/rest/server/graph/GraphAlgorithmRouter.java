@@ -37,6 +37,7 @@ public class GraphAlgorithmRouter {
             .andRoute(RequestPredicates.POST("/pregel/{id}"), graphAlgorithmHandler::run)
             .andRoute(RequestPredicates.GET("/pregel/{id}"), graphAlgorithmHandler::state)
             .andRoute(RequestPredicates.GET("/pregel/{id}/result"), graphAlgorithmHandler::result)
+            .andRoute(RequestPredicates.POST("/pregel/{id}/result"), graphAlgorithmHandler::filterResult)
             .andRoute(RequestPredicates.DELETE("/pregel/{id}"), graphAlgorithmHandler::delete);
     }
 }
