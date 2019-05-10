@@ -19,6 +19,7 @@
 package io.kgraph.tools.library;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
@@ -85,6 +86,10 @@ public class SvdppPredictor implements Callable<Void> {
                 .retrieve()
                 .bodyToMono(GraphAlgorithmStatus.class)
                 .block();
+            if (status == null) {
+                log.error("Error: no status found");
+                return null;
+            }
 
             double overallRating = Double.parseDouble(status.getAggregates().get(Svdpp.OVERALL_RATING_AGGREGATOR));
             long numEdges = Long.parseLong(status.getAggregates().get(EdgeCount.EDGE_COUNT_AGGREGATOR));
@@ -121,6 +126,10 @@ public class SvdppPredictor implements Callable<Void> {
             .bodyToFlux(KeyValue.class)
             .next()
             .block();
+        if (result == null) {
+            return Collections.emptyList();
+        }
+
         String[] values = result.getValue().split("(\\(|\\)|\\[|\\]|,\\s)");
         return Arrays.stream(values)
             .filter(s -> !s.isEmpty())
