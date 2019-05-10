@@ -18,7 +18,6 @@
 
 package io.kgraph.tools.library;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -72,8 +71,7 @@ public class SvdppPredictor implements Callable<Void> {
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public Void call() throws Exception {
+    public Void call() {
         try {
             String baseUrl = restAppServer;
             if (!baseUrl.startsWith("http://")) {
@@ -92,41 +90,11 @@ public class SvdppPredictor implements Callable<Void> {
             long numEdges = Long.parseLong(status.getAggregates().get(EdgeCount.EDGE_COUNT_AGGREGATOR));
             double meanRating =  overallRating / (numEdges * 2);
 
-            GraphAlgorithmResultRequest userKey = new GraphAlgorithmResultRequest();
-            userKey.setKey(new CfLongId((byte) 0, user).toString());
-            KeyValue userResult = client
-                .post()
-                .uri("/pregel/{id}/result", id)
-                .accept(MediaType.TEXT_EVENT_STREAM)
-                .body(Mono.just(userKey), GraphAlgorithmResultRequest.class)
-                .retrieve()
-                .bodyToFlux(KeyValue.class)
-                .next()
-                .block();
-            String[] userValues = userResult.getValue().split("(\\(|\\)|\\[|\\]|,\\s)");
-            List<Float> userFloats = Arrays.stream(userValues)
-                .filter(s -> !s.isEmpty())
-                .map(Float::parseFloat)
-                .collect(Collectors.toList());
+            List<Float> userFloats = getFloats(client, (byte) 0, user);
             Float userBaseline = userFloats.remove(0);
             FloatMatrix userFactors = new FloatMatrix(userFloats);
 
-            GraphAlgorithmResultRequest itemKey = new GraphAlgorithmResultRequest();
-            itemKey.setKey(new CfLongId((byte) 1, item).toString());
-            KeyValue itemResult = client
-                .post()
-                .uri("/pregel/{id}/result", id)
-                .accept(MediaType.TEXT_EVENT_STREAM)
-                .body(Mono.just(itemKey), GraphAlgorithmResultRequest.class)
-                .retrieve()
-                .bodyToFlux(KeyValue.class)
-                .next()
-                .block();
-            String[] itemValues = itemResult.getValue().split("(\\(|\\)|\\[|\\]|,\\s)");
-            List<Float> itemFloats = Arrays.stream(itemValues)
-                .filter(s -> !s.isEmpty())
-                .map(Float::parseFloat)
-                .collect(Collectors.toList());
+            List<Float> itemFloats = getFloats(client, (byte) 1, item);
             Float itemBaseline = itemFloats.remove(0);
             FloatMatrix itemFactors = new FloatMatrix(itemFloats);
 
@@ -141,7 +109,25 @@ public class SvdppPredictor implements Callable<Void> {
         return null;
     }
 
-    @SuppressWarnings("unchecked")
+    private List<Float> getFloats(WebClient client, byte type, long id) {
+        GraphAlgorithmResultRequest key = new GraphAlgorithmResultRequest();
+        key.setKey(new CfLongId(type, id).toString());
+        KeyValue result = client
+            .post()
+            .uri("/pregel/{id}/result", this.id)
+            .accept(MediaType.TEXT_EVENT_STREAM)
+            .body(Mono.just(key), GraphAlgorithmResultRequest.class)
+            .retrieve()
+            .bodyToFlux(KeyValue.class)
+            .next()
+            .block();
+        String[] values = result.getValue().split("(\\(|\\)|\\[|\\]|,\\s)");
+        return Arrays.stream(values)
+            .filter(s -> !s.isEmpty())
+            .map(Float::parseFloat)
+            .collect(Collectors.toList());
+    }
+
     public static void main(String[] args) {
         CommandLine.call(new SvdppPredictor(), args);
     }

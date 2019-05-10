@@ -145,7 +145,7 @@ public class GraphIntegrationTest {
             .expectStatus().isOk()
             .returnResult(KeyValue.class);
 
-        Map<String, String> map = result.getResponseBody().collectMap(kv -> kv.getKey(), kv -> kv.getValue()).block();
+        Map<String, String> map = result.getResponseBody().collectMap(KeyValue::getKey, KeyValue::getValue).block();
         for (int i = 0; i < 10; i++) {
             assertEquals("0", map.get(String.valueOf(i)));
         }
@@ -246,7 +246,7 @@ public class GraphIntegrationTest {
 
         NavigableMap<CfLongId, String> map = (NavigableMap<CfLongId, String>) result.getResponseBody().collectMap(
             kv -> new CfLongId(kv.getKey()),
-            kv -> kv.getValue(),
+            KeyValue::getValue,
             TreeMap::new
         ).block();
         assertEquals("(1, 0)=(0.11611404, [0.006397, 0.008010])", map.firstEntry().toString());
