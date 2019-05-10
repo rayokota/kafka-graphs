@@ -82,10 +82,10 @@ public class GraphIntegrationTest {
 
         GroupEdgesBySourceRequest prepareRequest = new GroupEdgesBySourceRequest();
         prepareRequest.setAlgorithm(GraphAlgorithmType.wcc);
-        prepareRequest.setInitialVerticesTopic("initial-vertices");
-        prepareRequest.setInitialEdgesTopic("initial-edges");
-        prepareRequest.setVerticesTopic("new-vertices");
-        prepareRequest.setEdgesGroupedBySourceTopic("new-edges");
+        prepareRequest.setInitialVerticesTopic("initial-cc-vertices");
+        prepareRequest.setInitialEdgesTopic("initial-cc-edges");
+        prepareRequest.setVerticesTopic("new-cc-vertices");
+        prepareRequest.setEdgesGroupedBySourceTopic("new-cc-edges");
         prepareRequest.setAsync(false);
 
         webTestClient
@@ -99,8 +99,8 @@ public class GraphIntegrationTest {
 
         GraphAlgorithmCreateRequest createRequest = new GraphAlgorithmCreateRequest();
         createRequest.setAlgorithm(GraphAlgorithmType.wcc);
-        createRequest.setVerticesTopic("new-vertices");
-        createRequest.setEdgesGroupedBySourceTopic("new-edges");
+        createRequest.setVerticesTopic("new-cc-vertices");
+        createRequest.setEdgesGroupedBySourceTopic("new-cc-edges");
 
         EntityExchangeResult<GraphAlgorithmId> createResponse = webTestClient
             .post()
@@ -156,8 +156,8 @@ public class GraphIntegrationTest {
 
     private MultiValueMap<String, HttpEntity<?>> generateCCBody() {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("verticesTopic", "initial-vertices");
-        builder.part("edgesTopic", "initial-edges");
+        builder.part("verticesTopic", "initial-cc-vertices");
+        builder.part("edgesTopic", "initial-cc-edges");
         builder.part("vertexFile", new ClassPathResource("vertices_simple.txt"));
         builder.part("edgeFile", new ClassPathResource("edges_simple.txt"));
         builder.part("vertexParser", VertexLongIdLongValueParser.class.getName());
@@ -182,9 +182,9 @@ public class GraphIntegrationTest {
 
         GroupEdgesBySourceRequest prepareRequest = new GroupEdgesBySourceRequest();
         prepareRequest.setAlgorithm(GraphAlgorithmType.svdpp);
-        prepareRequest.setInitialEdgesTopic("initial-edges");
-        prepareRequest.setVerticesTopic("new-vertices");
-        prepareRequest.setEdgesGroupedBySourceTopic("new-edges");
+        prepareRequest.setInitialEdgesTopic("initial-svdpp-edges");
+        prepareRequest.setVerticesTopic("new-svdpp-vertices");
+        prepareRequest.setEdgesGroupedBySourceTopic("new-svdpp-edges");
         prepareRequest.setAsync(false);
 
         webTestClient
@@ -198,8 +198,8 @@ public class GraphIntegrationTest {
 
         GraphAlgorithmCreateRequest createRequest = new GraphAlgorithmCreateRequest();
         createRequest.setAlgorithm(GraphAlgorithmType.svdpp);
-        createRequest.setVerticesTopic("new-vertices");
-        createRequest.setEdgesGroupedBySourceTopic("new-edges");
+        createRequest.setVerticesTopic("new-svdpp-vertices");
+        createRequest.setEdgesGroupedBySourceTopic("new-svdpp-edges");
 
         EntityExchangeResult<GraphAlgorithmId> createResponse = webTestClient
             .post()
@@ -255,7 +255,7 @@ public class GraphIntegrationTest {
 
     private MultiValueMap<String, HttpEntity<?>> generateSvdppBody() {
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("edgesTopic", "initial-edges");
+        builder.part("edgesTopic", "initial-svdpp-edges");
         builder.part("edgeFile", new ClassPathResource("ratings_simple.txt"));
         builder.part("edgeParser", EdgeCfLongIdFloatValueParser.class.getName());
         builder.part("edgeValueSerializer", FloatSerializer.class.getName());

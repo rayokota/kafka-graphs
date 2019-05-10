@@ -360,7 +360,8 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
             .flatMap(s -> {
                 log.debug("proxy configure to {}", s);
                 WebClient client = WebClient.create("http://" + s);
-                return client.post().uri("/pregel")
+                return client.post()
+                    .uri("/pregel")
                     .accept(MediaType.APPLICATION_JSON)
                     .header(X_KGRAPH_APPID, appId)
                     .body(Mono.just(input), GraphAlgorithmCreateRequest.class)
@@ -410,7 +411,8 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
             .flatMap(s -> {
                 log.debug("proxy run to {}", s);
                 WebClient client = WebClient.create("http://" + s);
-                return client.post().uri("/pregel/" + appId)
+                return client.post()
+                    .uri("/pregel/{id}", appId)
                     .accept(MediaType.APPLICATION_JSON)
                     .header(X_KGRAPH_APPID, appId)
                     .body(Mono.just(input), GraphAlgorithmRunRequest.class)
@@ -443,7 +445,8 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
             .map(s -> {
                 log.debug("proxy result to {}", s);
                 WebClient client = WebClient.create("http://" + s);
-                return client.get().uri("/pregel/" + appId + "/result")
+                return client.get()
+                    .uri("/pregel/{id}/result", appId)
                     .accept(MediaType.TEXT_EVENT_STREAM)
                     .header(X_KGRAPH_APPID, appId)
                     .retrieve()
@@ -484,7 +487,8 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
             .map(s -> {
                 log.debug("proxy result to {}", s);
                 WebClient client = WebClient.create("http://" + s);
-                return client.post().uri("/pregel/" + appId + "/result")
+                return client.post()
+                    .uri("/pregel/{id}/result", appId)
                     .accept(MediaType.TEXT_EVENT_STREAM)
                     .header(X_KGRAPH_APPID, appId)
                     .body(Mono.just(input), GraphAlgorithmResultRequest.class)
@@ -510,7 +514,8 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
             .flatMap(s -> {
                 log.debug("proxy delete to {}", s);
                 WebClient client = WebClient.create("http://" + s);
-                return client.delete().uri("/pregel/" + appId)
+                return client.delete()
+                    .uri("/pregel/{id}", appId)
                     .accept(MediaType.APPLICATION_JSON)
                     .header(X_KGRAPH_APPID, appId)
                     .retrieve()

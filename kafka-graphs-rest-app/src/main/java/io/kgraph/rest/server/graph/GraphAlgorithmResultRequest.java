@@ -26,6 +26,6 @@ import lombok.Setter;
 
 @Getter
 @Setter
-class GraphAlgorithmResultRequest {
+public class GraphAlgorithmResultRequest {
     private String key;
 }

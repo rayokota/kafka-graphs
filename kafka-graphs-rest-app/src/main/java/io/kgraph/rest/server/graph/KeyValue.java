@@ -25,7 +25,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-class KeyValue {
+public class KeyValue {
     private String key;
     private String value;
 }

@@ -23,6 +23,6 @@ import lombok.Setter;
 
 @Getter
 @Setter
-class GraphAlgorithmRunRequest {
+public class GraphAlgorithmRunRequest {
     private int numIterations = Integer.MAX_VALUE;
 }

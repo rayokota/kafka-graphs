@@ -25,6 +25,6 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-class GraphAlgorithmId {
+public class GraphAlgorithmId {
     private String id;
 }

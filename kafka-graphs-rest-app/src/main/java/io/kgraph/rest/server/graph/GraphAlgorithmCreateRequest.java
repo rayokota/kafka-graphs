@@ -26,7 +26,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-class GraphAlgorithmCreateRequest {
+public class GraphAlgorithmCreateRequest {
     private GraphAlgorithmType algorithm;
     private Map<String, String> params;
     private String verticesTopic;

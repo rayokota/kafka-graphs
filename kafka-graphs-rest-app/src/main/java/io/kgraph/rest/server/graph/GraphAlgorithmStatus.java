@@ -31,14 +31,14 @@ import lombok.Setter;
 @AllArgsConstructor
 @Getter
 @Setter
-class GraphAlgorithmStatus {
+public class GraphAlgorithmStatus {
 
     public GraphAlgorithmStatus(GraphAlgorithmState<?> state) {
         this.state = state.state();
         this.superstep = state.superstep();
         this.runningTime = state.runningTime();
         this.aggregates = state.aggregates().entrySet().stream()
-            .filter(e -> e.getKey().equals(PregelComputation.LAST_WRITTEN_OFFSETS))
+            .filter(e -> !e.getKey().equals(PregelComputation.LAST_WRITTEN_OFFSETS))
             .collect(Collectors.toMap(Map.Entry::getKey, e -> e.getValue().toString()));
     }
 
