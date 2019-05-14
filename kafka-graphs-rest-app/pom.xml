@@ -215,6 +215,23 @@
                 <!-- see https://github.com/spotify/dockerfile-maven/issues/10 -->
                 <executions>
                     <execution>
+                        <id>build-and-tag-latest</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>build</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>tag-version</id>
+                        <phase>none</phase>
+                        <goals>
+                            <goal>tag</goal>
+                        </goals>
+                        <configuration>
+                            <tag>${project.version}</tag>
+                        </configuration>
+                    </execution>
+                    <execution>
                         <id>push-latest</id>
                         <phase>none</phase>
                         <goals>
