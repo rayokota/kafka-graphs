@@ -67,6 +67,14 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
      * Default value for vector size.
      */
     public static final int VECTOR_SIZE_DEFAULT = 50;
+    /**
+     * Random seed.
+     */
+    public static final String RANDOM_SEED = "random.seed";
+    /**
+     * Default random seed
+     */
+    public static final Long RANDOM_SEED_DEFAULT = null;
 
     /**
      * Aggregator used to compute the RMSE
@@ -75,6 +83,7 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
 
     private float lambda;
     private int vectorSize;
+    private Long randomSeed;
 
     private Map<String, Object> configs;
 
@@ -82,6 +91,7 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     public void preSuperstep(int superstep, Aggregators aggregators) {
         lambda = (Float) configs.getOrDefault(LAMBDA, LAMBDA_DEFAULT);
         vectorSize = (Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT);
+        randomSeed = (Long) configs.getOrDefault(RANDOM_SEED, RANDOM_SEED_DEFAULT);
     }
 
     /**
@@ -184,7 +194,7 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
         ) {
             FloatMatrix vector =
                 new FloatMatrix((Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT));
-            Random randGen = new Random(0);
+            Random randGen = randomSeed != null ? new Random(randomSeed) : new Random();
             for (int i = 0; i < vector.length; i++) {
                 vector.put(i, 0.01f * randGen.nextFloat());
             }
@@ -219,7 +229,7 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
         ) {
             FloatMatrix vector =
                 new FloatMatrix((Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT));
-            Random randGen = new Random(0);
+            Random randGen = randomSeed != null ? new Random(randomSeed) : new Random();
             for (int i = 0; i < vector.length; i++) {
                 vector.put(i, 0.01f * randGen.nextFloat());
             }

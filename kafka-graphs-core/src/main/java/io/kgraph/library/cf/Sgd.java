@@ -97,6 +97,14 @@ public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
      * Default minimum rating
      */
     public static final float MIN_RATING_DEFAULT = 0.0f;
+    /**
+     * Random seed.
+     */
+    public static final String RANDOM_SEED = "random.seed";
+    /**
+     * Default random seed
+     */
+    public static final Long RANDOM_SEED_DEFAULT = null;
 
     /**
      * Aggregator used to compute the RMSE
@@ -108,6 +116,7 @@ public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     private float gamma;
     protected float minRating;
     protected float maxRating;
+    private Long randomSeed;
     private FloatMatrix oldValue;
 
     private Map<String, Object> configs;
@@ -119,6 +128,7 @@ public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
         tolerance = (Float) configs.getOrDefault(TOLERANCE, TOLERANCE_DEFAULT);
         minRating = (Float) configs.getOrDefault(MIN_RATING, MIN_RATING_DEFAULT);
         maxRating = (Float) configs.getOrDefault(MAX_RATING, MAX_RATING_DEFAULT);
+        randomSeed = (Long) configs.getOrDefault(RANDOM_SEED, RANDOM_SEED_DEFAULT);
     }
 
     /**
@@ -244,7 +254,7 @@ public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
             Callback<CfLongId, FloatMatrix, Float, FloatMatrixMessage> cb
         ) {
             FloatMatrix vector = new FloatMatrix((Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT));
-            Random randGen = new Random(0);
+            Random randGen = randomSeed != null ? new Random(randomSeed) : new Random();
             for (int i = 0; i < vector.length; i++) {
                 vector.put(i, 0.01f * randGen.nextFloat());
             }
@@ -278,7 +288,7 @@ public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
             Callback<CfLongId, FloatMatrix, Float, FloatMatrixMessage> cb
         ) {
             FloatMatrix vector = new FloatMatrix((Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT));
-            Random randGen = new Random(0);
+            Random randGen = randomSeed != null ? new Random(randomSeed) : new Random();
             for (int i = 0; i < vector.length; i++) {
                 vector.put(i, 0.01f * randGen.nextFloat());
             }

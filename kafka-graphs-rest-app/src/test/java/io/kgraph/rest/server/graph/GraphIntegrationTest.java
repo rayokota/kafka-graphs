@@ -199,6 +199,7 @@ public class GraphIntegrationTest {
             .expectBody(Void.class);
 
         Map<String, String> params = new HashMap<>();
+        params.put(Svdpp.RANDOM_SEED, "0");
         params.put(Svdpp.ITERATIONS, "3");
         GraphAlgorithmCreateRequest createRequest = new GraphAlgorithmCreateRequest();
         createRequest.setParams(params);

@@ -86,6 +86,7 @@ public class AlsTest extends AbstractIntegrationTest {
         Map<String, Object> configs = new HashMap<>();
         configs.put(Als.LAMBDA, 0.01f);
         configs.put(Als.VECTOR_SIZE, 2);
+        configs.put(Sgd.RANDOM_SEED, 0L);
         configs.put(Als.ITERATIONS, 5);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),

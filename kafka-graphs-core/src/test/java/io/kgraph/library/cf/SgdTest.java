@@ -87,6 +87,7 @@ public class SgdTest extends AbstractIntegrationTest {
         configs.put(Sgd.GAMMA, 0.005f);
         configs.put(Sgd.LAMBDA, 0.01f);
         configs.put(Sgd.VECTOR_SIZE, 2);
+        configs.put(Sgd.RANDOM_SEED, 0L);
         configs.put(Sgd.ITERATIONS, 5);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),

@@ -331,6 +331,8 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                     float maxRating = maxRatingStr != null ? Float.parseFloat(maxRatingStr) : 5f;
                     String vectorSizeStr = getParam(input.getParams(), Svdpp.VECTOR_SIZE, false);
                     int vectorSize = vectorSizeStr != null ? Integer.parseInt(vectorSizeStr) : 2;
+                    String randomSeedStr = getParam(input.getParams(), Svdpp.RANDOM_SEED, false);
+                    Long randomSeed = randomSeedStr != null ? Long.parseLong(randomSeedStr) : null;
                     String iterationsStr = getParam(input.getParams(), Svdpp.ITERATIONS, false);
                     int iterations = iterationsStr != null ? Integer.parseInt(iterationsStr) : Integer.MAX_VALUE;
                     configs.put(Svdpp.BIAS_LAMBDA, biasLambda);
@@ -340,6 +342,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                     configs.put(Svdpp.MIN_RATING, minRating);
                     configs.put(Svdpp.MAX_RATING, maxRating);
                     configs.put(Svdpp.VECTOR_SIZE, vectorSize);
+                    configs.put(Svdpp.RANDOM_SEED, randomSeed);
                     configs.put(Svdpp.ITERATIONS, iterations);
                     break;
                 default:

@@ -97,6 +97,7 @@ public class SvdppTest extends AbstractIntegrationTest {
         configs.put(Svdpp.MIN_RATING, 0f);
         configs.put(Svdpp.MAX_RATING, 5f);
         configs.put(Svdpp.VECTOR_SIZE, 2);
+        configs.put(Svdpp.RANDOM_SEED, 0L);
         configs.put(Svdpp.ITERATIONS, 6);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
@@ -152,6 +153,7 @@ public class SvdppTest extends AbstractIntegrationTest {
         configs.put(Svdpp.MIN_RATING, 0f);
         configs.put(Svdpp.MAX_RATING, 5f);
         configs.put(Svdpp.VECTOR_SIZE, 2);
+        configs.put(Svdpp.RANDOM_SEED, 0L);
         configs.put(Svdpp.ITERATIONS, 3);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
@@ -215,6 +217,7 @@ public class SvdppTest extends AbstractIntegrationTest {
         configs.put(Svdpp.MIN_RATING, 0f);
         configs.put(Svdpp.MAX_RATING, 5f);
         configs.put(Svdpp.VECTOR_SIZE, 2);
+        configs.put(Svdpp.RANDOM_SEED, 0L);
         configs.put(Svdpp.ITERATIONS, 3);
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),

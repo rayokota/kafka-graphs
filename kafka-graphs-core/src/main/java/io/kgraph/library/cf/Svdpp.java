@@ -114,6 +114,14 @@ public class Svdpp implements ComputeFunction<CfLongId,
      * Default latent vector size
      */
     public static final int VECTOR_SIZE_DEFAULT = 50;
+    /**
+     * Random seed.
+     */
+    public static final String RANDOM_SEED = "random.seed";
+    /**
+     * Default random seed
+     */
+    public static final Long RANDOM_SEED_DEFAULT = null;
 
     /**
      * Aggregator for the computation of RMSE
@@ -295,7 +303,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
 
             FloatMatrix factors = new FloatMatrix(1, vectorSize);
 
-            Random randGen = new Random(0);
+            Random randGen = randomSeed != null ? new Random(randomSeed) : new Random();
             for (int i = 0; i < factors.length; i++) {
                 factors.put(i, 0.01f * randGen.nextFloat());
             }
@@ -341,7 +349,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
             FloatMatrix factors = new FloatMatrix(1, vectorSize);
             FloatMatrix weight = new FloatMatrix(1, vectorSize);
 
-            Random randGen = new Random(0);
+            Random randGen = randomSeed != null ? new Random(randomSeed) : new Random();
             for (int i = 0; i < factors.length; i++) {
                 factors.put(i, 0.01f * randGen.nextFloat());
                 weight.put(i, 0.01f * randGen.nextFloat());
@@ -393,6 +401,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
             vectorSize = (Integer) configs.getOrDefault(VECTOR_SIZE,VECTOR_SIZE_DEFAULT);
             meanRating = (float) ((Double) aggregators.getAggregatedValue(
                 OVERALL_RATING_AGGREGATOR) / (getTotalNumEdges(aggregators) * 2));
+            randomSeed = (Long) configs.getOrDefault(RANDOM_SEED, RANDOM_SEED_DEFAULT);
         }
 
         @Override
@@ -550,6 +559,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
 
     private int maxIterations;
     private float rmseTarget;
+    private Long randomSeed;
 
     @Override
     @SuppressWarnings("unchecked")
@@ -557,6 +567,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
         this.configs = (Map<String, Object>) configs;
         maxIterations = (Integer) this.configs.getOrDefault(ITERATIONS, ITERATIONS_DEFAULT);
         rmseTarget = (Float) this.configs.getOrDefault(RMSE_TARGET, RMSE_TARGET_DEFAULT);
+        randomSeed = (Long) this.configs.getOrDefault(RANDOM_SEED, RANDOM_SEED_DEFAULT);
 
         cb.registerAggregator(EdgeCount.EDGE_COUNT_AGGREGATOR, LongSumAggregator.class, true);
         cb.registerAggregator(RMSE_AGGREGATOR, DoubleSumAggregator.class);
