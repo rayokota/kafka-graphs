@@ -21,6 +21,7 @@ package io.kgraph.rest.server.graph;
 import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.TreeMap;
@@ -48,6 +49,7 @@ import io.kgraph.GraphAlgorithmState;
 import io.kgraph.library.GraphAlgorithmType;
 import io.kgraph.library.cf.CfLongId;
 import io.kgraph.library.cf.EdgeCfLongIdFloatValueParser;
+import io.kgraph.library.cf.Svdpp;
 import io.kgraph.rest.server.KafkaGraphsApplication;
 import io.kgraph.rest.server.utils.EdgeLongIdLongValueParser;
 import io.kgraph.rest.server.utils.VertexLongIdLongValueParser;
@@ -196,7 +198,10 @@ public class GraphIntegrationTest {
             .expectStatus().isOk()
             .expectBody(Void.class);
 
+        Map<String, String> params = new HashMap<>();
+        params.put(Svdpp.ITERATIONS, "3");
         GraphAlgorithmCreateRequest createRequest = new GraphAlgorithmCreateRequest();
+        createRequest.setParams(params);
         createRequest.setAlgorithm(GraphAlgorithmType.svdpp);
         createRequest.setVerticesTopic("new-svdpp-vertices");
         createRequest.setEdgesGroupedBySourceTopic("new-svdpp-edges");

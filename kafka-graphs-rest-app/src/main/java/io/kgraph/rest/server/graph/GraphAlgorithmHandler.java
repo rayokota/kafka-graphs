@@ -282,7 +282,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                 GraphAlgorithmType.graphSerialized(type, input.isValuesOfTypeDouble());
             switch (type) {
                 case bfs:
-                    long srcVertexId = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
+                    long srcVertexId = Long.parseLong(getParam(input.getParams(), BreadthFirstSearch.SRC_VERTEX_ID, true));
                     configs.put(BreadthFirstSearch.SRC_VERTEX_ID, srcVertexId);
                     break;
                 case wcc:
@@ -292,14 +292,16 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                 case lp:
                     break;
                 case mssp:
-                    String[] values = getParam(input.getParams(), "landmarkVertexIds", true).split(",");
+                    String[] values = getParam(input.getParams(),
+                        MultipleSourceShortestPaths.LANDMARK_VERTEX_IDS, true).split(",");
                     Set<Long> landmarkVertexIds = Arrays.stream(values).map((Long::parseLong)).collect(Collectors.toSet());
                     configs.put(MultipleSourceShortestPaths.LANDMARK_VERTEX_IDS, landmarkVertexIds);
                     break;
                 case pagerank:
-                    double tolerance = Double.parseDouble(getParam(input.getParams(), "tolerance", true));
-                    double resetProbability = Double.parseDouble(getParam(input.getParams(), "resetProbability", true));
-                    String srcVertexIdStr = getParam(input.getParams(), "srcVertexId", false);
+                    double tolerance = Double.parseDouble(getParam(input.getParams(), PageRank.TOLERANCE, true));
+                    double resetProbability = Double.parseDouble(getParam(input.getParams(),
+                        PageRank.RESET_PROBABILITY, true));
+                    String srcVertexIdStr = getParam(input.getParams(), PageRank.SRC_VERTEX_ID, false);
                     configs.put(PageRank.TOLERANCE, tolerance);
                     configs.put(PageRank.RESET_PROBABILITY, resetProbability);
                     if (srcVertexIdStr != null) {
@@ -310,19 +312,35 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                     }
                     break;
                 case sssp:
-                    long srcVertexId2 = Long.parseLong(getParam(input.getParams(), "srcVertexId", true));
+                    long srcVertexId2 = Long.parseLong(getParam(input.getParams(),
+                        SingleSourceShortestPaths.SRC_VERTEX_ID, true));
                     configs.put(SingleSourceShortestPaths.SRC_VERTEX_ID, srcVertexId2);
                     break;
                 case svdpp:
-                    // TODO
-                    configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
-                    configs.put(Svdpp.BIAS_GAMMA, 0.01f);
-                    configs.put(Svdpp.FACTOR_LAMBDA, 0.005f);
-                    configs.put(Svdpp.FACTOR_GAMMA, 0.01f);
-                    configs.put(Svdpp.MIN_RATING, 0f);
-                    configs.put(Svdpp.MAX_RATING, 5f);
-                    configs.put(Svdpp.VECTOR_SIZE, 2);
-                    configs.put(Svdpp.ITERATIONS, 3);
+                    String biasLambdaStr = getParam(input.getParams(), Svdpp.BIAS_LAMBDA, false);
+                    float biasLambda = biasLambdaStr != null ? Float.parseFloat(biasLambdaStr) : 0.005f;
+                    String biasGammaStr = getParam(input.getParams(), Svdpp.BIAS_GAMMA, false);
+                    float biasGamma = biasGammaStr != null ? Float.parseFloat(biasGammaStr) : 0.01f;
+                    String factorLambdaStr = getParam(input.getParams(), Svdpp.FACTOR_LAMBDA, false);
+                    float factorLambda = factorLambdaStr != null ? Float.parseFloat(factorLambdaStr) : 0.005f;
+                    String factorGammaStr = getParam(input.getParams(), Svdpp.FACTOR_GAMMA, false);
+                    float factorGamma = factorGammaStr != null ? Float.parseFloat(factorGammaStr) : 0.01f;
+                    String minRatingStr = getParam(input.getParams(), Svdpp.MIN_RATING, false);
+                    float minRating = minRatingStr != null ? Float.parseFloat(minRatingStr) : 0f;
+                    String maxRatingStr = getParam(input.getParams(), Svdpp.MAX_RATING, false);
+                    float maxRating = maxRatingStr != null ? Float.parseFloat(maxRatingStr) : 5f;
+                    String vectorSizeStr = getParam(input.getParams(), Svdpp.VECTOR_SIZE, false);
+                    int vectorSize = vectorSizeStr != null ? Integer.parseInt(vectorSizeStr) : 2;
+                    String iterationsStr = getParam(input.getParams(), Svdpp.ITERATIONS, false);
+                    int iterations = iterationsStr != null ? Integer.parseInt(iterationsStr) : Integer.MAX_VALUE;
+                    configs.put(Svdpp.BIAS_LAMBDA, biasLambda);
+                    configs.put(Svdpp.BIAS_GAMMA, biasGamma);
+                    configs.put(Svdpp.FACTOR_LAMBDA, factorLambda);
+                    configs.put(Svdpp.FACTOR_GAMMA, factorGamma);
+                    configs.put(Svdpp.MIN_RATING, minRating);
+                    configs.put(Svdpp.MAX_RATING, maxRating);
+                    configs.put(Svdpp.VECTOR_SIZE, vectorSize);
+                    configs.put(Svdpp.ITERATIONS, iterations);
                     break;
                 default:
                     throw new ResponseStatusException(BAD_REQUEST, "Invalid algorithm: " + type);
