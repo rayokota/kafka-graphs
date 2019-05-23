@@ -42,7 +42,7 @@
         <kafka.scala.version>2.12</kafka.scala.version>
         <kryo.version>4.0.2</kryo.version>
         <vavr.version>0.10.0</vavr.version>
-        <zookeeper.version>3.4.12</zookeeper.version>
+        <zookeeper.version>3.5.5</zookeeper.version>
     </properties>
 
     <dependencyManagement>
