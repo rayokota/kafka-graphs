@@ -368,7 +368,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
     }
 
     private String getParam(Map<String, String> params, String key, boolean isRequired) {
-        String value = params.get(key);
+        String value = params != null ? params.get(key) : null;
         if (isRequired && value == null) {
             throw new ResponseStatusException(BAD_REQUEST, "Missing param: " + key);
         }
