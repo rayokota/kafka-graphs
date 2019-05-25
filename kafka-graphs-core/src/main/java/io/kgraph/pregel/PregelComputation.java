@@ -33,6 +33,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -141,6 +142,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private final Map<Integer, Map<Integer, Long>> lastWrittenOffsets = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Map<String, Aggregator<?>>>> aggregators = new ConcurrentHashMap<>();
     private final Map<Integer, Map<String, ?>> previousAggregates = new ConcurrentHashMap<>();
+
+    private final Set<Tuple2<Integer, Integer>> stepPartitions = new ConcurrentSkipListSet<>();
 
     public PregelComputation(
         String hostAndPort,
@@ -253,7 +256,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             .peek((k, v) -> {
                 try {
                     int partition = PregelComputation.vertexToPartition(k, serialized.keySerde().serializer(), numPartitions);
-                    ZKUtils.addChild(curator, applicationId, new PregelState(State.CREATED, 0, Stage.SEND), childPath(partition));
+                    Tuple2<Integer, Integer> stepPartition = new Tuple2<>(0, partition);
+                    if (!stepPartitions.contains(stepPartition)) {
+                        ZKUtils.addChild(curator, applicationId, new PregelState(State.CREATED, 0, Stage.SEND), childPath(partition));
+                        stepPartitions.add(stepPartition);
+                    }
                 } catch (Exception e) {
                     throw toRuntimeException(e);
                 }
@@ -786,7 +793,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                         // Activate partition for next step
                         int p = vertexToPartition(vertex, serialized.keySerde().serializer(), numPartitions);
                         log.debug("adding partition {} for vertex {}", p, vertex);
-                        ZKUtils.addChild(curator, applicationId, new PregelState(State.RUNNING, superstep + 1, Stage.SEND), childPath(p));
+                        Tuple2<Integer, Integer> stepPartition = new Tuple2<>(superstep + 1, p);
+                        if (!stepPartitions.contains(stepPartition)) {
+                            ZKUtils.addChild(curator, applicationId, new PregelState(State.RUNNING, superstep + 1, Stage.SEND), childPath(p));
+                            stepPartitions.add(stepPartition);
+                        }
 
                         Map<Integer, Long> endOffsets = lastWrittenOffsets.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
                         endOffsets.merge(metadata.partition(), metadata.offset(), Math::max);
