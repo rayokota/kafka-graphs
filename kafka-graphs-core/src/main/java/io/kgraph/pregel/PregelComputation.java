@@ -298,8 +298,14 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
         PregelState pregelState = new PregelState(State.RUNNING, -1, Stage.SEND);
         try {
-            ZKUtils.addChild(curator, ZKUtils.PREGEL_PATH + applicationId, ZKUtils.SUPERSTEP,
-                CreateMode.PERSISTENT, pregelState.toBytes());
+            String rootPath = ZKUtils.PREGEL_PATH + applicationId;
+            String childPath = ZKUtils.SUPERSTEP;
+            byte[] childData = pregelState.toBytes();
+            if (ZKUtils.hasChild(curator, rootPath, childPath)) {
+                ZKUtils.updateChild(curator, rootPath, childPath, childData);
+            } else {
+                ZKUtils.addChild(curator, rootPath, childPath, CreateMode.PERSISTENT, childData);
+            }
             return pregelState;
         } catch (Exception e) {
             throw toRuntimeException(e);
