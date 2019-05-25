@@ -161,6 +161,11 @@ public class ZKUtils {
         }
     }
 
+    public static byte[] getChildData(CuratorFramework curator, String rootPath, String child)
+        throws Exception {
+        return curator.getData().forPath(ZKPaths.makePath(rootPath, child));
+    }
+
     public static void updateChild(CuratorFramework curator, String rootPath,
                                    String child, byte[] data) throws Exception {
         String path = ZKPaths.makePath(rootPath, child);

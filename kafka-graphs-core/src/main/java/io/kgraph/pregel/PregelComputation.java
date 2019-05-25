@@ -297,9 +297,9 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         this.futureResult = futureResult;
 
         PregelState pregelState = new PregelState(State.RUNNING, -1, Stage.SEND);
-        try (SharedValue sharedValue = new SharedValue(curator, ZKPaths.makePath(ZKUtils.PREGEL_PATH + applicationId, ZKUtils.SUPERSTEP), pregelState.toBytes())) {
-            sharedValue.start();
-            setPregelState(sharedValue, pregelState);
+        try {
+            ZKUtils.addChild(curator, ZKUtils.PREGEL_PATH + applicationId, ZKUtils.SUPERSTEP,
+                CreateMode.PERSISTENT, pregelState.toBytes());
             return pregelState;
         } catch (Exception e) {
             throw toRuntimeException(e);
@@ -307,11 +307,9 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     }
 
     public PregelState state() {
-        PregelState pregelState = new PregelState(State.RUNNING, -1, Stage.SEND);
-        try (SharedValue sharedValue = new SharedValue(curator, ZKPaths.makePath(ZKUtils.PREGEL_PATH + applicationId, ZKUtils.SUPERSTEP), pregelState.toBytes())) {
-            sharedValue.start();
-            pregelState = PregelState.fromBytes(sharedValue.getValue());
-            return pregelState;
+        try {
+            byte[] data = ZKUtils.getChildData(curator, ZKUtils.PREGEL_PATH + applicationId, ZKUtils.SUPERSTEP);
+            return PregelState.fromBytes(data);
         } catch (Exception e) {
             throw toRuntimeException(e);
         }
@@ -553,7 +551,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             if (children != null) {
                 for (String path : children) {
                     if (!path.endsWith(ALL_PARTITIONS)) {
-                        byte[] data = curator.getData().forPath(ZKPaths.makePath(rootPath, path));
+                        byte[] data = ZKUtils.getChildData(curator, rootPath, path);
                         if (data.length > 0) {
                             Map<String, Aggregator<?>> aggregators = KryoUtils.deserialize(data);
                             newAggregators = mergeAggregators(newAggregators, aggregators);
