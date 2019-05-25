@@ -282,7 +282,7 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                 GraphAlgorithmType.graphSerialized(type, input.isValuesOfTypeDouble());
             switch (type) {
                 case bfs:
-                    long srcVertexId = Long.parseLong(getParam(input.getParams(), BreadthFirstSearch.SRC_VERTEX_ID, true));
+                    long srcVertexId = Long.parseLong(getConfig(input.getConfigs(), BreadthFirstSearch.SRC_VERTEX_ID, true));
                     configs.put(BreadthFirstSearch.SRC_VERTEX_ID, srcVertexId);
                     break;
                 case wcc:
@@ -292,16 +292,16 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                 case lp:
                     break;
                 case mssp:
-                    String[] values = getParam(input.getParams(),
+                    String[] values = getConfig(input.getConfigs(),
                         MultipleSourceShortestPaths.LANDMARK_VERTEX_IDS, true).split(",");
                     Set<Long> landmarkVertexIds = Arrays.stream(values).map((Long::parseLong)).collect(Collectors.toSet());
                     configs.put(MultipleSourceShortestPaths.LANDMARK_VERTEX_IDS, landmarkVertexIds);
                     break;
                 case pagerank:
-                    double tolerance = Double.parseDouble(getParam(input.getParams(), PageRank.TOLERANCE, true));
-                    double resetProbability = Double.parseDouble(getParam(input.getParams(),
+                    double tolerance = Double.parseDouble(getConfig(input.getConfigs(), PageRank.TOLERANCE, true));
+                    double resetProbability = Double.parseDouble(getConfig(input.getConfigs(),
                         PageRank.RESET_PROBABILITY, true));
-                    String srcVertexIdStr = getParam(input.getParams(), PageRank.SRC_VERTEX_ID, false);
+                    String srcVertexIdStr = getConfig(input.getConfigs(), PageRank.SRC_VERTEX_ID, false);
                     configs.put(PageRank.TOLERANCE, tolerance);
                     configs.put(PageRank.RESET_PROBABILITY, resetProbability);
                     if (srcVertexIdStr != null) {
@@ -312,28 +312,28 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
                     }
                     break;
                 case sssp:
-                    long srcVertexId2 = Long.parseLong(getParam(input.getParams(),
+                    long srcVertexId2 = Long.parseLong(getConfig(input.getConfigs(),
                         SingleSourceShortestPaths.SRC_VERTEX_ID, true));
                     configs.put(SingleSourceShortestPaths.SRC_VERTEX_ID, srcVertexId2);
                     break;
                 case svdpp:
-                    String biasLambdaStr = getParam(input.getParams(), Svdpp.BIAS_LAMBDA, false);
+                    String biasLambdaStr = getConfig(input.getConfigs(), Svdpp.BIAS_LAMBDA, false);
                     float biasLambda = biasLambdaStr != null ? Float.parseFloat(biasLambdaStr) : 0.005f;
-                    String biasGammaStr = getParam(input.getParams(), Svdpp.BIAS_GAMMA, false);
+                    String biasGammaStr = getConfig(input.getConfigs(), Svdpp.BIAS_GAMMA, false);
                     float biasGamma = biasGammaStr != null ? Float.parseFloat(biasGammaStr) : 0.01f;
-                    String factorLambdaStr = getParam(input.getParams(), Svdpp.FACTOR_LAMBDA, false);
+                    String factorLambdaStr = getConfig(input.getConfigs(), Svdpp.FACTOR_LAMBDA, false);
                     float factorLambda = factorLambdaStr != null ? Float.parseFloat(factorLambdaStr) : 0.005f;
-                    String factorGammaStr = getParam(input.getParams(), Svdpp.FACTOR_GAMMA, false);
+                    String factorGammaStr = getConfig(input.getConfigs(), Svdpp.FACTOR_GAMMA, false);
                     float factorGamma = factorGammaStr != null ? Float.parseFloat(factorGammaStr) : 0.01f;
-                    String minRatingStr = getParam(input.getParams(), Svdpp.MIN_RATING, false);
+                    String minRatingStr = getConfig(input.getConfigs(), Svdpp.MIN_RATING, false);
                     float minRating = minRatingStr != null ? Float.parseFloat(minRatingStr) : 0f;
-                    String maxRatingStr = getParam(input.getParams(), Svdpp.MAX_RATING, false);
+                    String maxRatingStr = getConfig(input.getConfigs(), Svdpp.MAX_RATING, false);
                     float maxRating = maxRatingStr != null ? Float.parseFloat(maxRatingStr) : 5f;
-                    String vectorSizeStr = getParam(input.getParams(), Svdpp.VECTOR_SIZE, false);
+                    String vectorSizeStr = getConfig(input.getConfigs(), Svdpp.VECTOR_SIZE, false);
                     int vectorSize = vectorSizeStr != null ? Integer.parseInt(vectorSizeStr) : 2;
-                    String randomSeedStr = getParam(input.getParams(), Svdpp.RANDOM_SEED, false);
+                    String randomSeedStr = getConfig(input.getConfigs(), Svdpp.RANDOM_SEED, false);
                     Long randomSeed = randomSeedStr != null ? Long.parseLong(randomSeedStr) : null;
-                    String iterationsStr = getParam(input.getParams(), Svdpp.ITERATIONS, false);
+                    String iterationsStr = getConfig(input.getConfigs(), Svdpp.ITERATIONS, false);
                     int iterations = iterationsStr != null ? Integer.parseInt(iterationsStr) : Integer.MAX_VALUE;
                     configs.put(Svdpp.BIAS_LAMBDA, biasLambda);
                     configs.put(Svdpp.BIAS_GAMMA, biasGamma);
@@ -367,8 +367,8 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
         }
     }
 
-    private String getParam(Map<String, String> params, String key, boolean isRequired) {
-        String value = params != null ? params.get(key) : null;
+    private String getConfig(Map<String, String> configs, String key, boolean isRequired) {
+        String value = configs != null ? configs.get(key) : null;
         if (isRequired && value == null) {
             throw new ResponseStatusException(BAD_REQUEST, "Missing param: " + key);
         }

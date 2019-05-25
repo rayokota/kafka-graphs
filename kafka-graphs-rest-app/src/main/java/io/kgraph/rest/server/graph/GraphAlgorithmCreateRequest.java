@@ -28,7 +28,7 @@ import lombok.Setter;
 @Setter
 public class GraphAlgorithmCreateRequest {
     private GraphAlgorithmType algorithm;
-    private Map<String, String> params;
+    private Map<String, String> configs;
     private String verticesTopic;
     private String edgesGroupedBySourceTopic;
     private int numPartitions = 50;

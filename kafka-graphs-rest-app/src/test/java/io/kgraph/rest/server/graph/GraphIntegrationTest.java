@@ -202,7 +202,7 @@ public class GraphIntegrationTest {
         params.put(Svdpp.RANDOM_SEED, "0");
         params.put(Svdpp.ITERATIONS, "3");
         GraphAlgorithmCreateRequest createRequest = new GraphAlgorithmCreateRequest();
-        createRequest.setParams(params);
+        createRequest.setConfigs(params);
         createRequest.setAlgorithm(GraphAlgorithmType.svdpp);
         createRequest.setVerticesTopic("new-svdpp-vertices");
         createRequest.setEdgesGroupedBySourceTopic("new-svdpp-edges");
