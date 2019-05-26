@@ -188,6 +188,10 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         cb.registerAggregator(LAST_WRITTEN_OFFSETS, MapOfLongMaxAggregator.class);
     }
 
+    public Map<String, ?> configs() {
+        return configs;
+    }
+
     public KTable<K, VV> vertices() {
         return vertices;
     }

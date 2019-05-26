@@ -19,6 +19,7 @@
 package io.kgraph;
 
 import java.io.Closeable;
+import java.util.Map;
 import java.util.Properties;
 
 import org.apache.kafka.streams.KeyValue;
@@ -35,6 +36,8 @@ public interface GraphAlgorithm<K, VV, EV, T> extends Closeable {
     GraphAlgorithmState<T> run(int maxIterations);
 
     GraphAlgorithmState<T> state();
+
+    Map<String, ?> configs();
 
     Iterable<KeyValue<K, VV>> result();
 }

@@ -21,12 +21,14 @@ package io.kgraph.tools.library;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.stream.Collectors;
 
 import org.jblas.FloatMatrix;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
@@ -91,9 +93,23 @@ public class SvdppPredictor implements Callable<Void> {
                 return null;
             }
 
+            Map<String, Object> configs = client
+                .get()
+                .uri("/pregel/{id}/configs", id)
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
+                .block();
+            if (configs == null) {
+                log.error("Error: no configs found");
+                return null;
+            }
+
             double overallRating = Double.parseDouble(status.getAggregates().get(Svdpp.OVERALL_RATING_AGGREGATOR));
             long numEdges = Long.parseLong(status.getAggregates().get(EdgeCount.EDGE_COUNT_AGGREGATOR));
-            double meanRating =  overallRating / (numEdges * 2);
+            float meanRating =  (float) (overallRating / (numEdges * 2));
+
+            float minRating = ((Number) configs.getOrDefault(Svdpp.MIN_RATING, Svdpp.MIN_RATING_DEFAULT)).floatValue();
+            float maxRating = ((Number) configs.getOrDefault(Svdpp.MAX_RATING, Svdpp.MAX_RATING_DEFAULT)).floatValue();
 
             List<Float> userFloats = getFloats(client, (byte) 0, user);
             Float userBaseline = userFloats.remove(0);
@@ -103,10 +119,16 @@ public class SvdppPredictor implements Callable<Void> {
             Float itemBaseline = itemFloats.remove(0);
             FloatMatrix itemFactors = new FloatMatrix(itemFloats);
 
-            double predictedRating = meanRating + userBaseline + itemBaseline +
+            float predicted = meanRating + userBaseline + itemBaseline +
                 itemFactors.dot(userFactors);
-            log.info("Predicted rating: " + predictedRating);
-            System.out.println("Predicted rating: " + predictedRating);
+            log.info("Raw rating: " + predicted);
+
+            // Correct the predicted rating to be between the min and max ratings
+            predicted = Math.min(predicted, maxRating);
+            predicted = Math.max(predicted, minRating);
+
+            log.info("Predicted rating: " + predicted);
+            System.out.println("Predicted rating: " + predicted);
         } catch (WebClientResponseException e) {
             log.error("Error: " + e.getMessage());
         }

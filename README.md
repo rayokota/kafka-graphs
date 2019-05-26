@@ -136,6 +136,7 @@ First, the graph is prepared by grouping the edges by the source ID, and also en
 ```bash
 POST /prepare
 {
+  "algorithm": "sssp",
   "initialVerticesTopic": "vertices", 
   "initialEdgesTopic": "edges", 
   "verticesTopic": "newvertices",
@@ -149,7 +150,7 @@ Next, the graph algorithm is configured.
 POST /pregel
 {
   "algorithm": "sssp",
-  "params": {
+  "configs": {
     "srcVertexId": 0
   },
   "verticesTopic": "newvertices",
@@ -188,10 +189,10 @@ As you can see above, a graph algorithm may have specific parameters.  Here are 
 
 | Algorithm | Parameters | Example |
 |-----------|------------|---------|
-| bfs  | srcVertexId | "params": { "srcVertexId": 0 } |
+| bfs  | srcVertexId | "configs": { "srcVertexId": 0 } |
 | lcc | | |
 | lp | | |
-| mssp | landmarkVertexIds | "params": { "landmarkVertexIds": "0,1,2" } |
-| pagerank | tolerance, resetProbability | "params": { "tolerance": 0.0001, "resetProbability": 0.15 } |
-| sssp | srcVertexId | "params": { "srcVertexId": 0 } |
+| mssp | landmarkVertexIds | "configs": { "landmarkVertexIds": "0,1,2" } |
+| pagerank | tolerance, resetProbability | "configs": { "tolerance": 0.0001, "resetProbability": 0.15 } |
+| sssp | srcVertexId | "configs": { "srcVertexId": 0 } |
 | wcc | | |

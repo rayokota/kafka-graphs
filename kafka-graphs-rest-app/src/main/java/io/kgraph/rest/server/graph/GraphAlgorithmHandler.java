@@ -443,6 +443,17 @@ public class GraphAlgorithmHandler<EV> implements ApplicationListener<ReactiveWe
         return flux;
     }
 
+    public Mono<ServerResponse> configs(ServerRequest request) {
+        String appId = request.pathVariable("id");
+        PregelGraphAlgorithm<?, ?, ?, ?> algorithm = algorithms.get(appId);
+        if (algorithm == null) {
+            return ServerResponse.notFound().build();
+        }
+        return ServerResponse.ok()
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(Mono.just(algorithm.configs()), Map.class);
+    }
+
     public Mono<ServerResponse> result(ServerRequest request) {
         List<String> appIdHeaders = request.headers().header(X_KGRAPH_APPID);
         String appId = request.pathVariable("id");

@@ -206,6 +206,11 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
     }
 
     @Override
+    public Map<String, ?> configs() {
+        return computation.configs();
+    }
+
+    @Override
     public Iterable<KeyValue<K, VV>> result() {
         return () -> streams.store(solutionSetStore, QueryableStoreTypes.<K, VV>keyValueStore()).all();
     }
