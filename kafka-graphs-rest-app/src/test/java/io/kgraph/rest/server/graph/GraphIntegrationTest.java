@@ -198,11 +198,11 @@ public class GraphIntegrationTest {
             .expectStatus().isOk()
             .expectBody(Void.class);
 
-        Map<String, String> params = new HashMap<>();
-        params.put(Svdpp.RANDOM_SEED, "0");
-        params.put(Svdpp.ITERATIONS, "3");
+        Map<String, String> configs = new HashMap<>();
+        configs.put(Svdpp.RANDOM_SEED, "0");
+        configs.put(Svdpp.ITERATIONS, "3");
         GraphAlgorithmCreateRequest createRequest = new GraphAlgorithmCreateRequest();
-        createRequest.setConfigs(params);
+        createRequest.setConfigs(configs);
         createRequest.setAlgorithm(GraphAlgorithmType.svdpp);
         createRequest.setVerticesTopic("new-svdpp-vertices");
         createRequest.setEdgesGroupedBySourceTopic("new-svdpp-edges");

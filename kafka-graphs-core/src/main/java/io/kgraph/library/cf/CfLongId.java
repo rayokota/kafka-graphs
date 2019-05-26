@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
  */
 public class CfLongId implements CfId<Long>, Comparable<CfId<Long>> {
 
-    private static Pattern CF_LONG_ID_PATTERN = Pattern.compile("\\((\\d+),\\s*(\\d+)\\)");
+    private static final Pattern CF_LONG_ID_PATTERN = Pattern.compile("\\((\\d+),\\s*(\\d+)\\)");
 
     private final byte type;
     private final Long id;

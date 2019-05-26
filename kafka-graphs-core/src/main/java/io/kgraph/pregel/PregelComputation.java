@@ -828,30 +828,37 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 ComputeFunction.Aggregates previousAggregates = new ComputeFunction.PreviousAggregates(
                     previousAggregates(superstep));
                 computeFunction.postSuperstep(superstep, previousAggregates);
-                //aggregators.aggregate(LAST_WRITTEN_OFFSETS, lastWrittenOffsets.get(superstep));
                 writeAggregate(superstep, partition);
             }
         }
 
         private void writeAggregate(int superstep, int partition) throws Exception {
+            Map<String, Aggregator<?>> newAggregators = newAggregators();
+            initLastWrittenOffsets(superstep, newAggregators);
             Map<Integer, Map<String, Map<K, ?>>> stepAggregators = aggregators.get(superstep);
             if (stepAggregators != null) {
                 Map<String, Map<K, ?>> partitionAggregators = stepAggregators.get(partition);
                 if (partitionAggregators != null) {
-                    Map<String, Aggregator<?>> newAggregators = newAggregators();
                     newAggregators = setAggregators(newAggregators, partitionAggregators);
-                    String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
-                    String childPath = childPath(partition);
-                    byte[] childData = KryoUtils.serialize(newAggregators);
-                    if (ZKUtils.hasChild(curator, rootPath, childPath)) {
-                        ZKUtils.updateChild(curator, rootPath, childPath, childData);
-                    } else {
-                        ZKUtils.addChild(curator, rootPath, childPath, CreateMode.PERSISTENT, childData);
-                    }
                 }
+            }
+            String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
+            String childPath = childPath(partition);
+            byte[] childData = KryoUtils.serialize(newAggregators);
+            if (ZKUtils.hasChild(curator, rootPath, childPath)) {
+                ZKUtils.updateChild(curator, rootPath, childPath, childData);
+            } else {
+                ZKUtils.addChild(curator, rootPath, childPath, CreateMode.PERSISTENT, childData);
             }
         }
 
+        @SuppressWarnings("unchecked")
+        private void initLastWrittenOffsets(int superstep, Map<String, Aggregator<?>> agg) {
+            Aggregator<Map<Integer, Long>> a = (Aggregator<Map<Integer, Long>>) agg.get(LAST_WRITTEN_OFFSETS);
+            a.aggregate(lastWrittenOffsets.get(superstep));
+        }
+
+        @SuppressWarnings("unchecked")
         private Map<String, Aggregator<?>> setAggregators(Map<String, Aggregator<?>> agg, Map<String, Map<K, ?>> map) {
             return agg.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> {
