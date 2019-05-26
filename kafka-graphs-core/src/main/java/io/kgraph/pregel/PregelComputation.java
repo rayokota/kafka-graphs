@@ -139,7 +139,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private final Map<Integer, Map<Integer, Boolean>> didPreSuperstep = new ConcurrentHashMap<>();
     private final Map<TopicPartition, Long> positions = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Long>> lastWrittenOffsets = new ConcurrentHashMap<>();
-    private final Map<Integer, Map<Integer, Map<String, Map<K, ?>>>> aggregators = new ConcurrentHashMap<>();
+    private final Map<Integer, Map<Integer, Map<String, Map<K, ?>>>> aggregates = new ConcurrentHashMap<>();
     private final Map<Integer, Map<String, ?>> previousAggregates = new ConcurrentHashMap<>();
 
     public PregelComputation(
@@ -379,7 +379,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
     private Map<String, Map<K, ?>> aggregators(int partition, int superstep) {
         Map<Integer, Map<String, Map<K, ?>>> stepAggregators =
-            aggregators.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
+            aggregates.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
         return stepAggregators.computeIfAbsent(partition, k -> newVertexAggregators());
     }
 
@@ -517,7 +517,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 forwardedVertices.remove(previousStep);
                                 didPreSuperstep.remove(previousStep);
                                 lastWrittenOffsets.remove(previousStep);
-                                aggregators.remove(previousStep);
+                                aggregates.remove(previousStep);
                                 previousAggregates.remove(previousStep);
                                 localworkSetStore.delete(previousStep);
                             }
@@ -839,11 +839,11 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         private void writeAggregate(int superstep, int partition) throws Exception {
             Map<String, Aggregator<?>> newAggregators = newAggregators();
             initLastWrittenOffsets(superstep, newAggregators);
-            Map<Integer, Map<String, Map<K, ?>>> stepAggregators = aggregators.get(superstep);
-            if (stepAggregators != null) {
-                Map<String, Map<K, ?>> partitionAggregators = stepAggregators.get(partition);
-                if (partitionAggregators != null) {
-                    newAggregators = setAggregators(newAggregators, partitionAggregators);
+            Map<Integer, Map<String, Map<K, ?>>> currentAggregates = aggregates.get(superstep);
+            if (currentAggregates != null) {
+                Map<String, Map<K, ?>> partitionAggregates = currentAggregates.get(partition);
+                if (partitionAggregates != null) {
+                    newAggregators = setAggregators(newAggregators, partitionAggregates);
                 }
             }
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
