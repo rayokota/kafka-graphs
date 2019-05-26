@@ -377,13 +377,13 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         });
     }
 
-    private Map<String, Map<K, ?>> aggregators(int partition, int superstep) {
-        Map<Integer, Map<String, Map<K, ?>>> stepAggregators =
+    private Map<String, Map<K, ?>> aggregates(int partition, int superstep) {
+        Map<Integer, Map<String, Map<K, ?>>> currentAggregates =
             aggregates.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
-        return stepAggregators.computeIfAbsent(partition, k -> newVertexAggregators());
+        return currentAggregates.computeIfAbsent(partition, k -> newVertexAggregates());
     }
 
-    private Map<String, Map<K, ?>> newVertexAggregators() {
+    private Map<String, Map<K, ?>> newVertexAggregates() {
         Set<Map.Entry<String, AggregatorWrapper<?>>> entries = registeredAggregators.entrySet();
         return entries.stream()
             .collect(Collectors.toConcurrentMap(Map.Entry::getKey, entry -> new ConcurrentHashMap<>()));
@@ -729,7 +729,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             }
 
             ComputeFunction.Callback<K, VV, EV, Message> cb = new ComputeFunction.Callback<>(key, edgesStore,
-                previousAggregates(superstep), aggregators(partition, superstep));
+                previousAggregates(superstep), aggregates(partition, superstep));
             Iterable<Message> messages = () -> incomingMessages.values().stream()
                 .flatMap(List::stream)
                 .iterator();
@@ -863,12 +863,12 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         }
 
         @SuppressWarnings("unchecked")
-        private Map<String, Aggregator<?>> setAggregators(Map<String, Aggregator<?>> agg, Map<String, Map<K, ?>> map) {
+        private Map<String, Aggregator<?>> setAggregators(Map<String, Aggregator<?>> agg, Map<String, Map<K, ?>> values) {
             return agg.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, e -> {
                     Aggregator<Object> a = (Aggregator<Object>) e.getValue();
-                    Map<K, ?> values = map.get(e.getKey());
-                    for (Object value : values.values()) {
+                    Map<K, ?> vertexAggregates = values.get(e.getKey());
+                    for (Object value : vertexAggregates.values()) {
                         a.aggregate(value);
                     }
                     return a;
