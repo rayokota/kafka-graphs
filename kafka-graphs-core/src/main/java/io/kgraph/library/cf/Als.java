@@ -88,7 +88,7 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     private Map<String, Object> configs;
 
     @Override
-    public void preSuperstep(int superstep, Aggregators aggregators) {
+    public void preSuperstep(int superstep, Aggregates aggregators) {
         lambda = (Float) configs.getOrDefault(LAMBDA, LAMBDA_DEFAULT);
         vectorSize = (Integer) configs.getOrDefault(VECTOR_SIZE, VECTOR_SIZE_DEFAULT);
         randomSeed = (Long) configs.getOrDefault(RANDOM_SEED, RANDOM_SEED_DEFAULT);
@@ -296,7 +296,7 @@ public class Als implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     }
 
     // Returns the total number of edges before adding reverse edges
-    protected long getTotalNumEdges(ReadAggregators aggregators) {
+    protected long getTotalNumEdges(Aggregates aggregators) {
         return aggregators.getAggregatedValue(EdgeCount.EDGE_COUNT_AGGREGATOR);
     }
 }

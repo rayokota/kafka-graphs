@@ -272,7 +272,7 @@ public class SybilRank implements ComputeFunction<Long, SybilRank.VertexValue, D
         }
     }
 
-    protected long getTotalNumVertices(ReadAggregators aggregators) {
+    protected long getTotalNumVertices(Aggregates aggregators) {
         return aggregators.getAggregatedValue(VertexCount.VERTEX_COUNT_AGGREGATOR);
     }
 }

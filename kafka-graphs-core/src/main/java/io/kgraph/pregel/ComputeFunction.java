@@ -66,7 +66,7 @@ public interface ComputeFunction<K, VV, EV, Message> {
      * @param superstep the superstep
      * @param aggregators the aggregators
      */
-    default void preSuperstep(int superstep, Aggregators aggregators) {
+    default void preSuperstep(int superstep, Aggregates aggregators) {
     }
 
     /**
@@ -91,7 +91,7 @@ public interface ComputeFunction<K, VV, EV, Message> {
      * @param superstep the superstep
      * @param aggregators the aggregators
      */
-    default void postSuperstep(int superstep, Aggregators aggregators) {
+    default void postSuperstep(int superstep, Aggregates aggregators) {
     }
 
 
@@ -115,11 +115,11 @@ public interface ComputeFunction<K, VV, EV, Message> {
         }
     }
 
-    interface ReadAggregators {
+    interface Aggregates {
         <T> T getAggregatedValue(String name);
     }
 
-    final class MasterCallback implements ReadAggregators {
+    final class MasterCallback implements Aggregates {
 
         protected final Map<String, Aggregator<?>> previousAggregators;
 
@@ -144,33 +144,21 @@ public interface ComputeFunction<K, VV, EV, Message> {
         }
     }
 
-    class Aggregators implements ReadAggregators {
+    class PreviousAggregates implements Aggregates {
 
         protected final Map<String, ?> previousAggregates;
 
-        protected final Map<String, Aggregator<?>> aggregators;
-
-        public Aggregators(Map<String, ?> previousAggregates, Map<String, Aggregator<?>> aggregators) {
+        public PreviousAggregates(Map<String, ?> previousAggregates) {
             this.previousAggregates = previousAggregates;
-            this.aggregators = aggregators;
         }
 
         @SuppressWarnings("unchecked")
         public final <T> T getAggregatedValue(String name) {
             return (T) previousAggregates.get(name);
         }
-
-        public final <T> void aggregate(String name, T value) {
-            aggregator(name).aggregate(value);
-        }
-
-        @SuppressWarnings("unchecked")
-        private <T> Aggregator<T> aggregator(String name) {
-            return (Aggregator<T>) aggregators.get(name);
-        }
     }
 
-    final class Callback<K, VV, EV, Message> extends Aggregators {
+    final class Callback<K, VV, EV, Message> extends PreviousAggregates {
 
         protected final K key;
 
@@ -182,11 +170,14 @@ public interface ComputeFunction<K, VV, EV, Message> {
 
         protected boolean voteToHalt = false;
 
+        protected final Map<String, Map<K, ?>> aggregators;
+
         public Callback(K key,
                         KeyValueStore<K, Map<K, EV>> edgesStore,
                         Map<String, ?> previousAggregates,
-                        Map<String, Aggregator<?>> aggregators) {
-            super(previousAggregates, aggregators);
+                        Map<String, Map<K, ?>> aggregators) {
+            super(previousAggregates);
+            this.aggregators = aggregators;
             this.key = key;
             this.edgesStore = edgesStore;
         }
@@ -229,6 +220,15 @@ public interface ComputeFunction<K, VV, EV, Message> {
 
         public void voteToHalt() {
             voteToHalt = true;
+        }
+
+        public final <T> void aggregate(String name, T value) {
+            aggregator(name).put(key, value);
+        }
+
+        @SuppressWarnings("unchecked")
+        private <T> Map<K, T> aggregator(String name) {
+            return (Map<K, T>) aggregators.get(name);
         }
     }
 }
