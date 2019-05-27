@@ -4,7 +4,7 @@
 
     <groupId>io.kgraph</groupId>
     <artifactId>kafka-graphs-parent</artifactId>
-    <version>1.2.1-SNAPSHOT</version>
+    <version>1.2.1</version>
     <packaging>pom</packaging>
 
     <name>kafka-graphs</name>
@@ -28,7 +28,7 @@
         <connection>scm:git:git://github.com:rayokota/kafka-graphs.git</connection>
         <developerConnection>scm:git:git@github.com:rayokota/kafka-graphs.git</developerConnection>
         <url>git@github.com:rayokota/kafka-graphs.git</url>
-        <tag>HEAD</tag>
+        <tag>kafka-graphs-parent-1.2.1</tag>
     </scm>
 
     <modules>
