@@ -22,7 +22,6 @@ import java.io.Closeable;
 import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -35,7 +34,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.cache.TreeCache;
@@ -553,7 +551,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             int superstep = pregelState.superstep();
             // Collect aggregator values, then run the masterCompute() and
             // finally save the aggregator values
-            Map<String, Aggregator<?>> newAggregators = reduceAggregates(superstep - 1);
+            Map<String, Aggregator<?>> newAggregators = reduceAggregators(superstep - 1);
             ComputeFunction.MasterCallback cb = new ComputeFunction.MasterCallback(newAggregators);
             computeFunction.masterCompute(superstep, cb);
             saveAggregates(superstep - 1, newAggregators);
@@ -566,7 +564,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             }
         }
 
-        private Map<String, Aggregator<?>> reduceAggregates(int superstep) throws Exception {
+        private Map<String, Aggregator<?>> reduceAggregators(int superstep) throws Exception {
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
             Map<String, Aggregator<?>> newAggregators = newAggregators();
             initAggregators(newAggregators, previousAggregates(superstep));
@@ -843,7 +841,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                     previousAggregates(superstep), copyAggregators);
                 computeFunction.postSuperstep(superstep, aggregators);
                 initLastWrittenOffsets(superstep, copyAggregators);
-                writeAggregators(superstep, partition, copyAggregators);
+                saveAggregators(superstep, partition, copyAggregators);
             }
         }
 
@@ -873,7 +871,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             }
         }
 
-        private void writeAggregators(int superstep, int partition, Map<String, Aggregator<?>> aggregators) throws Exception {
+        private void saveAggregators(int superstep, int partition, Map<String, Aggregator<?>> aggregators) throws Exception {
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
             String childPath = childPath(partition);
             byte[] childData = KryoUtils.serialize(aggregators);
@@ -885,9 +883,10 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         }
 
         @SuppressWarnings("unchecked")
-        private void initLastWrittenOffsets(int superstep, Map<String, Aggregator<?>> agg) {
-            Aggregator<Map<Integer, Long>> a = (Aggregator<Map<Integer, Long>>) agg.get(LAST_WRITTEN_OFFSETS);
-            a.aggregate(lastWrittenOffsets.get(superstep));
+        private void initLastWrittenOffsets(int superstep, Map<String, Aggregator<?>> aggregators) {
+            Aggregator<Map<Integer, Long>> aggregator =
+                (Aggregator<Map<Integer, Long>>) aggregators.get(LAST_WRITTEN_OFFSETS);
+            aggregator.aggregate(lastWrittenOffsets.get(superstep));
         }
 
         @Override
