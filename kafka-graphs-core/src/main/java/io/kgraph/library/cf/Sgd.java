@@ -122,7 +122,7 @@ public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     private Map<String, Object> configs;
 
     @Override
-    public void preSuperstep(int superstep, Aggregates aggregators) {
+    public void preSuperstep(int superstep, Aggregators aggregators) {
         lambda = (Float) configs.getOrDefault(LAMBDA, LAMBDA_DEFAULT);
         gamma = (Float) configs.getOrDefault(GAMMA, GAMMA_DEFAULT);
         tolerance = (Float) configs.getOrDefault(TOLERANCE, TOLERANCE_DEFAULT);
@@ -354,7 +354,7 @@ public class Sgd implements ComputeFunction<CfLongId, FloatMatrix, Float, FloatM
     }
 
     // Returns the total number of edges before adding reverse edges
-    protected long getTotalNumEdges(Aggregates aggregators) {
+    protected long getTotalNumEdges(ReadAggregators aggregators) {
         return aggregators.getAggregatedValue(EdgeCount.EDGE_COUNT_AGGREGATOR);
     }
 }

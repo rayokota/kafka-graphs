@@ -391,7 +391,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
         }
 
         @Override
-        public void preSuperstep(int superstep, Aggregates aggregators) {
+        public void preSuperstep(int superstep, Aggregators aggregators) {
             factorLambda = (Float) configs.getOrDefault(FACTOR_LAMBDA, FACTOR_LAMBDA_DEFAULT);
             factorGamma = (Float) configs.getOrDefault(FACTOR_GAMMA, FACTOR_GAMMA_DEFAULT);
             biasLambda = (Float) configs.getOrDefault(BIAS_LAMBDA, BIAS_LAMBDA_DEFAULT);
@@ -510,7 +510,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
         private int vectorSize;
 
         @Override
-        public void preSuperstep(int superstep, Aggregates aggregators) {
+        public void preSuperstep(int superstep, Aggregators aggregators) {
             biasLambda = (Float) configs.getOrDefault(BIAS_LAMBDA, BIAS_LAMBDA_DEFAULT);
             biasGamma = (Float) configs.getOrDefault(BIAS_GAMMA, BIAS_GAMMA_DEFAULT);
             factorLambda = (Float) configs.getOrDefault(FACTOR_LAMBDA, FACTOR_LAMBDA_DEFAULT);
@@ -590,7 +590,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
     private final ItemComputation itemComputation = new ItemComputation();
 
     @Override
-    public void preSuperstep(int superstep, Aggregates aggregators) {
+    public void preSuperstep(int superstep, Aggregators aggregators) {
         if (superstep <= 2) {
             // noop
         } else if (superstep % 2 != 0) {
@@ -623,7 +623,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
     }
 
     // Returns the total number of edges before adding reverse edges
-    protected long getTotalNumEdges(Aggregates aggregators) {
+    protected long getTotalNumEdges(ReadAggregators aggregators) {
         return aggregators.getAggregatedValue(EdgeCount.EDGE_COUNT_AGGREGATOR);
     }
 }

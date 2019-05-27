@@ -139,7 +139,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private final Map<Integer, Map<Integer, Boolean>> didPreSuperstep = new ConcurrentHashMap<>();
     private final Map<TopicPartition, Long> positions = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Long>> lastWrittenOffsets = new ConcurrentHashMap<>();
-    private final Map<Integer, Map<Integer, Map<String, Map<K, ?>>>> aggregates = new ConcurrentHashMap<>();
+    private final Map<Integer, Map<Integer, Map<String, Aggregator<?>>>> aggregators = new ConcurrentHashMap<>();
+    private final Map<Integer, Map<Integer, Map<String, Map<K, ?>>>> vertexAggregates = new ConcurrentHashMap<>();
     private final Map<Integer, Map<String, ?>> previousAggregates = new ConcurrentHashMap<>();
 
     public PregelComputation(
@@ -339,27 +340,27 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, Aggregator<?>> initAggregators(Map<String, Aggregator<?>> agg, Map<String, ?> values) {
-        return agg.entrySet().stream()
-            .collect(Collectors.toMap(Map.Entry::getKey, e -> {
-                Aggregator<Object> a = (Aggregator<Object>) e.getValue();
-                Object value = values.get(e.getKey());
-                if (value != null && registeredAggregators.get(e.getKey()).isPersistent()) {
-                    a.aggregate(value);
-                }
-                return a;
-            }));
+    private void initAggregators(Map<String, Aggregator<?>> aggregators, Map<String, ?> values) {
+        for (Map.Entry<String, Aggregator<?>> entry : aggregators.entrySet()) {
+            String name = entry.getKey();
+            Aggregator<Object> aggregator = (Aggregator<Object>) entry.getValue();
+            Object value = values.get(name);
+            if (value != null && registeredAggregators.get(name).isPersistent()) {
+                aggregator.aggregate(value);
+            }
+        }
     }
 
     @SuppressWarnings("unchecked")
-    private Map<String, Aggregator<?>> mergeAggregators(Map<String, Aggregator<?>> agg1, Map<String, Aggregator<?>> agg2) {
-        return Stream.of(agg1, agg2).map(Map::entrySet).flatMap(Collection::stream).collect(
-            Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> {
-                Aggregator<Object> a1 = (Aggregator<Object>) v1;
-                Aggregator<Object> a2 = (Aggregator<Object>) v2;
-                a1.aggregate(a2.getAggregate());
-                return a1;
-            }));
+    private void mergeAggregators(Map<String, Aggregator<?>> result, Map<String, Aggregator<?>> element) {
+        for (Map.Entry<String, Aggregator<?>> entry : result.entrySet()) {
+            String name = entry.getKey();
+            Aggregator<Object> aggregator1 = (Aggregator<Object>) entry.getValue();
+            Aggregator<Object> aggregator2 = (Aggregator<Object>) element.get(name);
+            if (aggregator2 != null) {
+                aggregator1.aggregate(aggregator2.getAggregate());
+            }
+        }
     }
 
     protected Map<String, ?> previousAggregates(int superstep) {
@@ -377,9 +378,15 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         });
     }
 
-    private Map<String, Map<K, ?>> aggregates(int partition, int superstep) {
+    private Map<String, Aggregator<?>> aggregators(int superstep, int partition) {
+        Map<Integer, Map<String, Aggregator<?>>> stepAggregators =
+            aggregators.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
+        return stepAggregators.computeIfAbsent(partition, k -> newAggregators());
+    }
+
+    private Map<String, Map<K, ?>> vertexAggregates(int superstep, int partition) {
         Map<Integer, Map<String, Map<K, ?>>> currentAggregates =
-            aggregates.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
+            vertexAggregates.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
         return currentAggregates.computeIfAbsent(partition, k -> newVertexAggregates());
     }
 
@@ -517,7 +524,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 forwardedVertices.remove(previousStep);
                                 didPreSuperstep.remove(previousStep);
                                 lastWrittenOffsets.remove(previousStep);
-                                aggregates.remove(previousStep);
+                                aggregators.remove(previousStep);
+                                vertexAggregates.remove(previousStep);
                                 previousAggregates.remove(previousStep);
                                 localworkSetStore.delete(previousStep);
                             }
@@ -561,7 +569,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         private Map<String, Aggregator<?>> reduceAggregates(int superstep) throws Exception {
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
             Map<String, Aggregator<?>> newAggregators = newAggregators();
-            newAggregators = initAggregators(newAggregators, previousAggregates(superstep));
+            initAggregators(newAggregators, previousAggregates(superstep));
             boolean exists = curator.checkExists().forPath(rootPath) != null;
             if (!exists) return newAggregators;
             List<String> children = curator.getChildren().forPath(rootPath);
@@ -571,7 +579,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                         byte[] data = ZKUtils.getChildData(curator, rootPath, path);
                         if (data.length > 0) {
                             Map<String, Aggregator<?>> aggregators = KryoUtils.deserialize(data);
-                            newAggregators = mergeAggregators(newAggregators, aggregators);
+                            mergeAggregators(newAggregators, aggregators);
                         }
                     }
                 }
@@ -581,8 +589,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
 
         private void saveAggregates(int superstep, Map<String, Aggregator<?>> newAggregators) throws Exception {
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
-            Set<Map.Entry<String, Aggregator<?>>> entries = newAggregators.entrySet();
-            Map<String, ?> newAggregates = entries.stream()
+            Map<String, ?> newAggregates = newAggregators.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, entry -> entry.getValue().getAggregate()));
             ZKUtils.addChild(curator, rootPath, ALL_PARTITIONS, CreateMode.PERSISTENT, KryoUtils.serialize(newAggregates));
         }
@@ -722,14 +729,14 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             Map<Integer, Boolean> didFlags = didPreSuperstep.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
             Boolean flag = didFlags.getOrDefault(partition, false);
             if (!flag) {
-                ComputeFunction.Aggregates previousAggregates = new ComputeFunction.PreviousAggregates(
-                    previousAggregates(superstep));
-                computeFunction.preSuperstep(superstep, previousAggregates);
+                ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
+                    previousAggregates(superstep), aggregators(superstep, partition));
+                computeFunction.preSuperstep(superstep, aggregators);
                 didFlags.put(partition, true);
             }
 
             ComputeFunction.Callback<K, VV, EV, Message> cb = new ComputeFunction.Callback<>(key, edgesStore,
-                previousAggregates(superstep), aggregates(partition, superstep));
+                previousAggregates(superstep), vertexAggregates(superstep, partition));
             Iterable<Message> messages = () -> incomingMessages.values().stream()
                 .flatMap(List::stream)
                 .iterator();
@@ -827,28 +834,49 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             log.debug("Step {}, vertex {} for partition {} is NOT active", superstep, vertex, partition);
             if (vertices.isEmpty()) {
                 // Deactivate partition
+                // Note: this may be invoked more than once, so we don't mutate aggregates.
                 log.debug("Step {}, removing partition {} for last vertex {}", superstep, partition, vertex);
                 ZKUtils.removeChild(curator, applicationId, new PregelState(State.RUNNING, superstep, Stage.SEND), childPath(partition));
-                ComputeFunction.Aggregates previousAggregates = new ComputeFunction.PreviousAggregates(
-                    previousAggregates(superstep));
-                computeFunction.postSuperstep(superstep, previousAggregates);
-                writeAggregate(superstep, partition);
+                Map<String, Aggregator<?>> copyAggregators = copyAggregators(superstep, partition);
+                aggregateVertices(superstep, partition, copyAggregators);
+                ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
+                    previousAggregates(superstep), copyAggregators);
+                computeFunction.postSuperstep(superstep, aggregators);
+                initLastWrittenOffsets(superstep, copyAggregators);
+                writeAggregators(superstep, partition, copyAggregators);
             }
         }
 
-        private void writeAggregate(int superstep, int partition) throws Exception {
+        @SuppressWarnings("unchecked")
+        private Map<String, Aggregator<?>> copyAggregators(int superstep, int partition) {
+            Map<String, Aggregator<?>> aggregators = aggregators(superstep, partition);
             Map<String, Aggregator<?>> newAggregators = newAggregators();
-            initLastWrittenOffsets(superstep, newAggregators);
-            Map<Integer, Map<String, Map<K, ?>>> currentAggregates = aggregates.get(superstep);
-            if (currentAggregates != null) {
-                Map<String, Map<K, ?>> partitionAggregates = currentAggregates.get(partition);
-                if (partitionAggregates != null) {
-                    newAggregators = setAggregators(newAggregators, partitionAggregates);
+            for (Map.Entry<String, Aggregator<?>> entry : newAggregators.entrySet()) {
+                String name = entry.getKey();
+                Aggregator<Object> newAggregator = (Aggregator<Object>) entry.getValue();
+                Aggregator<Object> aggregator = (Aggregator<Object>) aggregators.get(name);
+                newAggregator.setAggregate(aggregator.getAggregate());
+            }
+            return newAggregators;
+        }
+
+        @SuppressWarnings("unchecked")
+        private void aggregateVertices(int superstep, int partition, Map<String, Aggregator<?>> aggregators) {
+            Map<String, Map<K, ?>> vertexAggregates = vertexAggregates(superstep, partition);
+            for (Map.Entry<String, Aggregator<?>> entry : aggregators.entrySet()) {
+                String name = entry.getKey();
+                Aggregator<Object> aggregator = (Aggregator<Object>) entry.getValue();
+                Map<K, ?> values = vertexAggregates.get(name);
+                for (Object value : values.values()) {
+                    aggregator.aggregate(value);
                 }
             }
+        }
+
+        private void writeAggregators(int superstep, int partition, Map<String, Aggregator<?>> aggregators) throws Exception {
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
             String childPath = childPath(partition);
-            byte[] childData = KryoUtils.serialize(newAggregators);
+            byte[] childData = KryoUtils.serialize(aggregators);
             if (ZKUtils.hasChild(curator, rootPath, childPath)) {
                 ZKUtils.updateChild(curator, rootPath, childPath, childData);
             } else {
@@ -860,19 +888,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         private void initLastWrittenOffsets(int superstep, Map<String, Aggregator<?>> agg) {
             Aggregator<Map<Integer, Long>> a = (Aggregator<Map<Integer, Long>>) agg.get(LAST_WRITTEN_OFFSETS);
             a.aggregate(lastWrittenOffsets.get(superstep));
-        }
-
-        @SuppressWarnings("unchecked")
-        private Map<String, Aggregator<?>> setAggregators(Map<String, Aggregator<?>> agg, Map<String, Map<K, ?>> values) {
-            return agg.entrySet().stream()
-                .collect(Collectors.toMap(Map.Entry::getKey, e -> {
-                    Aggregator<Object> a = (Aggregator<Object>) e.getValue();
-                    Map<K, ?> vertexAggregates = values.get(e.getKey());
-                    for (Object value : vertexAggregates.values()) {
-                        a.aggregate(value);
-                    }
-                    return a;
-                }));
         }
 
         @Override

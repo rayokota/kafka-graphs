@@ -33,6 +33,20 @@ public class VertexCountToValue<K, EV> implements ComputeFunction<K, Long, EV, L
     }
 
     @Override
+    public void preSuperstep(int superstep, Aggregators aggregators) {
+        if (superstep == 0) {
+            aggregators.aggregate(VertexCount.VERTEX_COUNT_AGGREGATOR, 10000L);
+        }
+    }
+
+    @Override
+    public void postSuperstep(int superstep, Aggregators aggregators) {
+        if (superstep == 0) {
+            aggregators.aggregate(VertexCount.VERTEX_COUNT_AGGREGATOR, 100000L);
+        }
+    }
+
+    @Override
     public void compute(
         int superstep,
         VertexWithValue<K, Long> vertex,

@@ -96,27 +96,27 @@ public class AggregatorTest extends AbstractIntegrationTest {
         log.debug("result: {}", map);
 
         Map<Long, Long> expectedResult = new HashMap<>();
-        expectedResult.put(0L, 21L);
-        expectedResult.put(1L, 21L);
-        expectedResult.put(2L, 21L);
-        expectedResult.put(3L, 21L);
-        expectedResult.put(4L, 21L);
-        expectedResult.put(5L, 21L);
-        expectedResult.put(6L, 21L);
-        expectedResult.put(7L, 21L);
-        expectedResult.put(8L, 21L);
-        expectedResult.put(9L, 21L);
-        expectedResult.put(10L, 21L);
-        expectedResult.put(11L, 21L);
-        expectedResult.put(12L, 21L);
-        expectedResult.put(13L, 21L);
-        expectedResult.put(14L, 21L);
-        expectedResult.put(15L, 21L);
-        expectedResult.put(16L, 21L);
-        expectedResult.put(17L, 21L);
-        expectedResult.put(18L, 21L);
-        expectedResult.put(19L, 21L);
-        expectedResult.put(20L, 21L);
+        expectedResult.put(0L, 220021L);
+        expectedResult.put(1L, 220021L);
+        expectedResult.put(2L, 220021L);
+        expectedResult.put(3L, 220021L);
+        expectedResult.put(4L, 220021L);
+        expectedResult.put(5L, 220021L);
+        expectedResult.put(6L, 220021L);
+        expectedResult.put(7L, 220021L);
+        expectedResult.put(8L, 220021L);
+        expectedResult.put(9L, 220021L);
+        expectedResult.put(10L, 220021L);
+        expectedResult.put(11L, 220021L);
+        expectedResult.put(12L, 220021L);
+        expectedResult.put(13L, 220021L);
+        expectedResult.put(14L, 220021L);
+        expectedResult.put(15L, 220021L);
+        expectedResult.put(16L, 220021L);
+        expectedResult.put(17L, 220021L);
+        expectedResult.put(18L, 220021L);
+        expectedResult.put(19L, 220021L);
+        expectedResult.put(20L, 220021L);
 
         assertEquals(expectedResult, map);
     }
@@ -163,9 +163,9 @@ public class AggregatorTest extends AbstractIntegrationTest {
         Map<Long, Long> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.info("result: {}", map);
 
-        assertEquals(2071L, map.values().iterator().next().longValue());
-
+        assertEquals(10L * 100000L + 10L * 10000L + 2071L, map.values().iterator().next().longValue());
     }
+
     @Test
     public void testEdgeCountToValueFromFile() throws Exception {
         String suffix = "file";
