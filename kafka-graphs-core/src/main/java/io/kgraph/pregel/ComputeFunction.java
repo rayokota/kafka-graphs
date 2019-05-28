@@ -119,6 +119,10 @@ public interface ComputeFunction<K, VV, EV, Message> {
         <T> T getAggregatedValue(String name);
     }
 
+    interface ReadWriteAggregators extends ReadAggregators {
+        <T> void aggregate(String name, T value);
+    }
+
     final class MasterCallback implements ReadAggregators {
 
         protected final Map<String, Aggregator<?>> previousAggregators;
@@ -129,6 +133,7 @@ public interface ComputeFunction<K, VV, EV, Message> {
             this.previousAggregators = previousAggregators;
         }
 
+        @Override
         @SuppressWarnings("unchecked")
         public final <T> T getAggregatedValue(String name) {
             return (T) previousAggregators.get(name).getAggregate();
@@ -144,7 +149,7 @@ public interface ComputeFunction<K, VV, EV, Message> {
         }
     }
 
-    final class Aggregators implements ReadAggregators {
+    final class Aggregators implements ReadWriteAggregators {
 
         protected final Map<String, ?> previousAggregates;
 
@@ -155,11 +160,13 @@ public interface ComputeFunction<K, VV, EV, Message> {
             this.aggregators = aggregators;
         }
 
+        @Override
         @SuppressWarnings("unchecked")
         public final <T> T getAggregatedValue(String name) {
             return (T) previousAggregates.get(name);
         }
 
+        @Override
         public final <T> void aggregate(String name, T value) {
             aggregator(name).aggregate(value);
         }
@@ -170,7 +177,7 @@ public interface ComputeFunction<K, VV, EV, Message> {
         }
     }
 
-    final class Callback<K, VV, EV, Message> implements ReadAggregators {
+    final class Callback<K, VV, EV, Message> implements ReadWriteAggregators {
 
         protected final K key;
 
@@ -236,11 +243,13 @@ public interface ComputeFunction<K, VV, EV, Message> {
             voteToHalt = true;
         }
 
+        @Override
         @SuppressWarnings("unchecked")
         public final <T> T getAggregatedValue(String name) {
             return (T) previousAggregates.get(name);
         }
 
+        @Override
         public final <T> void aggregate(String name, T value) {
             aggregator(name).put(key, value);
         }
