@@ -134,7 +134,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private final String localSolutionSetStoreName;
 
     private final Map<Integer, Map<Integer, Set<K>>> activeVertices = new ConcurrentHashMap<>();
-    private final Map<Integer, Map<Integer, Boolean>> didPreSuperstep = new ConcurrentHashMap<>();
     private final Map<TopicPartition, Long> positions = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Long>> lastWrittenOffsets = new ConcurrentHashMap<>();
     private final Map<Integer, Map<Integer, Map<String, Aggregator<?>>>> aggregators = new ConcurrentHashMap<>();
@@ -376,6 +375,12 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         });
     }
 
+    private boolean hasAggregators(int superstep, int partition) {
+        Map<Integer, Map<String, Aggregator<?>>> stepAggregators =
+            aggregators.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
+        return stepAggregators.containsKey(partition);
+    }
+
     private Map<String, Aggregator<?>> aggregators(int superstep, int partition) {
         Map<Integer, Map<String, Aggregator<?>>> stepAggregators =
             aggregators.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
@@ -520,7 +525,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                 int previousStep = pregelState.superstep() - 1;
                                 activeVertices.remove(previousStep);
                                 forwardedVertices.remove(previousStep);
-                                didPreSuperstep.remove(previousStep);
                                 lastWrittenOffsets.remove(previousStep);
                                 aggregators.remove(previousStep);
                                 vertexAggregates.remove(previousStep);
@@ -724,13 +728,10 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             VV oldVertexValue = vertex._3 <= superstep ? vertex._4 : vertex._2;
             int partition = vertexToPartition(key, serialized.keySerde().serializer(), numPartitions);
 
-            Map<Integer, Boolean> didFlags = didPreSuperstep.computeIfAbsent(superstep, k -> new ConcurrentHashMap<>());
-            Boolean flag = didFlags.getOrDefault(partition, false);
-            if (!flag) {
+            if (!hasAggregators(superstep, partition)) {
                 ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), aggregators(superstep, partition));
                 computeFunction.preSuperstep(superstep, aggregators);
-                didFlags.put(partition, true);
             }
 
             ComputeFunction.Callback<K, VV, EV, Message> cb = new ComputeFunction.Callback<>(key, edgesStore,
