@@ -183,6 +183,10 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         log.info("Pregel configs: {}", configs);
         ComputeFunction.InitCallback cb = new ComputeFunction.InitCallback(registeredAggregators);
         cf.init(configs, cb);
+        registerLastWrittenOffsets(cb);
+    }
+
+    private void registerLastWrittenOffsets(ComputeFunction.InitCallback cb) {
         cb.registerAggregator(LAST_WRITTEN_OFFSETS, MapOfLongMaxAggregator.class);
     }
 
@@ -547,7 +551,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 // Use the vertices lastWrittenOffsets for superstep 0
                 return tp -> graphOffsets.get(new TopicPartition(verticesTopic, tp.partition()));
             }
-            Map<Integer, Long> lastWrittenOffsets = (Map<Integer, Long>) previousAggregates(superstep).get(LAST_WRITTEN_OFFSETS);
+            Map<Integer, Long> lastWrittenOffsets =
+                (Map<Integer, Long>) previousAggregates(superstep).get(LAST_WRITTEN_OFFSETS);
             return lastWrittenOffsets != null ? tp -> lastWrittenOffsets.get(tp.partition()) : null;
         }
 
@@ -841,7 +846,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 ComputeFunction.Aggregators aggregators = new ComputeFunction.Aggregators(
                     previousAggregates(superstep), copyAggregators);
                 computeFunction.postSuperstep(superstep, aggregators);
-                initLastWrittenOffsets(superstep, copyAggregators);
+                initLastWrittenOffsets(superstep, aggregators);
                 saveAggregators(superstep, partition, copyAggregators);
             }
         }
@@ -872,6 +877,10 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             }
         }
 
+        private void initLastWrittenOffsets(int superstep, ComputeFunction.Aggregators aggregators) {
+            aggregators.aggregate(LAST_WRITTEN_OFFSETS, lastWrittenOffsets.get(superstep));
+        }
+
         private void saveAggregators(int superstep, int partition, Map<String, Aggregator<?>> aggregators) throws Exception {
             String rootPath = ZKUtils.aggregatePath(applicationId, superstep);
             String childPath = childPath(partition);
@@ -881,13 +890,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             } else {
                 ZKUtils.addChild(curator, rootPath, childPath, CreateMode.PERSISTENT, childData);
             }
-        }
-
-        @SuppressWarnings("unchecked")
-        private void initLastWrittenOffsets(int superstep, Map<String, Aggregator<?>> aggregators) {
-            Aggregator<Map<Integer, Long>> aggregator =
-                (Aggregator<Map<Integer, Long>>) aggregators.get(LAST_WRITTEN_OFFSETS);
-            aggregator.aggregate(lastWrittenOffsets.get(superstep));
         }
 
         @Override
