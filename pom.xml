@@ -38,11 +38,11 @@
 
     <properties>
         <curator.version>4.2.0</curator.version>
-        <kafka.version>2.2.0</kafka.version>
+        <kafka.version>2.3.0</kafka.version>
         <kafka.scala.version>2.12</kafka.scala.version>
         <kryo.version>4.0.2</kryo.version>
         <vavr.version>0.10.0</vavr.version>
-        <zookeeper.version>3.4.14</zookeeper.version>
+        <zookeeper.version>3.5.5</zookeeper.version>
     </properties>
 
     <dependencyManagement>

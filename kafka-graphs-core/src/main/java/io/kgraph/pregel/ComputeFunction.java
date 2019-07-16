@@ -23,7 +23,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.kafka.streams.processor.ProcessorContext;
 import org.apache.kafka.streams.state.KeyValueStore;
+import org.apache.kafka.streams.state.TimestampedKeyValueStore;
+import org.apache.kafka.streams.state.ValueAndTimestamp;
 
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
@@ -179,9 +182,11 @@ public interface ComputeFunction<K, VV, EV, Message> {
 
     final class Callback<K, VV, EV, Message> implements ReadWriteAggregators {
 
+        protected final ProcessorContext context;
+
         protected final K key;
 
-        protected final KeyValueStore<K, Map<K, EV>> edgesStore;
+        protected final TimestampedKeyValueStore<K, Map<K, EV>> edgesStore;
 
         protected VV newVertexValue = null;
 
@@ -193,10 +198,12 @@ public interface ComputeFunction<K, VV, EV, Message> {
 
         protected final Map<String, Map<K, ?>> aggregators;
 
-        public Callback(K key,
-                        KeyValueStore<K, Map<K, EV>> edgesStore,
+        public Callback(ProcessorContext context,
+                        K key,
+                        TimestampedKeyValueStore<K, Map<K, EV>> edgesStore,
                         Map<String, ?> previousAggregates,
                         Map<String, Map<K, ?>> aggregators) {
+            this.context = context;
             this.previousAggregates = previousAggregates;
             this.aggregators = aggregators;
             this.key = key;
@@ -213,30 +220,30 @@ public interface ComputeFunction<K, VV, EV, Message> {
         }
 
         public final void addEdge(K target, EV value) {
-            Map<K, EV> edges = edgesStore.get(key);
+            Map<K, EV> edges = ValueAndTimestamp.getValueOrNull(edgesStore.get(key));
             if (edges == null) {
                 edges = new HashMap<>();
             }
             edges.put(target, value);
-            edgesStore.put(key, edges);
+            edgesStore.put(key, ValueAndTimestamp.make(edges, context.timestamp()));
         }
 
         public final void removeEdge(K target) {
-            Map<K, EV> edges = edgesStore.get(key);
+            Map<K, EV> edges = ValueAndTimestamp.getValueOrNull(edgesStore.get(key));
             if (edges == null) {
                 return;
             }
             edges.remove(target);
-            edgesStore.put(key, edges);
+            edgesStore.put(key, ValueAndTimestamp.make(edges, context.timestamp()));
         }
 
         public final void setNewEdgeValue(K target, EV value) {
-            Map<K, EV> edges = edgesStore.get(key);
+            Map<K, EV> edges = ValueAndTimestamp.getValueOrNull(edgesStore.get(key));
             if (edges == null) {
                 return;
             }
             edges.replace(target, value);
-            edgesStore.put(key, edges);
+            edgesStore.put(key, ValueAndTimestamp.make(edges, context.timestamp()));
         }
 
         public void voteToHalt() {

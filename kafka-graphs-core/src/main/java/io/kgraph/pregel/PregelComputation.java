@@ -72,6 +72,8 @@ import org.apache.kafka.streams.state.KeyValueStore;
 import org.apache.kafka.streams.state.ReadOnlyKeyValueStore;
 import org.apache.kafka.streams.state.StoreBuilder;
 import org.apache.kafka.streams.state.Stores;
+import org.apache.kafka.streams.state.TimestampedKeyValueStore;
+import org.apache.kafka.streams.state.ValueAndTimestamp;
 import org.apache.zookeeper.CreateMode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -689,16 +691,18 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         implements ValueTransformerWithKey<K, Tuple2<Integer, Map<K, List<Message>>>,
         Tuple3<Integer, Tuple4<Integer, VV, Integer, VV>, Map<K, List<Message>>>> {
 
+        private ProcessorContext context;
         private KeyValueStore<K, Tuple4<Integer, VV, Integer, VV>> localSolutionSetStore;
-        private ReadOnlyKeyValueStore<K, VV> verticesStore;
-        private KeyValueStore<K, Map<K, EV>> edgesStore;
+        private TimestampedKeyValueStore<K, VV> verticesStore;
+        private TimestampedKeyValueStore<K, Map<K, EV>> edgesStore;
 
         @SuppressWarnings("unchecked")
         @Override
         public void init(final ProcessorContext context) {
+            this.context = context;
             this.localSolutionSetStore = (KeyValueStore<K, Tuple4<Integer, VV, Integer, VV>>) context.getStateStore(localSolutionSetStoreName);
-            this.verticesStore = (ReadOnlyKeyValueStore<K, VV>) context.getStateStore(vertices.queryableStoreName());
-            this.edgesStore = (KeyValueStore<K, Map<K, EV>>) context.getStateStore(edgesGroupedBySource.queryableStoreName());
+            this.verticesStore = (TimestampedKeyValueStore<K, VV>) context.getStateStore(vertices.queryableStoreName());
+            this.edgesStore = (TimestampedKeyValueStore<K, Map<K, EV>>) context.getStateStore(edgesGroupedBySource.queryableStoreName());
         }
 
         @Override
@@ -708,7 +712,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             int superstep = value._1;
             Tuple4<Integer, VV, Integer, VV> vertex = localSolutionSetStore.get(readOnlyKey);
             if (vertex == null) {
-                VV vertexValue = verticesStore.get(readOnlyKey);
+                VV vertexValue = ValueAndTimestamp.getValueOrNull(verticesStore.get(readOnlyKey));
                 if (vertexValue == null) {
                     log.warn("No vertex value for {}", readOnlyKey);
                 }
@@ -739,13 +743,13 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                 computeFunction.preSuperstep(superstep, aggregators);
             }
 
-            ComputeFunction.Callback<K, VV, EV, Message> cb = new ComputeFunction.Callback<>(key, edgesStore,
+            ComputeFunction.Callback<K, VV, EV, Message> cb = new ComputeFunction.Callback<>(context, key, edgesStore,
                 previousAggregates(superstep), vertexAggregates(superstep, partition));
             Iterable<Message> messages = () -> incomingMessages.values().stream()
                 .flatMap(List::stream)
                 .iterator();
             Iterable<EdgeWithValue<K, EV>> edges = () -> {
-                Map<K, EV> outgoingEdges = edgesStore.get(key);
+                Map<K, EV> outgoingEdges = ValueAndTimestamp.getValueOrNull(edgesStore.get(key));
                 if (outgoingEdges == null) {
                     outgoingEdges = Collections.emptyMap();
                 }
