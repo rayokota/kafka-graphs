@@ -77,7 +77,7 @@ public class JoinWithVerticesITCase extends AbstractIntegrationTest {
 
     private static final class AddValuesMapper implements VertexJoinFunction<Long, Long> {
 
-        public Long vertexJoin(Long vertexValue, Long inputValue) {
+        public Long joinVertices(Long vertexValue, Long inputValue) {
             return vertexValue + inputValue;
         }
     }

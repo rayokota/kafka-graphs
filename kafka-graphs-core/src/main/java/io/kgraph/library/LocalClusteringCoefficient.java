@@ -134,7 +134,7 @@ public class LocalClusteringCoefficient implements ComputeFunction<Long, Double,
         return lcc;
     }
 
-    public final static class LCCMessage {
+    public static final class LCCMessage {
 
         private long source = 0L;
         private long[] edgeList = null;

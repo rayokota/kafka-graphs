@@ -21,5 +21,5 @@ package io.kgraph;
 @FunctionalInterface
 public interface EdgeJoinFunction<EV, T> {
 
-    EV edgeJoin(EV edgeValue, T inputValue);
+    EV joinEdges(EV edgeValue, T inputValue);
 }

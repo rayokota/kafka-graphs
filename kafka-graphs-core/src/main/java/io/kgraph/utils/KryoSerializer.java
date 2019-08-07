@@ -29,6 +29,9 @@ public class KryoSerializer<T> implements Serializer<T> {
 
     @Override
     public byte[] serialize(String s, T object) {
+        if (object == null) {
+            return null;
+        }
         return KryoUtils.serialize(object);
     }
 

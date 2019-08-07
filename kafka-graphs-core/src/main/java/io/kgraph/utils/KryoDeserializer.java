@@ -29,6 +29,9 @@ public class KryoDeserializer<T> implements Deserializer<T> {
 
     @Override
     public T deserialize(String s, byte[] bytes) {
+        if (bytes == null) {
+            return null;
+        }
         return KryoUtils.deserialize(bytes);
     }
 

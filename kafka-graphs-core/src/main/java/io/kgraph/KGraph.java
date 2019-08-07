@@ -147,7 +147,7 @@ public class KGraph<K, VV, EV> {
 
         KTable<K, VV> vertices = edges
             .toStream()
-            .flatMap(new EmitSrcAndTargetAsTuple1<>(vertexValueInitializer))
+            .flatMap(new EmitSrcAndTarget<>(vertexValueInitializer))
             .groupByKey(Grouped.with(serialized.keySerde(), new KryoSerde<>()))
             .<VV>reduce((v1, v2) -> v2,
                 Materialized.with(serialized.keySerde(), serialized.vertexValueSerde()));
@@ -155,12 +155,12 @@ public class KGraph<K, VV, EV> {
         return new KGraph<>(vertices, edges, serialized);
     }
 
-    private static final class EmitSrcAndTargetAsTuple1<K, VV, EV>
+    public static final class EmitSrcAndTarget<K, VV, EV>
         implements KeyValueMapper<Edge<K>, EV, Iterable<KeyValue<K, VV>>> {
 
         private final ValueMapper<K, VV> vertexValueInitializer;
 
-        public EmitSrcAndTargetAsTuple1(ValueMapper<K, VV> vertexValueInitializer) {
+        public EmitSrcAndTarget(ValueMapper<K, VV> vertexValueInitializer) {
             this.vertexValueInitializer = vertexValueInitializer;
         }
 
@@ -196,7 +196,7 @@ public class KGraph<K, VV, EV> {
         return new KGraph<>(resultedVertices, edges, serialized);
     }
 
-    private static final class ApplyLeftJoinToVertexValues<K, VV, T>
+    public static final class ApplyLeftJoinToVertexValues<K, VV, T>
         implements ValueJoiner<VV, T, VV> {
 
         private final VertexJoinFunction<VV, T> vertexJoinFunction;
@@ -209,7 +209,7 @@ public class KGraph<K, VV, EV> {
         public VV apply(VV value, T input) {
             if (value != null) {
                 if (input != null) {
-                    return vertexJoinFunction.vertexJoin(value, input);
+                    return vertexJoinFunction.joinVertices(value, input);
                 } else {
                     return value;
                 }
@@ -227,7 +227,7 @@ public class KGraph<K, VV, EV> {
         return new KGraph<>(vertices, resultedEdges, serialized);
     }
 
-    private static final class ApplyLeftJoinToEdgeValues<K, EV, T>
+    public static final class ApplyLeftJoinToEdgeValues<K, EV, T>
         implements ValueJoiner<EV, T, EV> {
 
         private final EdgeJoinFunction<EV, T> edgeJoinFunction;
@@ -240,7 +240,7 @@ public class KGraph<K, VV, EV> {
         public EV apply(EV value, T input) {
             if (value != null) {
                 if (input != null) {
-                    return edgeJoinFunction.edgeJoin(value, input);
+                    return edgeJoinFunction.joinEdges(value, input);
                 } else {
                     return value;
                 }
@@ -293,7 +293,7 @@ public class KGraph<K, VV, EV> {
         return new KGraph<>(vertices, resultedEdges, serialized);
     }
 
-    private static final class ApplyLeftJoinToEdgeValuesOnEitherSourceOrTarget<K, EV, T>
+    public static final class ApplyLeftJoinToEdgeValuesOnEitherSourceOrTarget<K, EV, T>
         implements ValueJoiner<Iterable<EdgeWithValue<K, EV>>, T, Iterable<EdgeWithValue<K, EV>>> {
 
         private final EdgeJoinFunction<EV, T> edgeJoinFunction;
@@ -311,7 +311,7 @@ public class KGraph<K, VV, EV> {
                 List<EdgeWithValue<K, EV>> result = new ArrayList<>();
 
                 for (EdgeWithValue<K, EV> edge : edgesIter) {
-                    EV value = edgeJoinFunction.edgeJoin(edge.value(), input);
+                    EV value = edgeJoinFunction.joinEdges(edge.value(), input);
                     result.add(new EdgeWithValue<>(edge.source(), edge.target(), value));
                 }
 
@@ -370,7 +370,7 @@ public class KGraph<K, VV, EV> {
             Materialized.<K, Long, KeyValueStore<Bytes, byte[]>>as(generateStoreName()).withKeySerde(keySerde()).withValueSerde(Serdes.Long()));
     }
 
-    private static final class CountNeighborsLeftJoin<K, VV, EV>
+    public static final class CountNeighborsLeftJoin<K, VV, EV>
         implements ValueJoiner<VV, Iterable<EdgeWithValue<K, EV>>, Long> {
 
         @Override
@@ -389,7 +389,7 @@ public class KGraph<K, VV, EV> {
 
         KTable<Edge<K>, EV> undirectedEdges = edges
             .toStream()
-            .flatMap(new RegularAndReversedEdgesMap<>())
+            .flatMap(new UndirectEdges<>())
             .groupByKey(Grouped.with(new KryoSerde<>(), serialized.edgeValueSerde()))
             .reduce((v1, v2) -> v2, Materialized.<Edge<K>, EV, KeyValueStore<Bytes, byte[]>>as(generateStoreName())
                 .withKeySerde(new KryoSerde<>()).withValueSerde(serialized.edgeValueSerde()));
@@ -397,7 +397,7 @@ public class KGraph<K, VV, EV> {
         return new KGraph<>(vertices, undirectedEdges, serialized);
     }
 
-    private static final class RegularAndReversedEdgesMap<K, EV>
+    public static final class UndirectEdges<K, EV>
         implements KeyValueMapper<Edge<K>, EV, Iterable<KeyValue<Edge<K>, EV>>> {
 
         @Override
@@ -550,7 +550,7 @@ public class KGraph<K, VV, EV> {
         }
     }
 
-    private static final class ApplyEdgeLeftJoinFunction<K, VV, EV, T>
+    public static final class ApplyEdgeLeftJoinFunction<K, VV, EV, T>
         implements ValueJoiner<VV, Iterable<EdgeWithValue<K, EV>>, T> {
 
         private final EdgesFunctionWithVertexValue<K, VV, EV, T> function;
@@ -587,7 +587,7 @@ public class KGraph<K, VV, EV> {
         }
     }
 
-    private static final class ApplyNeighborLeftJoinFunction<K, VV, EV, T>
+    public static final class ApplyNeighborLeftJoinFunction<K, VV, EV, T>
         implements ValueJoiner<VV, Map<EdgeWithValue<K, EV>, VV>, T> {
 
         private final NeighborsFunctionWithVertexValue<K, VV, EV, T> function;
@@ -607,7 +607,7 @@ public class KGraph<K, VV, EV> {
         }
     }
 
-    private String generateStoreName() {
+    public static String generateStoreName() {
         String name = STORE_PREFIX + UUID.randomUUID().toString();
         return name;
     }

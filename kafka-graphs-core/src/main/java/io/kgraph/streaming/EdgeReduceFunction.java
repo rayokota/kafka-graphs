@@ -16,10 +16,25 @@
  * limitations under the License.
  */
 
-package io.kgraph;
+package io.kgraph.streaming;
 
+/**
+ * Interface to be implemented by the function applied to a vertex neighborhood
+ * in the {@link KGraphWindowedStream#reduceOnEdges(EdgeReduceFunction)} method.
+ *
+ * @param <EV> the edge value type
+ */
 @FunctionalInterface
-public interface VertexJoinFunction<VV, T> {
+public interface EdgeReduceFunction<EV> {
 
-    VV joinVertices(VV vertexValue, T inputValue);
+    /**
+     * Combines two edge values into one value of the same type.
+     * The reduceEdges function is consecutively applied to all pairs of edges of a neighborhood,
+     * until only a single value remains.
+     *
+     * @param firstEdgeValue  the value of the first edge
+     * @param secondEdgeValue the value of the second edge
+     * @return The data stream that is the result of applying the reduceEdges function to the graph window.
+     */
+    EV reduceEdges(EV firstEdgeValue, EV secondEdgeValue);
 }
