@@ -40,7 +40,7 @@ import io.kgraph.pregel.ComputeFunction;
  * does not exceed its capacity. This is a greedy algorithm that provides a 1/2-approximation guarantee.
  */
 public class MaxBMatching implements ComputeFunction<Long, Integer, MBMEdgeValue, MBMMessage> {
-    private static final Logger LOG = Logger.getLogger(MaxBMatching.class);
+    private static final Logger log = Logger.getLogger(MaxBMatching.class);
 
     @Override
     public void compute(
@@ -50,7 +50,7 @@ public class MaxBMatching implements ComputeFunction<Long, Integer, MBMEdgeValue
         Iterable<EdgeWithValue<Long, MBMEdgeValue>> edges,
         Callback<Long, Integer, MBMEdgeValue, MBMMessage> cb
     ) {
-        if (LOG.isDebugEnabled()) {
+        if (log.isDebugEnabled()) {
             debug(vertex, edges);
         }
         if (vertex.value() < 0) {
@@ -131,8 +131,8 @@ public class MaxBMatching implements ComputeFunction<Long, Integer, MBMEdgeValue
             MBMEdgeValue edgeValue = edgeValues.get(msg.getId());
             if (edgeValue == null) {
                 // edge has already been removed, do nothing
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug(String.format("Superstep %d Vertex %d: message for removed edge from vertex %d", superstep, vertex.id(), msg
+                if (log.isDebugEnabled()) {
+                    log.debug(String.format("Superstep %d Vertex %d: message for removed edge from vertex %d", superstep, vertex.id(), msg
                         .getId()));
                 }
             } else {
@@ -151,8 +151,8 @@ public class MaxBMatching implements ComputeFunction<Long, Integer, MBMEdgeValue
             cb.removeEdge(e);
         }
 
-        if (LOG.isDebugEnabled()) {
-            LOG.debug(String.format("Superstep %d Vertex %d: included %d edges, removed %d edges", superstep, vertex.id(), numIncluded,
+        if (log.isDebugEnabled()) {
+            log.debug(String.format("Superstep %d Vertex %d: included %d edges, removed %d edges", superstep, vertex.id(), numIncluded,
                 toRemove.size()
             ));
         }
@@ -193,9 +193,9 @@ public class MaxBMatching implements ComputeFunction<Long, Integer, MBMEdgeValue
         VertexWithValue<Long, Integer> vertex,
         Iterable<EdgeWithValue<Long, MBMEdgeValue>> edges
     ) {
-        LOG.debug(vertex);
+        log.debug(vertex);
         for (EdgeWithValue<Long, MBMEdgeValue> e : edges) {
-            LOG.debug(String.format("Edge(%d, %s)", e.target(), e.value().toString()));
+            log.debug(String.format("Edge(%d, %s)", e.target(), e.value().toString()));
         }
     }
 }
