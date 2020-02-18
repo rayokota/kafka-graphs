@@ -57,7 +57,9 @@ public interface KGraphStream<K, VV, EV> {
     /**
      * Apply a function to the attribute of each edge in the graph stream.
      *
+     * @param <NV> the new vertex value type
      * @param mapper the map function to apply.
+     * @param newValueSerde the new value serde
      * @return a new graph stream.
      */
     <NV> KGraphStream<K, VV, NV> mapEdges(

@@ -60,6 +60,7 @@ public class EdgeStream<K, EV> implements KGraphStream<K, Void, EV> {
      * Creates a graph from an edge stream.
      *
      * @param edges a DataStream of edges.
+     * @param serialized the graph serialized
      */
     public EdgeStream(KStream<Edge<K>, EV> edges, GraphSerialized<K, Void, EV> serialized) {
         this.edges = edges;

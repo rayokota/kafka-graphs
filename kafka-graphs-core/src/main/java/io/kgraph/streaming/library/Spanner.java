@@ -49,7 +49,7 @@ public class Spanner<K extends Comparable<K>, EV> extends SummaryBulkAggregation
 
     /**
      * Decide to add or remove an edge to the local spanner in the current window.
-     * If the current distance between the edge endpoints is <= k then the edge is dropped,
+     * If the current distance between the edge endpoints is &lt;= k then the edge is dropped,
      * otherwise it is added to the local spanner.
      *
      * @param <K> the vertex ID type

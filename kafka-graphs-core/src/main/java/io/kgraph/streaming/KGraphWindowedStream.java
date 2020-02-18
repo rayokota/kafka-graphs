@@ -48,6 +48,7 @@ public class KGraphWindowedStream<K, EV> {
     /**
      * Performs a neighborhood fold on the graph window stream.
      *
+     * @param <T> the type of the initial value
      * @param initialValue the initial value
      * @param foldFunction the fold function
      * @return the result stream after applying the user-defined fold operation on the window

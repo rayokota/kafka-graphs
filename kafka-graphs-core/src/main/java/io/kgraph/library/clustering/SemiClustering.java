@@ -274,6 +274,7 @@ public class SemiClustering implements ComputeFunction<Long, Set<SemiClustering.
          * vertex to send a friends-of-friends list, which is very expensive.
          *
          * @param vertex      The new vertex to be added into the cluster
+         * @param edges       The edges of the vertex
          * @param scoreFactor Boundary Edge Score Factor
          */
         public final void addVertex(

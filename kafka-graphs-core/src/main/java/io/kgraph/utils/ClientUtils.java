@@ -45,6 +45,7 @@ public class ClientUtils {
      * prefix.
      *
      * @param prefix The prefix of the temporary directory, if null using "kafka-" as default prefix
+     * @return the temp dir
      */
     public static File tempDirectory(final String prefix) {
         return tempDirectory(null, prefix);
@@ -65,6 +66,7 @@ public class ClientUtils {
      *
      * @param parent The parent folder path name, if null using the default temporary-file directory
      * @param prefix The prefix of the temporary directory, if null using "kafka-" as default prefix
+     * @return the temp dir
      */
     public static File tempDirectory(final Path parent, String prefix) {
         final File file;

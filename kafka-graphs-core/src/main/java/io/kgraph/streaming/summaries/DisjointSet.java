@@ -105,7 +105,7 @@ public class DisjointSet<R> {
     /**
      * Union combines the two possibly disjoint sets where e1 and e2 belong in.
      * Optimizations:
-     * <p/>
+     *
      * - In case e1 or e2 do not exist they are being added directly in the same disjoint set.
      * - Union by Rank to minimize lookup depth
      *
@@ -146,6 +146,7 @@ public class DisjointSet<R> {
      * There is certainly room for further optimisations...
      *
      * @param other the disjoint set to be merged
+     * @return the disjoint set
      */
     public DisjointSet<R> merge(DisjointSet<R> other) {
         DisjointSet<R> result = new DisjointSet<>(this);

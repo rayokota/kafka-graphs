@@ -151,6 +151,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
      * @param sumWeights the sum of weights
      * @param maxRating the max rating
      * @param minRating the min rating
+     * @return the predicted rating
      */
     protected static float computePredictedRating(
         final float meanRating,
@@ -178,6 +179,7 @@ public class Svdpp implements ComputeFunction<CfLongId,
      * @param observedRating the observed rating
      * @param gamma the gamma parameter
      * @param lambda the lambda parameter
+     * @return the baseline
      */
     protected static float computeUpdatedBaseLine(
         final float baseline,
