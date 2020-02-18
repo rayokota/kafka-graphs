@@ -199,4 +199,4 @@ As you can see above, a graph algorithm may have specific parameters.  Here are 
 
 ## Graph Streaming
 
-Kafka Graphs also provides an experimental single-pass graph streaming analytics framework based on [Gelly Streaming](https://github.com/vasia/gelly-streaming).  See 
+Kafka Graphs also provides an experimental single-pass graph streaming analytics framework based on [Gelly Streaming](https://github.com/vasia/gelly-streaming).  See the [Java APIs](https://javadoc.io/static/io.kgraph/kafka-graphs-core/1.4.0/io/kgraph/streaming/package-summary.html).
