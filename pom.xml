@@ -299,7 +299,7 @@
         <plugins>
 
             <plugin>
-                <groupId>com.github.spotbufs</groupId>
+                <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
                 <version>3.1.11</version>
                 <configuration>
