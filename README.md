@@ -196,3 +196,7 @@ As you can see above, a graph algorithm may have specific parameters.  Here are 
 | pagerank | tolerance, resetProbability | "configs": { "tolerance": 0.0001, "resetProbability": 0.15 } |
 | sssp | srcVertexId | "configs": { "srcVertexId": 0 } |
 | wcc | | |
+
+## Graph Streaming
+
+Kafka Graphs also provides an experimental single-pass graph streaming analytics framework based on [Gelly Streaming](https://github.com/vasia/gelly-streaming).  See 
