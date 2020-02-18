@@ -176,6 +176,16 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
     }
 
     @Override
+    public Map<TopicPartition, OffsetAndMetadata> committed(Set<TopicPartition> partitions) {
+        return kafkaConsumer.committed(partitions);
+    }
+
+    @Override
+    public Map<TopicPartition, OffsetAndMetadata> committed(Set<TopicPartition> partitions, Duration timeout) {
+        return kafkaConsumer.committed(partitions, timeout);
+    }
+
+    @Override
     public Map<MetricName, ? extends Metric> metrics() {
         return kafkaConsumer.metrics();
     }
