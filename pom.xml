@@ -41,7 +41,7 @@
         <kafka.version>2.4.1</kafka.version>
         <kafka.scala.version>2.12</kafka.scala.version>
         <kryo.version>4.0.2</kryo.version>
-        <vavr.version>0.10.2</vavr.version>
+        <vavr.version>0.10.3</vavr.version>
         <zookeeper.version>3.5.7</zookeeper.version>
     </properties>
 
