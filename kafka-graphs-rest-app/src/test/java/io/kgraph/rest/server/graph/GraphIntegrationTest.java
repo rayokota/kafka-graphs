@@ -62,7 +62,7 @@ public class GraphIntegrationTest {
     @ClassRule
     public static final EmbeddedKafkaCluster CLUSTER = new EmbeddedKafkaCluster(1) {
         @Override
-        public void start() throws IOException, InterruptedException {
+        public void start() throws IOException {
             super.start();
             System.setProperty("spring.embedded.kafka.brokers", bootstrapServers());
             System.setProperty("spring.embedded.zookeeper.connect", zKConnectString());
