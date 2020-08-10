@@ -123,7 +123,7 @@ public class AggregatorTest extends AbstractIntegrationTest {
 
     @Test
     public void testVertexCountToValueFromFile() throws Exception {
-        String suffix = "file";
+        String suffix = "vertexFile";
         StreamsBuilder builder = new StreamsBuilder();
 
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), KryoSerializer.class,
@@ -168,7 +168,7 @@ public class AggregatorTest extends AbstractIntegrationTest {
 
     @Test
     public void testEdgeCountToValueFromFile() throws Exception {
-        String suffix = "file";
+        String suffix = "edgeFile";
         StreamsBuilder builder = new StreamsBuilder();
 
         Properties producerConfig = ClientUtils.producerConfig(CLUSTER.bootstrapServers(), KryoSerializer.class,

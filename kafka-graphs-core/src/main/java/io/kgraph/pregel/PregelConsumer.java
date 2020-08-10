@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerGroupMetadata;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -253,6 +254,16 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
     @Override
     public Map<TopicPartition, Long> endOffsets(Collection<TopicPartition> partitions, Duration timeout) {
         return kafkaConsumer.endOffsets(partitions, timeout);
+    }
+
+    @Override
+    public ConsumerGroupMetadata groupMetadata() {
+        return kafkaConsumer.groupMetadata();
+    }
+
+    @Override
+    public void enforceRebalance() {
+        kafkaConsumer.enforceRebalance();
     }
 
     @Override
