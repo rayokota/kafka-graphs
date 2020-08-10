@@ -981,10 +981,10 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
     private static Consumer<byte[], byte[]> internalConsumer(ProcessorContext context)
         throws NoSuchFieldException, IllegalAccessException {
         // Consumer is created in a different thread, so can't use ThreadLocal; use reflection instead
-        Field taskField = ProcessorContextImpl.class.getDeclaredField("task");
+        Field taskField = ProcessorContextImpl.class.getDeclaredField("streamTask");
         taskField.setAccessible(true);
         StreamTask streamTask = (StreamTask) taskField.get(context);
-        Field consumerField = AbstractTask.class.getDeclaredField("consumer");
+        Field consumerField = StreamTask.class.getDeclaredField("mainConsumer");
         consumerField.setAccessible(true);
         return (Consumer<byte[], byte[]>) consumerField.get(streamTask);
     }
