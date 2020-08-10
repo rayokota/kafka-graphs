@@ -993,33 +993,40 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                          int superstep,
                                          Map<TopicPartition, Long> positions,
                                          Function<TopicPartition, Long> lastWrittenOffsets) {
-        Set<TopicPartition> partitions = localPartitions(consumer, topic);
-        Map<TopicPartition, Long> pos;
-        if (positions != null) {
-            pos = partitions.stream()
-                .collect(Collectors.toMap(Function.identity(), tp -> positions.getOrDefault(tp, 0L)));
-        } else {
-            pos = positions(consumer, partitions);
-        }
-        Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
+        try {
+            Set<TopicPartition> partitions = localPartitions(consumer, topic);
+            Map<TopicPartition, Long> pos;
+            if (positions != null) {
+                pos = partitions.stream()
+                    .collect(Collectors.toMap(Function.identity(), tp -> positions.getOrDefault(tp, 0L)));
+            } else {
+                pos = positions(consumer, partitions);
+            }
+            Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
 
-        // Consumer end offsets may be stale; use last written offset if available
-        if (lastWrittenOffsets != null) {
-            for (Map.Entry<TopicPartition, Long> endOffset : endOffsets.entrySet()) {
-                Long lastWrittenOffset = lastWrittenOffsets.apply(endOffset.getKey());
-                if (lastWrittenOffset != null && lastWrittenOffset >= endOffset.getValue()) {
-                    endOffset.setValue(lastWrittenOffset + 1);
+            // Consumer end offsets may be stale; use last written offset if available
+            /*
+            if (lastWrittenOffsets != null) {
+                for (Map.Entry<TopicPartition, Long> endOffset : endOffsets.entrySet()) {
+                    Long lastWrittenOffset = lastWrittenOffsets.apply(endOffset.getKey());
+                    if (lastWrittenOffset != null && lastWrittenOffset >= endOffset.getValue()) {
+                        endOffset.setValue(lastWrittenOffset + 1);
+                    }
                 }
             }
-        }
+            */
 
-        boolean synced = endOffsets.equals(pos);
-        if (synced) {
-            log.debug("Step {}, synced Topic {}, end {}", superstep, topic, endOffsets);
-        } else {
-            log.debug("Step {}, not synced topic {}, pos {}, end {}", superstep, topic, pos, endOffsets);
+            boolean synced = endOffsets.equals(pos);
+            if (synced) {
+                log.debug("Step {}, synced Topic {}, end {}", superstep, topic, endOffsets);
+            } else {
+                log.debug("Step {}, not synced topic {}, pos {}, end {}", superstep, topic, pos, endOffsets);
+            }
+            return synced;
+        } catch (Exception e) {
+            log.error("Error while checking topic sync", e);
+            return false;
         }
-        return synced;
     }
 
     private static Set<TopicPartition> localPartitions(Consumer<byte[], byte[]> consumer, String topic) {
