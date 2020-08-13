@@ -1021,7 +1021,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             }
             return synced;
         } catch (Exception e) {
-            log.error("Error while checking topic sync", e);
+            log.warn("Exception while checking topic sync", e);
             return false;
         }
     }
