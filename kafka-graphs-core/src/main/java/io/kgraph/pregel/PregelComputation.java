@@ -550,8 +550,7 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
         @SuppressWarnings("unchecked")
         private Function<TopicPartition, Long> lastWrittenOffsets(int superstep) {
             if (superstep == 0) {
-                // Use the vertices lastWrittenOffsets for superstep 0
-                return tp -> graphOffsets.get(new TopicPartition(verticesTopic, tp.partition()));
+                return null;
             }
             Map<Integer, Long> lastWrittenOffsets =
                 (Map<Integer, Long>) previousAggregates(superstep).get(LAST_WRITTEN_OFFSETS);
@@ -1005,7 +1004,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
             Map<TopicPartition, Long> endOffsets = consumer.endOffsets(partitions);
 
             // Consumer end offsets may be stale; use last written offset if available
-            /*
             if (lastWrittenOffsets != null) {
                 for (Map.Entry<TopicPartition, Long> endOffset : endOffsets.entrySet()) {
                     Long lastWrittenOffset = lastWrittenOffsets.apply(endOffset.getKey());
@@ -1014,7 +1012,6 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                     }
                 }
             }
-            */
 
             boolean synced = endOffsets.equals(pos);
             if (synced) {
