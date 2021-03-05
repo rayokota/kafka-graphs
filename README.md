@@ -1,11 +1,11 @@
 # Kafka Graphs - Graph Analytics with Kafka
 
-[![Build Status][travis-shield]][travis-link]
+[![Build Status][github-actions-shield]][github-actions-link]
 [![Maven][maven-shield]][maven-link]
 [![Javadoc][javadoc-shield]][javadoc-link]
 
-[travis-shield]: https://travis-ci.org/rayokota/kafka-graphs.svg?branch=master
-[travis-link]: https://travis-ci.org/rayokota/kafka-graphs
+[github-actions-shield]: https://github.com/rayokota/kafka-graphs/workflows/build/badge.svg
+[github-actions-link]: https://github.com/rayokota/kafka-graphs/actions
 [maven-shield]: https://img.shields.io/maven-central/v/io.kgraph/kafka-graphs-core.svg
 [maven-link]: https://search.maven.org/#search%7Cga%7C1%7Cio.kgraph
 [javadoc-shield]: https://javadoc.io/badge/io.kgraph/kafka-graphs-core.svg?color=blue
