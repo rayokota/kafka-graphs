@@ -40,7 +40,7 @@
         <curator.version>5.1.0</curator.version>
         <kafka.version>2.6.0</kafka.version>
         <kafka.scala.version>2.13</kafka.scala.version>
-        <kryo.version>4.0.2</kryo.version>
+        <kryo.version>5.0.3</kryo.version>
         <vavr.version>0.10.3</vavr.version>
         <zookeeper.version>3.5.8</zookeeper.version>
     </properties>
