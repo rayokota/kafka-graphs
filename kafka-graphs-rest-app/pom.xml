@@ -17,8 +17,6 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>1.8</java.version>
-        <junit.platform.version>1.3.2</junit.platform.version>
-        <junit.jupiter.version>5.7.1</junit.jupiter.version>
         <maven-surefire-plugin.version>2.20</maven-surefire-plugin.version>
         <reactor.version>3.3.8.RELEASE</reactor.version>
         <reactor-spring.version>1.0.1.RELEASE</reactor-spring.version>
@@ -148,25 +146,21 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
-            <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>${junit.jupiter.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.platform</groupId>
             <artifactId>junit-platform-surefire-provider</artifactId>
-            <version>${junit.platform.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.platform</groupId>
             <artifactId>junit-platform-runner</artifactId>
-            <version>${junit.platform.version}</version>
             <scope>test</scope>
         </dependency>
 
