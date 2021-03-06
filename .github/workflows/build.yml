@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: trusty
 
     steps:
       - uses: actions/checkout@v2
