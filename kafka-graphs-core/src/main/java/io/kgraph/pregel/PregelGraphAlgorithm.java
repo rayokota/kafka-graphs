@@ -28,6 +28,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KTable;
@@ -212,7 +213,8 @@ public class PregelGraphAlgorithm<K, VV, EV, Message>
 
     @Override
     public Iterable<KeyValue<K, VV>> result() {
-        return () -> streams.store(solutionSetStore, QueryableStoreTypes.<K, VV>keyValueStore()).all();
+        return () -> streams.store(StoreQueryParameters.fromNameAndType(
+            solutionSetStore, QueryableStoreTypes.<K, VV>keyValueStore())).all();
     }
 
     @Override

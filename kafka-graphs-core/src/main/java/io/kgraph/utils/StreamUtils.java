@@ -32,6 +32,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.KeyValue;
+import org.apache.kafka.streams.StoreQueryParameters;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
@@ -115,7 +116,7 @@ public class StreamUtils {
 
     public static <K, V> List<KeyValue<K, V>> listFromStore(KafkaStreams streams, String storeName) {
         final ReadOnlyKeyValueStore<K, V> store = streams.store(
-            storeName, QueryableStoreTypes.keyValueStore());
+            StoreQueryParameters.fromNameAndType(storeName, QueryableStoreTypes.keyValueStore()));
 
         try (final KeyValueIterator<K, V> all = store.all()) {
             List<KeyValue<K, V>> result = new ArrayList<>();
@@ -132,7 +133,7 @@ public class StreamUtils {
 
     public static <K, V> NavigableMap<K, V> mapFromStore(KafkaStreams streams, String storeName) {
         final ReadOnlyKeyValueStore<K, V> store = streams.store(
-            storeName, QueryableStoreTypes.keyValueStore());
+            StoreQueryParameters.fromNameAndType(storeName, QueryableStoreTypes.keyValueStore()));
 
         try (final KeyValueIterator<K, V> all = store.all()) {
             NavigableMap<K, V> result = new TreeMap<>();
