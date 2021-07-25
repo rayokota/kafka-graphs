@@ -120,7 +120,7 @@
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-core</artifactId>
-                <version>1.2.3</version>
+                <version>1.2.4-groovyless</version>
             </dependency>
 
             <dependency>
@@ -331,7 +331,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.2.3</version>
+                <version>4.3.0</version>
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Default</threshold>
