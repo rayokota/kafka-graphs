@@ -18,7 +18,7 @@ package io.kgraph.pregel;
 
 import java.util.Map;
 
-import org.apache.kafka.clients.admin.AdminClient;
+import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.streams.KafkaClientSupplier;
@@ -32,8 +32,8 @@ public class PregelClientSupplier implements KafkaClientSupplier {
     }
 
     @Override
-    public AdminClient getAdminClient(final Map<String, Object> config) {
-        return defaultSupplier.getAdminClient(config);
+    public Admin getAdmin(final Map<String, Object> config) {
+        return defaultSupplier.getAdmin(config);
     }
 
     @Override

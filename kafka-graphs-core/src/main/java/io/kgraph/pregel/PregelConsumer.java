@@ -20,8 +20,8 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.OptionalLong;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import org.apache.kafka.clients.consumer.Consumer;
@@ -257,6 +257,11 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
     }
 
     @Override
+    public OptionalLong currentLag(TopicPartition topicPartition) {
+        return kafkaConsumer.currentLag(topicPartition);
+    }
+
+    @Override
     public ConsumerGroupMetadata groupMetadata() {
         return kafkaConsumer.groupMetadata();
     }
@@ -269,11 +274,6 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
     @Override
     public void close() {
         kafkaConsumer.close();
-    }
-
-    @Override
-    public void close(long timeout, TimeUnit unit) {
-        kafkaConsumer.close(timeout, unit);
     }
 
     @Override
