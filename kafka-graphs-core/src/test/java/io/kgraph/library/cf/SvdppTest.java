@@ -110,7 +110,7 @@ public class SvdppTest extends AbstractIntegrationTest {
         GraphAlgorithmState<KTable<CfLongId, Svdpp.SvdppValue>> paths = algorithm.run();
         paths.result().get();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         Map<CfLongId, Svdpp.SvdppValue> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.info("result: {}", map);
@@ -143,7 +143,7 @@ public class SvdppTest extends AbstractIntegrationTest {
             builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         Map<String, Object> configs = new HashMap<>();
         configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
@@ -167,7 +167,7 @@ public class SvdppTest extends AbstractIntegrationTest {
         GraphAlgorithmState<KTable<CfLongId, Svdpp.SvdppValue>> paths = algorithm.run();
         paths.result().get();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         NavigableMap<CfLongId, Svdpp.SvdppValue> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         Set<String> result = new TreeSet<>();
@@ -207,7 +207,7 @@ public class SvdppTest extends AbstractIntegrationTest {
             builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 50, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         Map<String, Object> configs = new HashMap<>();
         configs.put(Svdpp.BIAS_LAMBDA, 0.005f);
@@ -232,7 +232,7 @@ public class SvdppTest extends AbstractIntegrationTest {
         paths.result().get();
         log.info("agg: {}", algorithm.state().aggregates());
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         NavigableMap<CfLongId, Svdpp.SvdppValue> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         Set<String> result = new TreeSet<>();

@@ -100,7 +100,7 @@ public class MaxBMatchingTest extends AbstractIntegrationTest {
         GraphAlgorithmState<KTable<Long, Integer>> paths = algorithm.run();
         paths.result().get();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         Map<Long, Map<Long, MBMEdgeValue>> map = StreamUtils.mapFromStore(paths.streams(), "edgesStore-run-" + suffix);
         log.debug("result: {}", map);

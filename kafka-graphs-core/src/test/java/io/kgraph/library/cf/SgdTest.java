@@ -100,7 +100,7 @@ public class SgdTest extends AbstractIntegrationTest {
         GraphAlgorithmState<KTable<CfLongId, FloatMatrix>> paths = algorithm.run();
         paths.result().get();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         Map<CfLongId, FloatMatrix> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);
