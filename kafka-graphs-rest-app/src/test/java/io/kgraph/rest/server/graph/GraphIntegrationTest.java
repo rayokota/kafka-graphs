@@ -29,7 +29,8 @@ import java.util.TreeMap;
 import org.apache.kafka.common.serialization.FloatSerializer;
 import org.apache.kafka.common.serialization.LongSerializer;
 import org.apache.kafka.streams.integration.utils.EmbeddedKafkaCluster;
-import org.junit.ClassRule;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,8 +59,6 @@ import io.kgraph.rest.server.utils.VertexLongIdLongValueParser;
 @AutoConfigureWebTestClient(timeout = "36000")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = KafkaGraphsApplication.class)
 public class GraphIntegrationTest {
-
-    @ClassRule
     public static final EmbeddedKafkaCluster CLUSTER = new EmbeddedKafkaCluster(1) {
         @Override
         public void start() throws IOException {
@@ -68,6 +67,16 @@ public class GraphIntegrationTest {
             System.setProperty("spring.embedded.zookeeper.connect", zKConnectString());
         }
     };
+
+    @BeforeClass
+    public static void startCluster() throws IOException {
+        CLUSTER.start();
+    }
+
+    @AfterClass
+    public static void closeCluster() {
+        CLUSTER.stop();
+    }
 
     @Autowired
     private WebTestClient webTestClient;

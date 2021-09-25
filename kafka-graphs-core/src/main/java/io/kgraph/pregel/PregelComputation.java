@@ -489,6 +489,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                         if (pregelState.stage() == Stage.RECEIVE) {
                             if (pregelState.superstep() == 0) {
                                 if (!ZKUtils.hasChild(curator, applicationId, pregelState, workerName)) {
+                                    Set<TopicPartition> verticesTps = localPartitions(internalConsumer, verticesTopic);
+                                    Set<TopicPartition> edgesTps = localPartitions(internalConsumer, edgesGroupedBySourceTopic);
                                     Set<TopicPartition> workSetTps = localPartitions(internalConsumer, workSetTopic);
                                     Set<TopicPartition> solutionSetTps = localPartitions(internalConsumer, solutionSetTopic);
                                     if (isTopicSynced(internalConsumer, verticesTopic, 0, null, graphOffsets::get)
@@ -502,6 +504,8 @@ public class PregelComputation<K, VV, EV, Message> implements Closeable {
                                     } else {
                                         internalConsumer.pause(workSetTps);
                                         internalConsumer.pause(solutionSetTps);
+                                        internalConsumer.resume(verticesTps);
+                                        internalConsumer.resume(edgesTps);
                                     }
                                 }
                             }

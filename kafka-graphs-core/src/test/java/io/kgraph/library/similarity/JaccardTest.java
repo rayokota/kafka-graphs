@@ -161,7 +161,7 @@ public class JaccardTest extends AbstractIntegrationTest {
         GraphAlgorithmState<KTable<Long, Double>> paths = algorithm.run();
         paths.result().get();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         Map<Long, Map<Long, Double>> edgesMap = StreamUtils.mapFromStore(paths.streams(), "edgesStore-run-" + suffix);
         log.debug("edges : {}", edgesMap);

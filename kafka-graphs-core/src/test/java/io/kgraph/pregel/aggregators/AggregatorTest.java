@@ -147,7 +147,7 @@ public class AggregatorTest extends AbstractIntegrationTest {
             builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 10, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),
@@ -192,7 +192,7 @@ public class AggregatorTest extends AbstractIntegrationTest {
             builder, props, graph, "vertices-" + suffix, "edgesGroupedBySource-" + suffix, 10, (short) 1);
         Map<TopicPartition, Long> offsets = state.get();
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
         algorithm =
             new PregelGraphAlgorithm<>(null, "run-" + suffix, CLUSTER.bootstrapServers(),

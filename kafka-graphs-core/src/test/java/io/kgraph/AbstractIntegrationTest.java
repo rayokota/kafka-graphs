@@ -16,6 +16,7 @@
  */
 package io.kgraph;
 
+import java.io.IOException;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -25,15 +26,25 @@ import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.integration.utils.EmbeddedKafkaCluster;
 import org.apache.kafka.streams.integration.utils.IntegrationTestUtils;
 import org.junit.After;
-import org.junit.ClassRule;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 
 import io.kgraph.utils.ClientUtils;
 
 public abstract class AbstractIntegrationTest {
-    @ClassRule
     public static final EmbeddedKafkaCluster CLUSTER = new EmbeddedKafkaCluster(1, new Properties() {{
         setProperty("message.max.bytes", String.valueOf(100 * 1024 * 1024));
     }});
+
+    @BeforeClass
+    public static void startCluster() throws IOException {
+        CLUSTER.start();
+    }
+
+    @AfterClass
+    public static void closeCluster() {
+        CLUSTER.stop();
+    }
 
     protected KafkaStreams streams;
     protected Properties streamsConfiguration;
@@ -44,6 +55,13 @@ public abstract class AbstractIntegrationTest {
             keySerde.getClass(), valueSerde.getClass());
         streams = new KafkaStreams(builder.build(), streamsConfiguration);
         streams.start();
+        while (streams.state() != KafkaStreams.State.RUNNING) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+        }
     }
 
     @After
