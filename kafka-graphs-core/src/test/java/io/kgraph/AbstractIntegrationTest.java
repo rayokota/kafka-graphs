@@ -55,6 +55,13 @@ public abstract class AbstractIntegrationTest {
             keySerde.getClass(), valueSerde.getClass());
         streams = new KafkaStreams(builder.build(), streamsConfiguration);
         streams.start();
+        while (streams.state() != KafkaStreams.State.RUNNING) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+        }
     }
 
     @After
