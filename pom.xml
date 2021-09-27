@@ -4,7 +4,7 @@
 
     <groupId>io.kgraph</groupId>
     <artifactId>kafka-graphs-parent</artifactId>
-    <version>2.0.1-SNAPSHOT</version>
+    <version>1.5.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>kafka-graphs</name>
