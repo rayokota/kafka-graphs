@@ -9,11 +9,16 @@
         <Bug pattern="REC_CATCH_EXCEPTION"/>
     </Match>
     <Match>
-        <Class name="io.kgraph.library.LocalClusteringCoefficient$LCCMessage"/>
-        <Bug pattern="EI_EXPOSE_REP2"/>
-    </Match>
-    <Match>
         <Class name="io.kgraph.library.LocalClusteringCoefficient$LCCComputeFunction"/>
         <Bug pattern="SIC_INNER_SHOULD_BE_STATIC"/>
+    </Match>
+    <Match>
+        <Bug pattern="DMI_RANDOM_USED_ONLY_ONCE"/>
+    </Match>
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP"/>
+    </Match>
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
 </FindBugsFilter>
