@@ -5,7 +5,7 @@
     <parent>
         <artifactId>kafka-graphs-parent</artifactId>
         <groupId>io.kgraph</groupId>
-        <version>1.5.1-SNAPSHOT</version>
+        <version>2.0.0</version>
     </parent>
 
     <groupId>io.kgraph</groupId>
