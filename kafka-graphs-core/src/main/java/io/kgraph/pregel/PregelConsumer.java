@@ -267,6 +267,11 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
     }
 
     @Override
+    public void enforceRebalance(String reason) {
+        kafkaConsumer.enforceRebalance(reason);
+    }
+
+    @Override
     public void enforceRebalance() {
         kafkaConsumer.enforceRebalance();
     }
