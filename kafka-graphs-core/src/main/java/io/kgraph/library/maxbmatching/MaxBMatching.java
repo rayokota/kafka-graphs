@@ -24,7 +24,8 @@ import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.kgraph.EdgeWithValue;
 import io.kgraph.VertexWithValue;
@@ -40,7 +41,7 @@ import io.kgraph.pregel.ComputeFunction;
  * does not exceed its capacity. This is a greedy algorithm that provides a 1/2-approximation guarantee.
  */
 public class MaxBMatching implements ComputeFunction<Long, Integer, MBMEdgeValue, MBMMessage> {
-    private static final Logger log = Logger.getLogger(MaxBMatching.class);
+    private static final Logger log = LoggerFactory.getLogger(MaxBMatching.class);
 
     @Override
     public void compute(
@@ -193,7 +194,7 @@ public class MaxBMatching implements ComputeFunction<Long, Integer, MBMEdgeValue
         VertexWithValue<Long, Integer> vertex,
         Iterable<EdgeWithValue<Long, MBMEdgeValue>> edges
     ) {
-        log.debug(vertex);
+        log.debug(vertex.toString());
         for (EdgeWithValue<Long, MBMEdgeValue> e : edges) {
             log.debug(String.format("Edge(%d, %s)", e.target(), e.value().toString()));
         }
