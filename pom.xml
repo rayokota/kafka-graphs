@@ -120,13 +120,13 @@
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-core</artifactId>
-                <version>1.2.9</version>
+                <version>1.2.11</version>
             </dependency>
 
             <dependency>
                 <groupId>ch.qos.logback</groupId>
                 <artifactId>logback-classic</artifactId>
-                <version>1.2.9</version>
+                <version>1.2.11</version>
             </dependency>
 
             <!-- Test dependencies -->
@@ -331,7 +331,7 @@
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
-                <version>4.5.3.0</version>
+                <version>4.7.1.0</version>
                 <configuration>
                     <effort>Max</effort>
                     <threshold>Default</threshold>
