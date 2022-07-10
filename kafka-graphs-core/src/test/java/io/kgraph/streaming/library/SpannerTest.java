@@ -55,6 +55,7 @@ public class SpannerTest extends AbstractIntegrationTest {
 
         List<String> values = StreamUtils.listFromTable(streams, sets).stream()
             .map(kv -> kv.value.toString())
+            .sorted()
             .collect(Collectors.toList());
 
         // This result will vary depending on the number of partitions

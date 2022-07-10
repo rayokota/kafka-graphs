@@ -49,6 +49,7 @@ public class ExactTriangleCountTest extends AbstractIntegrationTest {
 
         List<String> values = StreamUtils.listFromTable(streams, result).stream()
             .map(kv -> "(" + kv.key.toString() + "," + kv.value.toString() + ")")
+            .sorted()
             .collect(Collectors.toList());
 
         // This result will vary depending on the number of partitions
