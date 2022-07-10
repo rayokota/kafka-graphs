@@ -123,8 +123,8 @@ public class ClientUtils {
         properties.putAll(additional);
         properties.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         properties.put(ProducerConfig.ACKS_CONFIG, "all");
-        properties.put(ProducerConfig.RETRIES_CONFIG, 0);
-        properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, false);
+        properties.put(ProducerConfig.RETRIES_CONFIG, Integer.MAX_VALUE);
+        properties.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
         properties.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, keySerializer);
         properties.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, valueSerializer);
         return properties;
