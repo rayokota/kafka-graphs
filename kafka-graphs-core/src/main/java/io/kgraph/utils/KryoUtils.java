@@ -36,6 +36,7 @@ public class KryoUtils {
         protected Kryo create() {
             Kryo kryo = new Kryo();
             // Configure the Kryo instance.
+            kryo.setRegistrationRequired(false);
             kryo.register(HashMap.class);
             return kryo;
         }
