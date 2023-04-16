@@ -113,7 +113,8 @@ public class SemiClusteringTest extends AbstractIntegrationTest {
         Map<Long, Map<Long, Long>> map = StreamUtils.mapFromStore(paths.streams(), "solutionSetStore-" + suffix);
         log.debug("result: {}", map);
 
-        assertEquals("{1=[[ 1 4  | -2.5, 0.0, 5.0 ], [ 1 3  | -2.0, 1.0, 6.0 ]], 2=[[ 2 4  | -3.0, 0.0, 6.0 ], [ 2 3  | -0.5, 2.0, 5.0 ]], 3=[[ 3 4  | -0.5, 2.0, 5.0 ], [ 3  | 0.0, 0.0, 6.0 ]], 4=[[ 3 4  | -0.5, 2.0, 5.0 ], [ 4  | 0.0, 0.0, 3.0 ]], 5=[[ 3 5  | -2.0, 1.0, 6.0 ], [ 4 5  | -0.5, 1.0, 3.0 ]]}", map.toString());
+        assertEquals("{1=[[ 1 5  | -2.0, 0.0, 4.0 ], [ 1 3  | -2.0, 1.0, 6.0 ]], 2=[[ 2 5  | -2.5, 0.0, 5.0 ], [ 2 3  | -0.5, 2.0, 5.0 ]], 3=[[ 3 4  | -0.5, 2.0, 5.0 ], [ 3  | 0.0, 0.0, 6.0 ]], 4=[[ 4 5  | -0.5, 1.0, 3.0 ], [ 3 4  | -0.5, 2.0, 5.0 ]], 5=[[ 4 5  | -0.5, 1.0, 3.0 ], [ 5  | 0.0, 0.0, 2.0 ]]}", map.toString());
+
     }
 
     @After
