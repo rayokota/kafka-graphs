@@ -90,7 +90,7 @@
             <dependency>
                 <groupId>org.jblas</groupId>
                 <artifactId>jblas</artifactId>
-                <version>1.2.4</version>
+                <version>1.2.5</version>
             </dependency>
 
             <dependency>
@@ -307,8 +307,8 @@
                     <version>3.10.1</version>
                     <inherited>true</inherited>
                     <configuration>
-                        <source>1.8</source>
-                        <target>1.8</target>
+                        <source>11</source>
+                        <target>11</target>
                     </configuration>
                 </plugin>
 
