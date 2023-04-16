@@ -39,6 +39,7 @@ import org.apache.kafka.streams.kstream.ValueMapper;
 import org.jblas.FloatMatrix;
 import org.junit.After;
 import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,6 +61,7 @@ public class AlsTest extends AbstractIntegrationTest {
 
     GraphAlgorithm<CfLongId, FloatMatrix, Float, KTable<CfLongId, FloatMatrix>> algorithm;
 
+    @Disabled("With jblas 1.25, get different results on macos and ubuntu")
     @Test
     public void testAls() throws Exception {
         String suffix = "";
