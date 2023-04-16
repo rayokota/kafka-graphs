@@ -9,6 +9,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       # For jblas, see https://github.com/mikiobraun/jblas/wiki/Missing-Libraries
+      # May not be needed as jblas 1.2.5 bundles libgfortran4
+      # See https://github.com/jblas-project/jblas/issues/87
       - name: Install jblas
         run: sudo apt-get install -y libgfortran5
       - name: Set up JDK 11 
