@@ -307,8 +307,8 @@
                     <version>3.10.1</version>
                     <inherited>true</inherited>
                     <configuration>
-                        <source>17</source>
-                        <target>17</target>
+                        <source>11</source>
+                        <target>11</target>
                     </configuration>
                 </plugin>
 
