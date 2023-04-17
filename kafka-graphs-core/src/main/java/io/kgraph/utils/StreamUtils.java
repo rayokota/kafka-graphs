@@ -21,6 +21,7 @@ package io.kgraph.utils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Properties;
 import java.util.TreeMap;
@@ -139,7 +140,12 @@ public class StreamUtils {
             NavigableMap<K, V> result = new TreeMap<>();
             while (all.hasNext()) {
                 KeyValue<K, V> next = all.next();
-                result.put(next.key, next.value);
+                K key = next.key;
+                V value = next.value;
+                if (value instanceof Map) {
+                    value = (V) new TreeMap<>((Map)value);
+                }
+                result.put(key, value);
             }
             return result;
         }
