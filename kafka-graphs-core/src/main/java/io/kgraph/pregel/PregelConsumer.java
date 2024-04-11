@@ -35,6 +35,7 @@ import org.apache.kafka.common.Metric;
 import org.apache.kafka.common.MetricName;
 import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.Uuid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -184,6 +185,11 @@ public class PregelConsumer implements Consumer<byte[], byte[]> {
     @Override
     public Map<TopicPartition, OffsetAndMetadata> committed(Set<TopicPartition> partitions, Duration timeout) {
         return kafkaConsumer.committed(partitions, timeout);
+    }
+
+    @Override
+    public Uuid clientInstanceId(Duration timeout) {
+        return kafkaConsumer.clientInstanceId(timeout);
     }
 
     @Override
