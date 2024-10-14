@@ -37,7 +37,7 @@
     </modules>
 
     <properties>
-        <curator.version>5.6.0</curator.version>
+        <curator.version>5.7.1</curator.version>
         <kafka.version>3.8.0</kafka.version>
         <kafka.scala.version>2.13</kafka.scala.version>
         <kryo.version>5.6.2</kryo.version>
