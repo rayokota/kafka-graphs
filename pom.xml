@@ -38,7 +38,7 @@
 
     <properties>
         <curator.version>5.6.0</curator.version>
-        <kafka.version>3.8.0</kafka.version>
+        <kafka.version>3.9.0</kafka.version>
         <kafka.scala.version>2.13</kafka.scala.version>
         <kryo.version>5.6.2</kryo.version>
         <logback.version>1.5.15</logback.version>
@@ -242,7 +242,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
-                        <version>3.8.0</version>
+                        <version>3.11.2</version>
                         <executions>
                             <execution>
                                 <id>attach-javadocs</id>
@@ -289,7 +289,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
-                        <version>3.8.0</version>
+                        <version>3.11.2</version>
                         <executions>
                             <execution>
                                 <id>attach-javadocs</id>
