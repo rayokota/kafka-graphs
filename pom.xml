@@ -38,7 +38,7 @@
 
     <properties>
         <curator.version>5.8.0</curator.version>
-        <kafka.version>3.9.0</kafka.version>
+        <kafka.version>3.9.1</kafka.version>
         <kafka.scala.version>2.13</kafka.scala.version>
         <kryo.version>5.6.2</kryo.version>
         <logback.version>1.5.21</logback.version>
